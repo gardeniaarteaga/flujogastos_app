@@ -1,0 +1,239 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a
+                class="submenu-item"
+                routerLink="/categorias"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child active" routerLink="/subcategorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de entidad
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Mantenimiento</p>
+        <h2 class="page-title-accent">Subcategorias</h2>
+        <p class="lead">Gestiona el catalogo de <strong>subcategorias</strong> para usarlo dentro de categorias.</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="secondary-button" (click)="cancelEdit()">
+          Nueva subcategoria
+        </button>
+        <button type="button" class="secondary-button" routerLink="/categorias">
+          Ir a Categorias
+        </button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar subcategoria' : 'Registrar subcategoria' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="subcategoriaForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="categoria">Categoria</label>
+            <select id="categoria" formControlName="id_categoria">
+              <option value="">Seleccione una categoria</option>
+              <option *ngFor="let categoria of categorias" [value]="categoria.id_categoria">
+                {{ categoria.nombre_categoria }}
+              </option>
+            </select>
+            <small *ngIf="subcategoriaForm.controls.id_categoria.touched && subcategoriaForm.controls.id_categoria.errors?.['required']">
+              La categoria es obligatoria.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="nombre_subcategoria">Nombre subcategoría</label>
+            <input id="nombre_subcategoria" type="text" formControlName="nombre_subcategoria" maxlength="50" />
+            <small *ngIf="subcategoriaForm.controls.nombre_subcategoria.touched && subcategoriaForm.controls.nombre_subcategoria.errors?.['required']">
+              El nombre de la subcategoria es obligatorio.
+            </small>
+            <small *ngIf="subcategoriaForm.controls.nombre_subcategoria.touched && subcategoriaForm.controls.nombre_subcategoria.errors?.['maxlength']">
+              El nombre no puede exceder 50 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" rows="4" formControlName="descripcion" maxlength="100"></textarea>
+            <small *ngIf="subcategoriaForm.controls.descripcion.touched && subcategoriaForm.controls.descripcion.errors?.['maxlength']">
+              La descripcion no puede exceder 100 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="estado">Estado</label>
+            <select id="estado" formControlName="estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fecha_creacion">Fecha creación</label>
+            <input id="fecha_creacion" type="text" [value]="today | date: 'yyyy-MM-dd'" readonly />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar subcategoria' : 'Guardar subcategoria') }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Tabla subcategorias</p>
+            <h3>Listado general</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadSubcategorias()">Recargar</button>
+        </div>
+
+        <p *ngIf="loading" class="empty-text">Cargando subcategorias...</p>
+        <div *ngIf="!loading && subcategorias.length === 0" class="empty-box">
+          No hay registros en la tabla <strong>subcategorias</strong>.
+        </div>
+
+        <div *ngIf="!loading && subcategorias.length > 0" class="accordion-section-label">
+          <span>Categorias</span>
+        </div>
+
+        <div *ngIf="!loading && subcategorias.length > 0" class="accordion-list">
+          <article *ngFor="let group of subcategoriaGroups" class="accordion-item">
+            <button
+              type="button"
+              class="accordion-trigger"
+              (click)="toggleCategoriaGroup(group.id_categoria)"
+            >
+              <div class="accordion-copy">
+                <strong>{{ group.nombre_categoria }}</strong>
+              </div>
+              <div class="accordion-meta">
+                <span class="accordion-count">{{ group.total }} subcategorias</span>
+                <span class="accordion-caret" [class.expanded]="isCategoriaGroupExpanded(group.id_categoria)">v</span>
+              </div>
+            </button>
+
+            <div *ngIf="isCategoriaGroupExpanded(group.id_categoria)" class="accordion-panel">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nombre subcategoria</th>
+                      <th>Origen</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let subcategoria of group.subcategorias">
+                      <td>{{ subcategoria.nombre_subcategoria }}</td>
+                      <td>
+                        <span
+                          class="origin-badge"
+                          [ngClass]="subcategoria.es_predeterminada ? 'default' : 'custom'"
+                        >
+                          {{ subcategoria.es_predeterminada ? 'Predeterminada' : 'Personalizada' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="status" [ngClass]="subcategoria.estado ? 'active' : 'inactive'">
+                          {{ subcategoria.estado ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                      <td class="actions-cell">
+                        <app-maintenance-actions
+                          [showEdit]="canManageSubcategoria(subcategoria)"
+                          [showDelete]="canDeleteSubcategoria(subcategoria)"
+                          [deleteDisabled]="deletingId === subcategoria.id_subcategoria"
+                          (detail)="showSubcategoriaDetail(subcategoria)"
+                          (edit)="editSubcategoria(subcategoria)"
+                          (remove)="removeSubcategoria(subcategoria)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

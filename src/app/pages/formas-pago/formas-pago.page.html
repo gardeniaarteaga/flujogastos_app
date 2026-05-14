@@ -1,0 +1,509 @@
+﻿
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a
+                class="submenu-item"
+                routerLink="/categorias"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a
+            class="submenu-item active"
+            routerLink="/formas-pago"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a
+                class="submenu-item submenu-item-child"
+                routerLink="/subcategorias"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Subcategorias
+              </a>
+              <a
+                class="submenu-item submenu-item-child"
+                routerLink="/entidades-financieras"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Entidades financieras
+              </a>
+              <a
+                class="submenu-item submenu-item-child"
+                routerLink="/tipo-entidad"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Tipo de entidad
+              </a>
+              <a
+                class="submenu-item submenu-item-child"
+                routerLink="/tipo-producto"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+              >
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Mantenimiento</p>
+        <h2>Formas de Pago</h2>
+        <p class="lead">
+          Gestiona la tabla <strong>metodos_pago</strong> usando entidades financieras y tipos de producto
+          existentes o registrando nuevos desde la misma pantalla.
+        </p>
+      </div>
+      <button type="button" class="secondary-button" (click)="cancelEdit()">Nueva forma de pago</button>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar forma de pago' : 'Registrar forma de pago' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="formaPagoForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="nombre_forma">Nombre forma de pago <span class="required-mark">*</span></label>
+            <input
+              id="nombre_forma"
+              type="text"
+              formControlName="nombre_forma"
+              maxlength="100"
+            />
+            <small class="field-example">Ejemplo: Tarjeta Black, Efectivo, Tarjeta Dorada.</small>
+            <small *ngIf="formaPagoForm.controls.nombre_forma.touched && formaPagoForm.controls.nombre_forma.errors?.['required']">
+              El nombre de la forma de pago es obligatorio.
+            </small>
+            <small *ngIf="formaPagoForm.controls.nombre_forma.touched && formaPagoForm.controls.nombre_forma.errors?.['maxlength']">
+              El nombre no puede exceder 100 caracteres.
+            </small>
+          </div>
+
+          <section class="linked-fields-panel">
+            <div class="linked-fields-header">
+              <p class="linked-fields-eyebrow">Relacion</p>
+            </div>
+
+            <div *ngIf="isCreatingNewEntidad" class="field">
+              <label>Tipo de entidad <span class="required-mark">*</span></label>
+              <div class="selector-mode">
+                <label class="mode-option" [class.active]="!isCreatingNewTipoEntidad" [class.disabled]="!hasExistingTiposEntidad">
+                  <input
+                    type="radio"
+                    name="tipoEntidadMode"
+                    [checked]="!isCreatingNewTipoEntidad"
+                    [disabled]="!hasExistingTiposEntidad"
+                    (change)="setTipoEntidadMode('existente')"
+                  />
+                  <span>Existente</span>
+                </label>
+                <label class="mode-option" [class.active]="isCreatingNewTipoEntidad">
+                  <input
+                    type="radio"
+                    name="tipoEntidadMode"
+                    [checked]="isCreatingNewTipoEntidad"
+                    (change)="setTipoEntidadMode('nuevo')"
+                  />
+                  <span>Nuevo</span>
+                </label>
+              </div>
+
+              <select *ngIf="!isCreatingNewTipoEntidad" id="id_tipo_entidad" formControlName="id_tipo_entidad">
+                <option [ngValue]="null">Seleccione un tipo de entidad</option>
+                <option *ngFor="let tipoEntidad of tiposEntidad" [ngValue]="tipoEntidad.id_tipo_entidad">
+                  {{ tipoEntidad.descripcion }}{{ tipoEntidad.estado ? '' : ' (Inactivo)' }}
+                </option>
+              </select>
+
+              <input
+                *ngIf="isCreatingNewTipoEntidad"
+                id="new_tipo_entidad"
+                type="text"
+                formControlName="new_tipo_entidad"
+                maxlength="100"
+                placeholder="Ejemplo: Banco, Cooperativa, Prestamista"
+              />
+
+              <small
+                *ngIf="!isCreatingNewTipoEntidad && tipoEntidadControl.touched && tipoEntidadControl.errors?.['required']"
+              >
+                Debes seleccionar un tipo de entidad.
+              </small>
+              <small
+                *ngIf="isCreatingNewTipoEntidad && newTipoEntidadControl.touched && newTipoEntidadControl.errors?.['required']"
+              >
+                Debes escribir el nombre del nuevo tipo de entidad.
+              </small>
+              <small
+                *ngIf="isCreatingNewTipoEntidad && newTipoEntidadControl.touched && newTipoEntidadControl.errors?.['maxlength']"
+              >
+                El nombre no puede exceder 100 caracteres.
+              </small>
+            </div>
+
+            <div class="field">
+              <label>Entidad financiera <span class="required-mark">*</span></label>
+              <div class="selector-mode">
+                <label class="mode-option" [class.active]="!isCreatingNewEntidad" [class.disabled]="!hasExistingEntidades">
+                  <input
+                    type="radio"
+                    name="entidadMode"
+                    [checked]="!isCreatingNewEntidad"
+                    [disabled]="!hasExistingEntidades"
+                    (change)="setEntidadMode('existente')"
+                  />
+                  <span>Existente</span>
+                </label>
+                <label class="mode-option" [class.active]="isCreatingNewEntidad">
+                  <input
+                    type="radio"
+                    name="entidadMode"
+                    [checked]="isCreatingNewEntidad"
+                    (change)="setEntidadMode('nuevo')"
+                  />
+                  <span>Nueva</span>
+                </label>
+              </div>
+
+              <select *ngIf="!isCreatingNewEntidad" id="id_entidad" formControlName="id_entidad">
+                <option [ngValue]="null">Seleccione una entidad financiera</option>
+                <option *ngFor="let entidad of entidades" [ngValue]="entidad.id_entidad">
+                  {{ entidad.nombre_entidad }}
+                  {{ entidad.tipoEntidad?.descripcion ? ' - ' + entidad.tipoEntidad?.descripcion : '' }}
+                  {{ entidad.estado ? '' : ' (Inactiva)' }}
+                </option>
+              </select>
+
+              <input
+                *ngIf="isCreatingNewEntidad"
+                id="new_entidad"
+                type="text"
+                formControlName="new_entidad"
+                maxlength="100"
+                placeholder="Ejemplo: Banco Agricola"
+              />
+
+              <small class="field-example" *ngIf="!hasExistingEntidades">
+                No hay entidades financieras cargadas; por eso el formulario cambia a nueva automaticamente.
+              </small>
+              <small *ngIf="!isCreatingNewEntidad && entidadControl.touched && entidadControl.errors?.['required']">
+                Debes seleccionar una entidad financiera.
+              </small>
+              <small *ngIf="isCreatingNewEntidad && newEntidadControl.touched && newEntidadControl.errors?.['required']">
+                Debes escribir el nombre de la nueva entidad financiera.
+              </small>
+              <small *ngIf="isCreatingNewEntidad && newEntidadControl.touched && newEntidadControl.errors?.['maxlength']">
+                El nombre no puede exceder 100 caracteres.
+              </small>
+            </div>
+
+            <div class="field">
+              <label>Tipo de producto <span class="required-mark">*</span></label>
+              <div class="selector-mode">
+                <label class="mode-option" [class.active]="!isCreatingNewTipo" [class.disabled]="!hasExistingTiposProducto">
+                  <input
+                    type="radio"
+                    name="tipoMode"
+                    [checked]="!isCreatingNewTipo"
+                    [disabled]="!hasExistingTiposProducto"
+                    (change)="setTipoMode('existente')"
+                  />
+                  <span>Existente</span>
+                </label>
+                <label class="mode-option" [class.active]="isCreatingNewTipo">
+                  <input
+                    type="radio"
+                    name="tipoMode"
+                    [checked]="isCreatingNewTipo"
+                    (change)="setTipoMode('nuevo')"
+                  />
+                  <span>Nuevo</span>
+                </label>
+              </div>
+
+              <select *ngIf="!isCreatingNewTipo" id="id_tipo" formControlName="id_tipo">
+                <option [ngValue]="null">Seleccione un tipo de producto</option>
+                <option *ngFor="let tipo of tipos" [ngValue]="tipo.id_tipo_producto">
+                  {{ tipo.nombre_tipo }}
+                </option>
+              </select>
+
+              <input
+                *ngIf="isCreatingNewTipo"
+                id="new_tipo"
+                type="text"
+                formControlName="new_tipo"
+                maxlength="100"
+                placeholder="Ejemplo: Tarjeta Black, Efectivo"
+              />
+
+              <small class="field-example" *ngIf="!hasExistingTiposProducto">
+                No hay tipos de producto cargados; por eso el formulario cambia a nuevo automaticamente.
+              </small>
+              <small class="field-example" *ngIf="hasExistingTiposProducto">
+                Puedes reutilizar cualquier tipo de producto con la entidad seleccionada; no se limita a uno solo.
+              </small>
+              <small *ngIf="!isCreatingNewTipo && tipoControl.touched && tipoControl.errors?.['required']">
+                Debes seleccionar un tipo de producto.
+              </small>
+              <small *ngIf="isCreatingNewTipo && newTipoControl.touched && newTipoControl.errors?.['required']">
+                Debes escribir el nombre del nuevo tipo de producto.
+              </small>
+              <small *ngIf="isCreatingNewTipo && newTipoControl.touched && newTipoControl.errors?.['maxlength']">
+                El nombre no puede exceder 100 caracteres.
+              </small>
+            </div>
+          </section>
+
+          <div class="field">
+            <label for="tasa_anual">Tasa anual %</label>
+            <input id="tasa_anual" type="number" formControlName="tasa_anual" min="0" step="0.01" />
+          </div>
+
+          <div class="field">
+            <label for="calcula_interes">Calcula interes</label>
+            <select id="calcula_interes" formControlName="calcula_interes">
+              <option [ngValue]="true">Si</option>
+              <option [ngValue]="false">No</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="recibe_estado_cuenta">Recibe estado de cuenta</label>
+            <select id="recibe_estado_cuenta" formControlName="recibe_estado_cuenta">
+              <option [ngValue]="true">Si</option>
+              <option [ngValue]="false">No</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="aplica_membresia">Aplica membresia</label>
+            <select id="aplica_membresia" formControlName="aplica_membresia" (change)="onAplicaMembresiaChange()">
+              <option [ngValue]="true">Si</option>
+              <option [ngValue]="false">No</option>
+              <option [ngValue]="'no_aplica'">No aplica</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="mes_pago_membresia">Mes pago membresia</label>
+            <select
+              id="mes_pago_membresia"
+              formControlName="mes_pago_membresia"
+              [disabled]="aplicaMembresiaValue === 'no_aplica'"
+            >
+              <option [ngValue]="0">No aplica</option>
+              <option [ngValue]="null">Seleccione un mes</option>
+              <option *ngFor="let mes of mesesPagoMembresia" [ngValue]="mes.value">
+                {{ mes.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="dia_corte">Dia corte</label>
+            <input id="dia_corte" type="number" formControlName="dia_corte" min="1" max="31" />
+            <small *ngIf="formaPagoForm.controls.dia_corte.touched && formaPagoForm.controls.dia_corte.errors?.['min']">
+              El dia corte debe ser mayor o igual a 1.
+            </small>
+            <small *ngIf="formaPagoForm.controls.dia_corte.touched && formaPagoForm.controls.dia_corte.errors?.['max']">
+              El dia corte debe ser menor o igual a 31.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="dia_ultimo_pago">Dia ultimo pago</label>
+            <input id="dia_ultimo_pago" type="number" formControlName="dia_ultimo_pago" min="1" max="31" />
+          </div>
+
+          <div class="field">
+            <label for="dias_gracia">
+              Dias gracia
+              <span
+                class="field-help-icon"
+                title="Son los dias en los que la transaccion no generara interes."
+                aria-label="Son los dias en los que la transaccion no generara interes."
+              >
+                ?
+              </span>
+            </label>
+            <input id="dias_gracia" type="number" formControlName="dias_gracia" min="0" />
+            <small class="field-example">
+              Son los dias en los que la transaccion no generara interes.
+            </small>
+          </div>
+
+          <div
+            class="field status-field"
+            [ngClass]="formaPagoForm.controls.estado.value === 'activo' ? 'active' : 'inactive'"
+          >
+            <label for="estado">Estado</label>
+            <select id="estado" formControlName="estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fecha_creacion">Fecha creacion</label>
+            <input id="fecha_creacion" type="text" [value]="fechaCreacionActual | date: 'yyyy-MM-dd'" readonly />
+          </div>
+
+          <div class="messages">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar forma de pago' : 'Guardar forma de pago') }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Forma de pago</p>
+            <h3>Listado general</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadData()">Recargar</button>
+        </div>
+
+        <p *ngIf="loading" class="empty-text">Cargando formas de pago...</p>
+        <div *ngIf="!loading && formasPago.length === 0" class="empty-box">
+          No hay registros de <strong>formas de pago</strong>.
+        </div>
+
+        <div *ngIf="!loading && formasPago.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Forma de pago</th>
+                <th>Entidad financiera</th>
+                <th>Tipo producto</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let forma of paginatedFormasPago">
+                <td>{{ forma.nombre_forma }}</td>
+                <td>{{ forma.entidad_financiera.nombre_entidad }}</td>
+                <td>{{ forma.tipo_producto.nombre_tipo }}</td>
+                <td>
+                  <span class="status" [ngClass]="forma.estado ? 'active' : 'inactive'">
+                    {{ forma.estado ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <app-maintenance-actions
+                    [showEdit]="canEditFormaPago(forma)"
+                    [showDelete]="canDeleteFormaPago(forma)"
+                    [deleteDisabled]="deletingId === forma.id_forma"
+                    (detail)="showFormaPagoDetail(forma)"
+                    (edit)="editFormaPago(forma)"
+                    (remove)="removeFormaPago(forma)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!loading && formasPago.length > 0" class="pagination">
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === 1"
+            (click)="goToPreviousPage()"
+          >
+            Anterior
+          </button>
+
+          <div class="pagination-pages">
+            <button
+              *ngFor="let page of pageNumbers"
+              type="button"
+              class="pagination-button"
+              [class.active]="page === currentPage"
+              (click)="goToPage(page)"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === totalPages"
+            (click)="goToNextPage()"
+          >
+            Siguiente
+          </button>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

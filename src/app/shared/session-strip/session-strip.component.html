@@ -1,0 +1,90 @@
+<section class="session-strip">
+  <div class="session-strip-inner">
+    <div class="toolbar-start">
+      <button type="button" class="toolbar-icon toolbar-icon-menu" aria-label="Navegacion">
+        <span></span>
+      </button>
+      <div class="toolbar-search">
+        <span class="toolbar-search-lens">⌕</span>
+        <span>Analytics Dashboard</span>
+      </div>
+    </div>
+
+    <nav class="toolbar-nav">
+      <a class="toolbar-link" routerLink="/dashboard">Mega Menu</a>
+      <a class="toolbar-link" routerLink="/categorias">Settings</a>
+      <a class="toolbar-link" routerLink="/formas-pago">Projects</a>
+    </nav>
+
+    <div class="toolbar-end">
+      <div class="notifications-shell">
+        <button
+          type="button"
+          class="toolbar-icon notification-trigger"
+          aria-label="Notificaciones"
+          (click)="toggleNotifications()"
+        >
+          <span class="notification-bell" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path
+                d="M12 2.75a1.9 1.9 0 0 0-1.9 1.9v.42A5.9 5.9 0 0 0 6 10.72v2.63c0 .7-.2 1.38-.58 1.96l-1.08 1.68a2 2 0 0 0 1.68 3.09h3.67a2.32 2.32 0 0 0 4.62 0h3.67a2 2 0 0 0 1.68-3.09l-1.08-1.68a3.58 3.58 0 0 1-.58-1.96v-2.63a5.9 5.9 0 0 0-4.1-5.65v-.42A1.9 1.9 0 0 0 12 2.75Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          @if (unreadNotifications > 0) {
+            <span class="toolbar-pill alert notification-counter">{{ unreadNotifications }}</span>
+          }
+        </button>
+
+        @if (notificationsOpen) {
+          <div class="notifications-panel">
+            <div class="notifications-header">
+              <strong>Notificaciones</strong>
+              <button
+                type="button"
+                class="notifications-action"
+                (click)="markAllNotificationsAsRead()"
+              >
+                Marcar leidas
+              </button>
+            </div>
+
+            @if (notifications.length > 0) {
+              <div class="notifications-list">
+                @for (notification of notifications; track notification.id_notificacion) {
+                  <button
+                    type="button"
+                    class="notification-item"
+                    [class.is-unread]="!notification.leida"
+                    (click)="openNotification(notification)"
+                  >
+                    <strong>{{ notification.titulo }}</strong>
+                    <p>{{ notification.mensaje }}</p>
+                    <span>{{ formatNotificationDate(notification.fecha_creacion) }}</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <div class="notifications-empty">
+                <strong>Todo al dia</strong>
+                <p>No tienes pagos asignados pendientes de revisar.</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+      <span class="toolbar-pill locale">SV</span>
+      <a class="toolbar-link profile-link" routerLink="/perfil">Perfil</a>
+      <button type="button" class="logout-button" (click)="logout()">Salir</button>
+
+      <div class="user-menu session-user-menu">
+        <div class="user-avatar">{{ userInitials }}</div>
+        <div class="user-copy">
+          <strong>{{ userProfile.fullName }}</strong>
+          <span>{{ userProfile.email }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

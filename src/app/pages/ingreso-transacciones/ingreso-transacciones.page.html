@@ -1,0 +1,681 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Ingresos
+      </a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Gastos
+      </a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de entidad
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">{{ sectionLabel }}</p>
+        <h2>{{ pageTitle }}</h2>
+      </div>
+      <button type="button" class="secondary-button" (click)="reloadCatalogos()">Recargar catalogos</button>
+    </header>
+
+    <section class="workspace single-column">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ formTitle }}</h3>
+          </div>
+          <span class="pill">Base</span>
+        </div>
+
+        <div class="messages">
+          <p *ngIf="successMessage" class="message success">{{ successMessage }}</p>
+          <p *ngIf="errorMessage" class="message error">{{ errorMessage }}</p>
+        </div>
+        <p *ngIf="loading" class="empty-text">Cargando catalogos para transacciones...</p>
+
+        <form [formGroup]="transaccionForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <section class="transaction-essentials">
+            <div class="transaction-essentials-header">
+              <div>
+                <p class="panel-title">Datos base</p>
+                <h4>Captura principal</h4>
+              </div>
+              <div *ngIf="shouldShowEstadoPago" class="transaction-status-inline">
+                <div class="status-chip">
+                  <span>Pago</span>
+                  <strong>{{ transaccionForm.controls.estado_transaccion.value }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-grid field-grid-compact field-grid-primary">
+              <div class="field">
+                <label for="fecha_transaccion">Fecha</label>
+                <div class="date-entry">
+                  <input
+                    id="fecha_transaccion"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="DD/MM/AAAA"
+                    formControlName="fecha_transaccion"
+                    (input)="onFechaInput($event)"
+                    (paste)="onFechaPaste($event)"
+                    (blur)="onFechaBlur()"
+                  />
+                  <button
+                    type="button"
+                    class="date-picker-button"
+                    (click)="openNativeDatePicker(fechaCalendarPicker)"
+                    aria-label="Abrir calendario"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                      />
+                    </svg>
+                  </button>
+                  <input
+                    #fechaCalendarPicker
+                    class="date-picker-native"
+                    type="date"
+                    [value]="fechaCalendarioValue"
+                    (change)="onFechaCalendarChange($event)"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                </div>
+                <small
+                  *ngIf="transaccionForm.controls.fecha_transaccion.touched && transaccionForm.controls.fecha_transaccion.errors?.['invalidDate']"
+                >
+                  Ingresa una fecha valida en formato DD/MM/AAAA.
+                </small>
+                <small
+                  *ngIf="transaccionForm.controls.fecha_transaccion.touched && transaccionForm.controls.fecha_transaccion.errors?.['required']"
+                >
+                  La fecha es obligatoria.
+                </small>
+              </div>
+
+              <div class="field field-span-2">
+                <label for="descripcion">{{ isIncomeMode ? 'Descripcion del Ingreso' : 'Descripcion/Comercio' }}</label>
+                <input
+                  id="descripcion"
+                  type="text"
+                  maxlength="250"
+                  formControlName="descripcion"
+                  [placeholder]="isIncomeMode ? 'Ej. Salario' : 'Ej. Pago de internet abril'"
+                />
+                <small *ngIf="transaccionForm.controls.descripcion.touched && transaccionForm.controls.descripcion.errors?.['required']">
+                  La descripcion/comercio es obligatoria.
+                </small>
+                <small *ngIf="transaccionForm.controls.descripcion.touched && transaccionForm.controls.descripcion.errors?.['maxlength']">
+                  La descripcion/comercio no puede superar los 250 caracteres.
+                </small>
+              </div>
+
+              <div class="field">
+                <label for="monto">{{ montoPrincipalLabel }}</label>
+                <input
+                  id="monto"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  formControlName="monto"
+                  (input)="onMontoInput()"
+                  (keydown)="onMontoKeydown($event)"
+                  (paste)="onMontoPaste($event)"
+                  (blur)="normalizeMoneyInput('monto')"
+                />
+                <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['required']">
+                  El monto es obligatorio.
+                </small>
+                <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['min']">
+                  El monto debe ser mayor que 0.
+                </small>
+                <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['maxTwoDecimals']">
+                  Solo se permiten 2 decimales.
+                </small>
+              </div>
+            </div>
+
+            <div class="field-grid field-grid-compact">
+              <div class="field">
+                <label for="id_tipo_transaccion" class="label-with-help">
+                  <span>Tipo de transaccion</span>
+                  <span class="help-tooltip">
+                    <button
+                      type="button"
+                      class="help-badge"
+                      aria-label="Mostrar ayuda sobre tipo de transaccion"
+                    >
+                      ?
+                    </button>
+                    <span class="help-tooltip-content" role="tooltip">
+                      Credito: entrada de dinero.<br />
+                      Debito: salida de dinero.
+                    </span>
+                  </span>
+                </label>
+                <select id="id_tipo_transaccion" formControlName="id_tipo_transaccion">
+                  <option *ngFor="let tipo of tiposTransaccion" [ngValue]="tipo.value">
+                    {{ tipo.label }}
+                  </option>
+                </select>
+                <small *ngIf="transaccionForm.controls.id_tipo_transaccion.touched && transaccionForm.controls.id_tipo_transaccion.errors?.['required']">
+                  Selecciona un tipo de transaccion.
+                </small>
+              </div>
+
+              <div class="field">
+                <label for="forma_pago">Forma de pago</label>
+                <select id="forma_pago" formControlName="forma_pago" (change)="onFormaPagoChange()">
+                  <option [ngValue]="null">Seleccione una forma de pago</option>
+                  <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                    {{ forma.nombre_forma }}
+                  </option>
+                </select>
+                <small *ngIf="transaccionForm.controls.forma_pago.touched && transaccionForm.controls.forma_pago.errors?.['required']">
+                  Selecciona una forma de pago.
+                </small>
+              </div>
+
+              <div class="field">
+                <label for="entidad_financiera">Entidad financiera</label>
+                <input id="entidad_financiera" type="text" formControlName="entidad_financiera" readonly />
+              </div>
+
+              <div class="field">
+                <label for="id_categoria">Categoria</label>
+                <select id="id_categoria" formControlName="id_categoria" (change)="onCategoriaChange()">
+                  <option [ngValue]="null">Seleccione una categoria</option>
+                  <option *ngFor="let categoria of categorias" [ngValue]="categoria.id_categoria">
+                    {{ categoria.nombre_categoria }}
+                  </option>
+                </select>
+                <small *ngIf="transaccionForm.controls.id_categoria.touched && transaccionForm.controls.id_categoria.errors?.['required']">
+                  Selecciona una categoria.
+                </small>
+              </div>
+
+              <div class="field">
+                <label for="id_subcategoria">Subcategoria</label>
+                <select id="id_subcategoria" formControlName="id_subcategoria">
+                  <option [ngValue]="null">
+                    {{ selectedCategoriaHasSubcategorias ? 'Seleccione una subcategoria' : 'Sin subcategoria' }}
+                  </option>
+                  <option *ngFor="let subcategoria of filteredSubcategorias" [ngValue]="subcategoria.id_subcategoria">
+                    {{ subcategoria.nombre_subcategoria }}
+                  </option>
+                </select>
+                <small *ngIf="transaccionForm.controls.id_subcategoria.touched && transaccionForm.controls.id_subcategoria.errors?.['required']">
+                  Selecciona una subcategoria.
+                </small>
+                <small *ngIf="transaccionForm.controls.id_categoria.value && filteredSubcategorias.length === 0">
+                  La categoria seleccionada no tiene subcategorias activas.
+                </small>
+              </div>
+            </div>
+          </section>
+
+          <section *ngIf="isIncomeMode && titularDetalleGroup as titularGroup" class="participants-section">
+            <div>
+              <p class="panel-title">Cuotas del ingreso</p>
+              <h4>Configura el plan del titular</h4>
+            </div>
+            <div class="participant-block" [formGroup]="titularGroup">
+              <div class="participant-row participant-row--titular-cuotas">
+                <div class="field">
+                  <label for="titular_cuotas_ingreso">Cuotas</label>
+                  <input
+                    id="titular_cuotas_ingreso"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    formControlName="cantidad_cuotas"
+                    (blur)="normalizeCuotasInput(titularGroup)"
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="titular_monto_ingreso">{{ titularMontoLabel }}</label>
+                  <input
+                    id="titular_monto_ingreso"
+                    type="number"
+                    step="0.01"
+                    inputmode="decimal"
+                    formControlName="monto"
+                    readonly
+                  />
+                </div>
+              </div>
+
+              <details
+                class="cuotas-accordion"
+                *ngIf="titularGroup.controls.cantidad_cuotas.value && titularGroup.controls.cantidad_cuotas.value > 1"
+                [open]="isCuotasAccordionOpen(titularGroup)"
+                (toggle)="onCuotasAccordionToggle(titularGroup, $event)"
+              >
+                <summary>
+                  <span>Cuotas</span>
+                  <span class="cuotas-summary-meta">
+                    <span>Total: ${{ getCuotasTotal(titularGroup) | number: '1.2-2' }}</span>
+                    <span class="cuotas-remaining">
+                      Saldo restante: ${{ getCuotasRemaining(titularGroup) | number: '1.2-2' }}
+                    </span>
+                  </span>
+                </summary>
+                <div class="cuotas-programacion-grid">
+                  <div class="field">
+                    <label for="programacion_tipo_ingreso">Programacion de pago</label>
+                    <select
+                      id="programacion_tipo_ingreso"
+                      formControlName="tipo_programacion"
+                      (change)="onTipoProgramacionChange(titularGroup)"
+                    >
+                      <option *ngFor="let tipo of tiposProgramacionCuota" [ngValue]="tipo.value">
+                        {{ tipo.label }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="field" *ngIf="titularGroup.controls.tipo_programacion.value === 'dia_mes'">
+                    <label for="programacion_dia_ingreso">Dia del mes</label>
+                    <select
+                      id="programacion_dia_ingreso"
+                      formControlName="dia_programado"
+                      (blur)="onDiaProgramadoBlur(titularGroup)"
+                      (change)="onDiaProgramadoBlur(titularGroup)"
+                    >
+                      <option *ngFor="let dia of diasProgramacion" [ngValue]="dia">
+                        Dia {{ dia }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <small *ngIf="isIncomeMode" class="field-hint cuotas-programacion-hint">
+                  La fecha programada es solo una referencia visual. El ingreso real se podra aplicar en cualquier fecha.
+                </small>
+                <div class="cuotas-list" formArrayName="cuotas">
+                  <div
+                    class="cuota-row"
+                    *ngFor="let cuotaItem of getPaginatedCuotas(titularGroup); trackBy: trackCuotaPageItem"
+                    [formGroupName]="cuotaItem.index"
+                  >
+                    <label [for]="'cuota_ingreso_' + cuotaItem.index">
+                      Cuota {{ cuotaItem.index + 1 }}
+                    </label>
+                    <input
+                      [id]="'cuota_ingreso_' + cuotaItem.index"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputmode="decimal"
+                      formControlName="monto"
+                      [readonly]="isCuotaMontoReadonly(titularGroup)"
+                      (keydown)="onMontoKeydown($event)"
+                      (paste)="onMontoPaste($event)"
+                      (blur)="normalizeCuotaMontoInput(titularGroup, cuotaItem.index)"
+                    />
+                    <div class="field">
+                      <label [for]="'fecha_programada_ingreso_' + cuotaItem.index">
+                        Fecha programada
+                      </label>
+                      <input
+                        [id]="'fecha_programada_ingreso_' + cuotaItem.index"
+                        type="text"
+                        [value]="getFechaProgramadaDisplay(cuotaItem.control.controls.fecha_programada.value)"
+                        readonly
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="cuotas-pagination" *ngIf="getCuotasTotalPages(titularGroup) > 1">
+                  <span class="cuotas-pagination-summary">
+                    Mostrando {{ getCuotasPageStart(titularGroup) }}-{{ getCuotasPageEnd(titularGroup) }}
+                    de {{ getCuotasArray(titularGroup).length }} cuotas
+                  </span>
+                  <div class="cuotas-pagination-actions">
+                    <button
+                      type="button"
+                      class="secondary-button compact-button"
+                      [disabled]="getCuotasCurrentPage(titularGroup) === 1"
+                      (click)="changeCuotasPage(titularGroup, -1)"
+                    >
+                      Anterior
+                    </button>
+                    <span class="cuotas-pagination-page">
+                      Pagina {{ getCuotasCurrentPage(titularGroup) }} de {{ getCuotasTotalPages(titularGroup) }}
+                    </span>
+                    <button
+                      type="button"
+                      class="secondary-button compact-button"
+                      [disabled]="getCuotasCurrentPage(titularGroup) === getCuotasTotalPages(titularGroup)"
+                      (click)="changeCuotasPage(titularGroup, 1)"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+                <small *ngIf="!isCuotasTotalValid(titularGroup)">
+                  La suma de cuotas debe ser igual al monto total del ingreso.
+                </small>
+              </details>
+            </div>
+          </section>
+
+          <section *ngIf="requiresDeferredPaymentSetup" class="participants-section">
+            <div>
+              <p class="panel-title">Cuotas y participantes</p>
+              <h4>Configura el detalle del gasto</h4>
+            </div>
+            <label *ngIf="showCuotasSinInteresesOption" class="checkbox-row">
+              <input type="checkbox" formControlName="cuotas_sin_intereses" />
+              <span>Cuotas sin intereses</span>
+            </label>
+
+            <div class="participants-list">
+              <div
+                *ngFor="let participanteGroup of participantesDetalleControls; let i = index"
+              >
+                <div class="participant-block" [formGroup]="participanteGroup">
+                  <div class="participant-row">
+                    <div class="field">
+                      <label [for]="'participante_' + i">
+                        {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
+                      </label>
+                      <input
+                        *ngIf="participanteGroup.controls.es_titular.value"
+                        [id]="'participante_' + i"
+                        type="text"
+                        formControlName="nombre_mostrado"
+                        readonly
+                      />
+                      <select
+                        *ngIf="!participanteGroup.controls.es_titular.value"
+                        [id]="'participante_' + i"
+                        formControlName="id_participante"
+                        (change)="onParticipanteSelectionChange(participanteGroup)"
+                      >
+                        <option [ngValue]="null">Seleccione un participante</option>
+                        <option
+                          *ngFor="let participante of selectableParticipantes"
+                          [ngValue]="participante.id_participante"
+                          [disabled]="isParticipanteOptionDisabled(participante.id_participante, participanteGroup)"
+                        >
+                          {{ getParticipanteDisplayName(participante) }}
+                        </option>
+                      </select>
+                      <small
+                        *ngIf="!participanteGroup.controls.es_titular.value && participanteGroup.controls.id_participante.touched && participanteGroup.controls.id_participante.errors?.['required']"
+                      >
+                        Selecciona un participante.
+                      </small>
+                    </div>
+
+                    <div class="field">
+                      <label [for]="'participante_porcentaje_' + i">Porcentaje</label>
+                      <input
+                        [id]="'participante_porcentaje_' + i"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        inputmode="decimal"
+                        formControlName="porcentaje"
+                        (input)="onParticipantePorcentajeInput(participanteGroup)"
+                        (blur)="normalizePercentageInput(participanteGroup)"
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label [for]="'participante_cuotas_' + i">Cuotas</label>
+                      <input
+                        [id]="'participante_cuotas_' + i"
+                        type="number"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                        formControlName="cantidad_cuotas"
+                        (blur)="normalizeCuotasInput(participanteGroup)"
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label [for]="'participante_monto_' + i">Monto</label>
+                      <input
+                        [id]="'participante_monto_' + i"
+                        type="number"
+                        [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
+                        step="0.01"
+                        inputmode="decimal"
+                        formControlName="monto"
+                        (keydown)="onMontoKeydown($event)"
+                        (paste)="onMontoPaste($event)"
+                        (input)="onParticipanteMontoInput(participanteGroup)"
+                        (blur)="normalizeMoneyInput('monto', participanteGroup)"
+                      />
+                      <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['required']">
+                        Ingresa un monto.
+                      </small>
+                      <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['min']">
+                        {{
+                          participanteGroup.controls.es_titular.value
+                            ? 'El monto del titular no puede ser negativo.'
+                            : 'El monto debe ser mayor que 0.'
+                        }}
+                      </small>
+                      <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['maxTwoDecimals']">
+                        Solo se permiten 2 decimales.
+                      </small>
+                    </div>
+
+                    <div class="participant-actions">
+                      <button
+                        *ngIf="!participanteGroup.controls.es_titular.value"
+                        type="button"
+                        class="secondary-button table-button"
+                        (click)="removeParticipanteDetalle(i)"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+
+                  <details
+                    class="cuotas-accordion"
+                    *ngIf="participanteGroup.controls.cantidad_cuotas.value && participanteGroup.controls.cantidad_cuotas.value > 1"
+                    [open]="isCuotasAccordionOpen(participanteGroup)"
+                    (toggle)="onCuotasAccordionToggle(participanteGroup, $event)"
+                  >
+                    <summary>
+                      <span>Cuotas</span>
+                      <span class="cuotas-summary-meta">
+                        <span>Total: ${{ getCuotasTotal(participanteGroup) | number: '1.2-2' }}</span>
+                        <span class="cuotas-remaining">
+                          Saldo restante: ${{ getCuotasRemaining(participanteGroup) | number: '1.2-2' }}
+                        </span>
+                      </span>
+                    </summary>
+                    <div class="cuotas-programacion-grid">
+                      <div class="field">
+                        <label [for]="'programacion_tipo_' + i">Programacion de pago</label>
+                        <select
+                          [id]="'programacion_tipo_' + i"
+                          formControlName="tipo_programacion"
+                          (change)="onTipoProgramacionChange(participanteGroup)"
+                        >
+                          <option *ngFor="let tipo of tiposProgramacionCuota" [ngValue]="tipo.value">
+                            {{ tipo.label }}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div class="field" *ngIf="participanteGroup.controls.tipo_programacion.value === 'dia_mes'">
+                        <label [for]="'programacion_dia_' + i">Dia del mes</label>
+                        <select
+                          [id]="'programacion_dia_' + i"
+                          formControlName="dia_programado"
+                          (blur)="onDiaProgramadoBlur(participanteGroup)"
+                          (change)="onDiaProgramadoBlur(participanteGroup)"
+                        >
+                          <option *ngFor="let dia of diasProgramacion" [ngValue]="dia">
+                            Dia {{ dia }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <small *ngIf="isIncomeMode" class="field-hint cuotas-programacion-hint">
+                      La fecha programada es solo una referencia visual. El pago real se podra aplicar en cualquier fecha.
+                    </small>
+                    <div class="cuotas-list" formArrayName="cuotas">
+                      <div
+                        class="cuota-row"
+                        *ngFor="let cuotaItem of getPaginatedCuotas(participanteGroup); trackBy: trackCuotaPageItem"
+                        [formGroupName]="cuotaItem.index"
+                      >
+                        <label [for]="'cuota_' + i + '_' + cuotaItem.index">
+                          Cuota {{ cuotaItem.index + 1 }}
+                        </label>
+                        <input
+                          [id]="'cuota_' + i + '_' + cuotaItem.index"
+                          type="number"
+                          [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
+                          step="0.01"
+                          inputmode="decimal"
+                          formControlName="monto"
+                          [readonly]="isCuotaMontoReadonly(participanteGroup)"
+                          (keydown)="onMontoKeydown($event)"
+                          (paste)="onMontoPaste($event)"
+                          (blur)="normalizeCuotaMontoInput(participanteGroup, cuotaItem.index)"
+                        />
+                        <div class="field">
+                          <label [for]="'fecha_programada_' + i + '_' + cuotaItem.index">
+                            Fecha programada
+                          </label>
+                          <input
+                            [id]="'fecha_programada_' + i + '_' + cuotaItem.index"
+                            type="text"
+                            [value]="getFechaProgramadaDisplay(cuotaItem.control.controls.fecha_programada.value)"
+                            readonly
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="cuotas-pagination" *ngIf="getCuotasTotalPages(participanteGroup) > 1">
+                      <span class="cuotas-pagination-summary">
+                        Mostrando {{ getCuotasPageStart(participanteGroup) }}-{{ getCuotasPageEnd(participanteGroup) }}
+                        de {{ getCuotasArray(participanteGroup).length }} cuotas
+                      </span>
+                      <div class="cuotas-pagination-actions">
+                        <button
+                          type="button"
+                          class="secondary-button compact-button"
+                          [disabled]="getCuotasCurrentPage(participanteGroup) === 1"
+                          (click)="changeCuotasPage(participanteGroup, -1)"
+                        >
+                          Anterior
+                        </button>
+                        <span class="cuotas-pagination-page">
+                          Pagina {{ getCuotasCurrentPage(participanteGroup) }} de {{ getCuotasTotalPages(participanteGroup) }}
+                        </span>
+                        <button
+                          type="button"
+                          class="secondary-button compact-button"
+                          [disabled]="getCuotasCurrentPage(participanteGroup) === getCuotasTotalPages(participanteGroup)"
+                          (click)="changeCuotasPage(participanteGroup, 1)"
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                    <small
+                      *ngIf="!isCuotasTotalValid(participanteGroup)"
+                    >
+                      La suma de cuotas debe ser igual al monto total de esta persona.
+                    </small>
+                  </details>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="secondary-button" (click)="addParticipanteDetalle()">
+                  Agregar participante
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="loading || saving">
+              {{ saving ? 'Guardando...' : submitLabel }}
+            </button>
+          </div>
+        </form>
+      </article>
+    </section>
+  </main>
+</div>

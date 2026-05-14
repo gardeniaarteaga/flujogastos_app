@@ -1,0 +1,289 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item active" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Participantes
+          </a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de entidad
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Mantenimiento</p>
+        <h2 class="page-title-accent">Participantes</h2>
+        <p class="lead">Gestiona el catalogo de participantes para distribuir porcentajes de participacion.</p>
+      </div>
+      <button type="button" class="secondary-button" (click)="cancelEdit()">Nuevo participante</button>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar participante' : 'Registrar participante' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="participanteForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="nombre_participante">Nombre participante <span class="required-mark">*</span></label>
+            <input id="nombre_participante" type="text" formControlName="nombre_participante" maxlength="150" />
+            <small *ngIf="participanteForm.controls.nombre_participante.touched && participanteForm.controls.nombre_participante.errors?.['required']">
+              El nombre del participante es obligatorio.
+            </small>
+            <small *ngIf="participanteForm.controls.nombre_participante.touched && participanteForm.controls.nombre_participante.errors?.['maxlength']">
+              El nombre no puede exceder 150 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="correo_electronico">Correo electronico</label>
+            <input
+              id="correo_electronico"
+              type="email"
+              formControlName="correo_electronico"
+              maxlength="255"
+              placeholder="correo@empresa.com"
+            />
+            <small *ngIf="participanteForm.controls.correo_electronico.touched && participanteForm.controls.correo_electronico.errors?.['email']">
+              Ingresa un correo valido.
+            </small>
+            <small *ngIf="participanteForm.controls.correo_electronico.touched && participanteForm.controls.correo_electronico.errors?.['maxlength']">
+              El correo no puede exceder 255 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="celular">Celular</label>
+            <input
+              id="celular"
+              type="tel"
+              formControlName="celular"
+              maxlength="9"
+              inputmode="numeric"
+              autocomplete="tel-national"
+              placeholder="0000-0000"
+              (input)="onCelularInput()"
+            />
+            <small *ngIf="participanteForm.controls.celular.touched && participanteForm.controls.celular.errors?.['maxlength']">
+              El celular debe tener el formato 0000-0000.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="porcentaje_participacion">Porcentaje participacion%</label>
+            <input
+              id="porcentaje_participacion"
+              type="text"
+              inputmode="decimal"
+              [value]="porcentajeParticipacionDisplayValue"
+              (input)="onPorcentajeParticipacionInput($event)"
+              (blur)="onPorcentajeParticipacionBlur()"
+            />
+            <small *ngIf="participanteForm.controls.porcentaje_participacion.touched && participanteForm.controls.porcentaje_participacion.errors?.['min']">
+              El porcentaje no puede ser menor a 1.
+            </small>
+            <small *ngIf="participanteForm.controls.porcentaje_participacion.touched && participanteForm.controls.porcentaje_participacion.errors?.['max']">
+              El porcentaje no puede ser mayor a 100.
+            </small>
+          </div>
+
+          <div class="field status-field" [ngClass]="participanteForm.controls.estado.value === 'activo' ? 'active' : 'inactive'">
+            <label for="estado">Estado <span class="required-mark">*</span></label>
+            <select id="estado" formControlName="estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fecha_creacion">Fecha creacion</label>
+            <input id="fecha_creacion" type="text" [value]="today | date: 'yyyy-MM-dd'" readonly />
+          </div>
+
+          <div class="messages">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar participante' : 'Guardar participante') }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Tabla participantes</p>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadParticipantes()">Recargar</button>
+        </div>
+
+        <p *ngIf="loading" class="empty-text">Cargando participantes...</p>
+        <div *ngIf="!loading && participantes.length === 0" class="empty-box">
+          No hay registros en la tabla <strong>participantes</strong>.
+        </div>
+
+        <div *ngIf="!loading && participantes.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre participante</th>
+                <th>Correo electronico</th>
+                <th>Celular</th>
+                <th>Origen</th>
+                <th>Participacion</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let participante of paginatedParticipantes">
+                <td>
+                  <span class="participant-name-inline">
+                    <span>{{ participante.nombre_participante }}</span>
+                    <span
+                      *ngIf="isParticipanteAsociado(participante)"
+                      class="system-user-star"
+                      title="Usuario del sistema"
+                      aria-label="Usuario del sistema"
+                    >
+                      ★
+                    </span>
+                  </span>
+                  <span *ngIf="isCurrentUserLinkedParticipante(participante)">(Titular)</span>
+                </td>
+                <td>{{ participante.correo_electronico || '-' }}</td>
+                <td>{{ formatCelular(participante.celular) || '-' }}</td>
+                <td>
+                  <span
+                    class="origin-badge"
+                    [ngClass]="participante.es_predeterminada ? 'default' : 'custom'"
+                  >
+                    {{ participante.es_predeterminada ? 'Predeterminado' : 'Personalizado' }}
+                  </span>
+                </td>
+                <td>{{ participante.porcentaje_participacion !== null ? (participante.porcentaje_participacion + '%') : '-' }}</td>
+                <td>
+                  <span class="status" [ngClass]="participante.estado === 'ACTIVO' ? 'active' : 'inactive'">
+                    {{ participante.estado === 'ACTIVO' ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <app-maintenance-actions
+                    [showEdit]="canManageParticipante(participante)"
+                    [showDelete]="canDeleteParticipante(participante)"
+                    [deleteDisabled]="deletingId === participante.id_participante"
+                    (detail)="showParticipanteDetail(participante)"
+                    (edit)="editParticipante(participante)"
+                    (remove)="removeParticipante(participante)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!loading && participantes.length > 0" class="pagination">
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === 1"
+            (click)="goToPreviousPage()"
+          >
+            Anterior
+          </button>
+
+          <div class="pagination-pages">
+            <button
+              *ngFor="let page of pageNumbers"
+              type="button"
+              class="pagination-button"
+              [class.active]="page === currentPage"
+              (click)="goToPage(page)"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === totalPages"
+            (click)="goToNextPage()"
+          >
+            Siguiente
+          </button>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

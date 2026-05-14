@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.categoria-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.required-mark {
+  color: var(--color-danger);
+}
+
+.field-example {
+  color: var(--color-text-soft);
+}
+
+.checkbox-field {
+  gap: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 700;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.phone-field-grid {
+  display: grid;
+  grid-template-columns: minmax(88px, 120px) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.area-code-input {
+  text-align: center;
+}
+
+.access-note {
+  margin-bottom: 1.25rem;
+}
+
+.access-note p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  min-width: 42px;
+  padding: 0.6rem 0.75rem;
+}
+
+.pagination-button.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #ffffff;
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .phone-field-grid {
+    grid-template-columns: 1fr;
+  }
+}

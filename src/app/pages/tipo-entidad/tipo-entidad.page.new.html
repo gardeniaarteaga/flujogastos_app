@@ -1,0 +1,166 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Resumen
+      </a>
+      <a class="nav-item" href="#">Ingresos</a>
+      <a class="nav-item" href="#">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child active" routerLink="/tipo-entidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de entidad
+              </a>
+            </div>
+          </details>
+          <a class="submenu-item" href="#">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Mantenimiento</p>
+        <h2>Tipo de Entidad</h2>
+        <p class="lead">
+          Gestiona el catalogo de <strong>tipo_entidad</strong> para clasificar las entidades financieras.
+        </p>
+      </div>
+      <button type="button" class="secondary-button" routerLink="/entidades-financieras">
+        Ir a entidades financieras
+      </button>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar tipo de entidad' : 'Registrar tipo de entidad' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="tipoEntidadForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="descripcion">Descripcion</label>
+            <input id="descripcion" type="text" formControlName="descripcion" maxlength="100" />
+            <small *ngIf="tipoEntidadForm.controls.descripcion.touched && tipoEntidadForm.controls.descripcion.errors?.['required']">
+              La descripcion es obligatoria.
+            </small>
+            <small *ngIf="tipoEntidadForm.controls.descripcion.touched && tipoEntidadForm.controls.descripcion.errors?.['maxlength']">
+              La descripcion no puede exceder 100 caracteres.
+            </small>
+          </div>
+
+          <div class="field status-field" [ngClass]="tipoEntidadForm.controls.estado.value === 'activo' ? 'active' : 'inactive'">
+            <label for="estado">Estado</label>
+            <select id="estado" formControlName="estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div class="messages">
+            <p *ngIf="successMessage" class="message success">{{ successMessage }}</p>
+            <p *ngIf="errorMessage" class="message error">{{ errorMessage }}</p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar tipo de entidad' : 'Guardar tipo de entidad') }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Tabla tipo_entidad</p>
+            <h3>Listado general</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadTiposEntidad()">Recargar</button>
+        </div>
+
+        <p *ngIf="loading" class="empty-text">Cargando tipos de entidad...</p>
+        <div *ngIf="!loading && tiposEntidad.length === 0" class="empty-box">
+          No hay registros en la tabla <strong>tipo_entidad</strong>.
+        </div>
+
+        <div *ngIf="!loading && tiposEntidad.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Descripcion</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tipoEntidad of tiposEntidad">
+                <td>{{ tipoEntidad.descripcion }}</td>
+                <td>
+                  <span class="status" [ngClass]="tipoEntidad.estado ? 'active' : 'inactive'">
+                    {{ tipoEntidad.estado ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <button type="button" class="table-button" (click)="editTipoEntidad(tipoEntidad)">Editar</button>
+                  <button
+                    type="button"
+                    class="table-button danger"
+                    [disabled]="deletingId === tipoEntidad.id_tipo_entidad"
+                    (click)="removeTipoEntidad(tipoEntidad)"
+                  >
+                    {{ deletingId === tipoEntidad.id_tipo_entidad ? 'Eliminando...' : 'Eliminar' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

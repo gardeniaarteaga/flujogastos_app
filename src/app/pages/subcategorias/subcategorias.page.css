@@ -1,0 +1,165 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.categoria-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.page-title-accent {
+  color: var(--color-primary-strong);
+}
+
+.accordion-section-label {
+  margin-bottom: 0.75rem;
+}
+
+.accordion-section-label span {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.accordion-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.accordion-item {
+  border: 1px solid #e3e8ee;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%);
+  color: var(--color-heading);
+  box-shadow: none;
+}
+
+.accordion-trigger:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.accordion-copy {
+  display: grid;
+  text-align: left;
+}
+
+.accordion-copy strong {
+  font-size: 1rem;
+}
+
+.accordion-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.accordion-count {
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.accordion-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e9f3ff, #d9e8ff);
+  border: 1px solid #b8cdf5;
+  color: var(--color-primary);
+  font-weight: 800;
+  transition: transform 0.2s ease;
+}
+
+.accordion-caret.expanded {
+  transform: rotate(180deg);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.accordion-panel {
+  padding: 0 1rem 1rem;
+}
+
+.accordion-panel .table-wrap {
+  border-radius: 0.6rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  min-width: 42px;
+  padding: 0.6rem 0.75rem;
+}
+
+.pagination-button.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.origin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.origin-badge.default {
+  background: #e7f0ff;
+  color: #2457d6;
+}
+
+.origin-badge.custom {
+  background: #f1e8ff;
+  color: #7a3fe0;
+}
+
+@media (max-width: 720px) {
+  .accordion-trigger,
+  .accordion-meta {
+    align-items: flex-start;
+  }
+
+  .accordion-trigger {
+    flex-direction: column;
+  }
+}

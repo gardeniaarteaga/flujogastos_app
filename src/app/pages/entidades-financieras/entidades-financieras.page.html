@@ -1,0 +1,310 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Categorias
+              </a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child active" routerLink="/entidades-financieras" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de entidad
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Mantenimiento</p>
+        <h2>Entidades Financieras</h2>
+        <p class="lead">
+          Administra el catalogo de <strong>entidades_financieras</strong> y relaciona cada entidad con su
+          tipo correspondiente.
+        </p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="secondary-button" (click)="cancelEdit()">
+          Nueva entidad financiera
+        </button>
+        <button type="button" class="secondary-button" routerLink="/tipo-entidad">Ir a tipo de entidad</button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar entidad financiera' : 'Registrar entidad financiera' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="entidadForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="nombre_entidad">Nombre entidad financiera</label>
+            <input
+              id="nombre_entidad"
+              type="text"
+              formControlName="nombre_entidad"
+              maxlength="100"
+              placeholder="Ejemplo: Banco Agricola, Banco Cuscatlan"
+            />
+            <small *ngIf="entidadForm.controls.nombre_entidad.touched && entidadForm.controls.nombre_entidad.errors?.['required']">
+              El nombre de la entidad financiera es obligatorio.
+            </small>
+            <small *ngIf="entidadForm.controls.nombre_entidad.touched && entidadForm.controls.nombre_entidad.errors?.['maxlength']">
+              El nombre no puede exceder 100 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="tipo_entidad">Tipo de entidad</label>
+            <p class="field-hint">Puedes seleccionarlo de la lista o crear uno nuevo sin salir de esta pantalla.</p>
+            <div class="selector-mode selector-mode-prominent">
+              <label class="mode-option" [class.active]="!isCreatingNewTipoEntidad">
+                <input
+                  type="radio"
+                  name="tipoEntidadMode"
+                  [checked]="!isCreatingNewTipoEntidad"
+                  (change)="setTipoEntidadMode('existente')"
+                />
+                <span>Existente</span>
+              </label>
+              <label class="mode-option" [class.active]="isCreatingNewTipoEntidad">
+                <input
+                  type="radio"
+                  name="tipoEntidadMode"
+                  [checked]="isCreatingNewTipoEntidad"
+                  (change)="setTipoEntidadMode('nuevo')"
+                />
+                <span>Nuevo</span>
+              </label>
+            </div>
+
+            <div class="related-field type-entity-box" [ngClass]="isCreatingNewTipoEntidad ? 'create-mode' : 'select-mode'">
+              <select *ngIf="!isCreatingNewTipoEntidad" id="tipo_entidad" formControlName="tipo_entidad">
+                <option [ngValue]="null">Seleccione un tipo de entidad</option>
+                <option *ngFor="let tipoEntidad of tiposEntidad" [ngValue]="tipoEntidad.id_tipo_entidad">
+                  {{ tipoEntidad.descripcion }}{{ tipoEntidad.estado ? '' : ' (Inactivo)' }}
+                </option>
+              </select>
+
+              <input
+                *ngIf="isCreatingNewTipoEntidad"
+                id="new_tipo_entidad"
+                type="text"
+                formControlName="new_tipo_entidad"
+                maxlength="100"
+                placeholder="Ejemplo: Banco, Cooperativa, Prestamista"
+              />
+            </div>
+
+            <small *ngIf="!isCreatingNewTipoEntidad && tipoEntidadControl.touched && tipoEntidadControl.errors?.['required']">
+              Debes seleccionar un tipo de entidad.
+            </small>
+            <small *ngIf="isCreatingNewTipoEntidad && newTipoEntidadControl.touched && newTipoEntidadControl.errors?.['required']">
+              Debes escribir el nombre del nuevo tipo de entidad.
+            </small>
+            <small *ngIf="isCreatingNewTipoEntidad && newTipoEntidadControl.touched && newTipoEntidadControl.errors?.['maxlength']">
+              El nombre no puede exceder 100 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="pais">Pais</label>
+            <select id="pais" formControlName="pais">
+              <option value="">Seleccione un pais</option>
+              <option *ngFor="let country of countryOptions" [value]="country.code">
+                {{ country.name }} ({{ country.code }})
+              </option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="sitio_web">Sitio web</label>
+            <input id="sitio_web" type="text" formControlName="sitio_web" maxlength="150" />
+            <small *ngIf="entidadForm.controls.sitio_web.touched && entidadForm.controls.sitio_web.errors?.['maxlength']">
+              El sitio web no puede exceder 150 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="telefono_contacto">Telefono de contacto</label>
+            <input id="telefono_contacto" type="text" formControlName="telefono_contacto" maxlength="30" />
+            <small *ngIf="entidadForm.controls.telefono_contacto.touched && entidadForm.controls.telefono_contacto.errors?.['maxlength']">
+              El telefono no puede exceder 30 caracteres.
+            </small>
+          </div>
+
+          <div class="field status-field" [ngClass]="entidadForm.controls.estado.value === 'activo' ? 'active' : 'inactive'">
+            <label for="estado">Estado</label>
+            <select id="estado" formControlName="estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fecha_creacion">Fecha creacion</label>
+            <input id="fecha_creacion" type="text" [value]="fechaCreacionActual | date: 'yyyy-MM-dd'" readonly />
+          </div>
+
+          <div class="messages">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar entidad financiera' : 'Guardar entidad financiera') }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Entidades financieras</p>
+            <h3>Listado general</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadData()">Recargar</button>
+        </div>
+
+        <p *ngIf="loading" class="empty-text">Cargando entidades financieras...</p>
+        <div *ngIf="!loading && entidades.length === 0" class="empty-box">
+          No hay registros de <strong>entidades financieras</strong>.
+        </div>
+
+        <div *ngIf="!loading && entidades.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Entidad</th>
+                <th>Tipo de entidad</th>
+                <th>Pais</th>
+                <th>Telefono</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entidad of paginatedEntidades">
+                <td>
+                  <strong>{{ entidad.nombre_entidad }}</strong>
+                  <div *ngIf="entidad.sitio_web">{{ entidad.sitio_web }}</div>
+                </td>
+                <td>{{ entidad.tipoEntidad?.descripcion || 'Sin tipo asignado' }}</td>
+                <td>{{ getCountryDisplay(entidad.pais) }}</td>
+                <td>{{ entidad.telefono_contacto || '-' }}</td>
+                <td>
+                  <span class="status" [ngClass]="entidad.estado ? 'active' : 'inactive'">
+                    {{ entidad.estado ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <app-maintenance-actions
+                    [showEdit]="canEditEntidad(entidad)"
+                    [showDelete]="canDeleteEntidad(entidad)"
+                    [deleteDisabled]="deletingId === entidad.id_entidad"
+                    (detail)="showEntidadDetail(entidad)"
+                    (edit)="editEntidad(entidad)"
+                    (remove)="removeEntidad(entidad)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!loading && entidades.length > 0" class="pagination">
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === 1"
+            (click)="goToPreviousPage()"
+          >
+            Anterior
+          </button>
+
+          <div class="pagination-pages">
+            <button
+              *ngFor="let page of pageNumbers"
+              type="button"
+              class="pagination-button"
+              [class.active]="page === currentPage"
+              (click)="goToPage(page)"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="secondary-button table-button"
+            [disabled]="currentPage === totalPages"
+            (click)="goToNextPage()"
+          >
+            Siguiente
+          </button>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,325 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Pacifico&display=swap');
+@import './app/shared/styles/admin-shell.css';
+
+:root {
+  --font-sans: 'Manrope', 'Segoe UI', sans-serif;
+  --font-brand: 'Pacifico', cursive;
+  --color-primary: #3f6ad8;
+  --color-primary-strong: #2955c8;
+  --color-primary-soft: #e9f0ff;
+  --color-primary-muted: rgba(63, 106, 216, 0.14);
+  --color-heading: #2c3e50;
+  --color-text: #5c6b77;
+  --color-text-soft: #7a8a99;
+  --color-border: #dfe5ee;
+  --color-border-strong: #c8d2df;
+  --color-surface: rgba(255, 255, 255, 0.96);
+  --color-surface-soft: #f6f8fb;
+  --color-sidebar: #28313f;
+  --color-sidebar-strong: #1f2631;
+  --color-sidebar-text: rgba(255, 255, 255, 0.74);
+  --color-success: #3ac47d;
+  --color-warning: #f7b924;
+  --color-danger: #d92550;
+  --shadow-card: 0 0.625rem 1.875rem rgba(78, 115, 223, 0.08), 0 0.125rem 0.25rem rgba(46, 61, 73, 0.08);
+  --shadow-soft: 0 0.35rem 1rem rgba(44, 62, 80, 0.08);
+  --radius-lg: 1.25rem;
+  --radius-md: 0.9rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top left, rgba(63, 106, 216, 0.1), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(58, 196, 125, 0.08), transparent 24%),
+    linear-gradient(180deg, #f2f4f8 0%, #eef2f7 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.date-entry {
+  position: relative;
+}
+
+.date-entry > input[type='text'] {
+  padding-right: 3.5rem;
+}
+
+.date-picker-button {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-primary);
+  transform: translateY(-50%);
+}
+
+.date-picker-button svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: currentColor;
+}
+
+.date-picker-button:hover,
+.date-picker-button:focus-visible {
+  background: rgba(63, 106, 216, 0.12);
+  outline: none;
+  transform: translateY(-50%);
+}
+
+.date-picker-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7d2e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.finance-scene {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 270px;
+  padding: 1.1rem;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.22));
+}
+
+.scene-card {
+  border-radius: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.scene-card span,
+.scene-card small,
+.preview-panel span,
+.preview-foot small {
+  display: block;
+}
+
+.scene-balance {
+  padding: 1rem 1.05rem;
+}
+
+.scene-balance span,
+.scene-chart-copy span,
+.scene-donut span,
+.preview-panel span,
+.preview-foot small {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scene-balance span,
+.scene-chart-copy span,
+.scene-donut span {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.scene-balance strong,
+.scene-chart-copy strong,
+.scene-donut strong,
+.preview-panel strong {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.scene-balance strong,
+.scene-chart-copy strong,
+.scene-donut strong {
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.preview-panel strong {
+  font-size: 1.35rem;
+}
+
+.scene-balance small,
+.scene-donut small {
+  margin-top: 0.28rem;
+  color: #a7f3d0;
+}
+
+.scene-chart,
+.scene-donut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+}
+
+.scene-bars {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  min-height: 76px;
+}
+
+.bar {
+  width: 0.9rem;
+  border-radius: 999px 999px 0 0;
+}
+
+.bar.income {
+  height: 76px;
+  background: linear-gradient(180deg, #6ee7b7, #10b981);
+}
+
+.bar.expense {
+  height: 52px;
+  background: linear-gradient(180deg, #fdba74, #f97316);
+}
+
+.bar.debt {
+  height: 62px;
+  background: linear-gradient(180deg, #93c5fd, #2563eb);
+}
+
+.bar.savings {
+  height: 40px;
+  background: linear-gradient(180deg, #ddd6fe, #8b5cf6);
+}
+
+.mini-donut {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(15, 23, 42, 0.92) 0 36%, transparent 37%),
+    conic-gradient(#10b981 0 34%, #2563eb 34% 62%, #f97316 62% 84%, rgba(255, 255, 255, 0.2) 84% 100%);
+}
+
+.finance-owner {
+  justify-content: space-between;
+}
+
+.owner-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.owner-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.owner-chip-income {
+  background: rgba(16, 185, 129, 0.16);
+  color: #bbf7d0;
+}
+
+.owner-chip-alert {
+  background: rgba(249, 115, 22, 0.16);
+  color: #fdba74;
+}
+
+.finance-preview {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 164px;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 26%),
+    linear-gradient(180deg, #f5fffd 0%, #f8fafc 100%);
+}
+
+.preview-panel {
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #0f766e, #2563eb);
+  color: #ffffff;
+}
+
+.preview-lines {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.preview-lines i {
+  display: block;
+  height: 0.78rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d6f5ee, #dbeafe);
+}
+
+.preview-lines i:nth-child(1) {
+  width: 92%;
+}
+
+.preview-lines i:nth-child(2) {
+  width: 76%;
+}
+
+.preview-lines i:nth-child(3) {
+  width: 58%;
+}
+
+.preview-foot {
+  padding: 0.8rem 0.95rem;
+  border-radius: 1rem;
+  background: #ecfdf5;
+  color: #047857;
+}

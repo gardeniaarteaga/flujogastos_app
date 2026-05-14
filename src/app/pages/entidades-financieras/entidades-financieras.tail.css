@@ -1,0 +1,58 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.categoria-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field-example {
+  color: var(--color-text-soft);
+}
+
+.type-entity-box {
+  border-radius: 1.2rem;
+  border: 1px dashed var(--color-border-strong);
+  padding: 1rem;
+}
+
+.type-entity-box.select-mode {
+  background: #f9fbff;
+}
+
+.type-entity-box.create-mode {
+  background: #f4f7ff;
+}
+
+.inline-hint {
+  margin-top: 0.7rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  min-width: 42px;
+  padding: 0.6rem 0.75rem;
+}
+
+.pagination-button.active {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #ffffff;
+  border-color: transparent;
+}

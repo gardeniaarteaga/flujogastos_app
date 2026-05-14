@@ -1,0 +1,36 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.inline-hint {
+  margin-top: 0.2rem;
+}
+
+.selector-mode-prominent .mode-option {
+  padding: 0.75rem 1rem;
+  font-weight: 800;
+}
+
+.type-entity-box {
+  margin-top: 0.15rem;
+  border-top-style: solid;
+  border-top-color: rgba(200, 210, 223, 0.85);
+  border-radius: 1rem;
+  background: #f8fbff;
+}
+
+.type-entity-box.select-mode {
+  background: #f7faff;
+}
+
+.type-entity-box.create-mode {
+  background: #f5fcf8;
+  border-top-color: rgba(58, 196, 125, 0.24);
+}

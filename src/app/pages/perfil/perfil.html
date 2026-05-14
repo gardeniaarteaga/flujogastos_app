@@ -1,0 +1,266 @@
+<div class="profile-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias" routerLinkActive="active">Categorias</a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active">Formas de Pago</a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias" routerLinkActive="active">Subcategorias</a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras" routerLinkActive="active">Entidades financieras</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad" routerLinkActive="active">Tipo de entidad</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto" routerLinkActive="active">Tipo de producto</a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Usuarios</a>
+        </div>
+      </div>
+
+      <a class="nav-item" href="#">Reportes</a>
+
+      <a class="nav-item active" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Mi perfil
+      </a>
+    </nav>
+
+    <section class="sidebar-card">
+      <span class="sidebar-label">Sesion</span>
+      <strong>{{ userProfile().fullName }}</strong>
+      <p>{{ userProfile().email }}</p>
+    </section>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Cuenta</p>
+        <h2>Perfil del usuario</h2>
+        <p class="lead">Actualiza tu perfil, define tu pais y cambia tu contrasena desde una sola pantalla.</p>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>Datos del perfil</h3>
+          </div>
+          <span class="pill">{{ profileCompletion() }}% completo</span>
+        </div>
+
+        <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="profile-form" novalidate>
+          <div class="field-grid profile-grid-header">
+            <div class="field">
+              <label for="fullName">Nombre</label>
+              <input id="fullName" type="text" formControlName="fullName" maxlength="60" />
+            </div>
+
+            <div class="field">
+              <label for="email">Correo electronico</label>
+              <input id="email" type="email" formControlName="email" readonly />
+            </div>
+
+            <div class="field">
+              <label for="role">Rol</label>
+              <input id="role" type="text" formControlName="role" maxlength="40" readonly />
+            </div>
+          </div>
+
+          <div class="field-grid profile-grid-location">
+            <div class="field">
+              <label for="country">Pais</label>
+              <select id="country" formControlName="country">
+                <option value="">Selecciona un pais</option>
+                <option *ngFor="let country of countryOptions" [value]="country.name">
+                  {{ country.name }}
+                </option>
+              </select>
+              <small *ngIf="profileForm.controls.country.touched && profileForm.controls.country.errors?.['required']">
+                Debes seleccionar un pais.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="city">Ciudad</label>
+              <input id="city" type="text" formControlName="city" maxlength="80" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="celular">Telefono</label>
+            <div class="phone-inline-grid">
+              <input
+                id="areaCode"
+                class="area-code-input"
+                type="text"
+                formControlName="areaCode"
+                readonly
+                aria-label="Codigo de area"
+              />
+              <input
+                id="celular"
+                type="tel"
+                formControlName="celular"
+                maxlength="20"
+                inputmode="tel"
+                autocomplete="tel-national"
+                [placeholder]="phonePlaceholder"
+                (input)="onPhoneInput()"
+              />
+            </div>
+            <small *ngIf="profileForm.controls.celular.touched && profileForm.controls.celular.errors?.['elSalvadorPhone']">
+              El telefono debe tener el formato 1234-5678.
+            </small>
+            <small *ngIf="profileForm.controls.celular.touched && profileForm.controls.celular.errors?.['genericPhone']">
+              El telefono solo puede contener numeros y guion medio.
+            </small>
+          </div>
+
+          <div class="messages">
+            <p *ngIf="profileSuccessMessage" class="message success">{{ profileSuccessMessage }}</p>
+            <p *ngIf="profileErrorMessage" class="message error">{{ profileErrorMessage }}</p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : 'Guardar perfil' }}
+            </button>
+          </div>
+        </form>
+
+        <section class="password-section">
+          <div class="panel-header password-header">
+            <div>
+              <p class="panel-title">Seguridad</p>
+              <h3>Cambiar contrasena</h3>
+            </div>
+            <span class="pill neutral">{{ today | date: 'yyyy-MM-dd' }}</span>
+          </div>
+
+          <form [formGroup]="passwordChangeForm" (ngSubmit)="onPasswordChangeSubmit()" class="password-form" novalidate>
+            <div class="field-grid">
+              <div class="field">
+                <label for="newPassword">Nueva contrasena</label>
+                <input id="newPassword" type="password" formControlName="newPassword" placeholder="Minimo 6 caracteres" />
+                <small *ngIf="passwordChangeForm.controls.newPassword.touched && passwordChangeForm.controls.newPassword.errors?.['required']">
+                  La nueva contrasena es obligatoria.
+                </small>
+                <small *ngIf="passwordChangeForm.controls.newPassword.touched && passwordChangeForm.controls.newPassword.errors?.['minlength']">
+                  La nueva contrasena debe tener al menos 6 caracteres.
+                </small>
+              </div>
+
+              <div class="field">
+                <label for="confirmPassword">Confirmar contrasena</label>
+                <input id="confirmPassword" type="password" formControlName="confirmPassword" placeholder="Repite la nueva contrasena" />
+                <small *ngIf="passwordChangeForm.controls.confirmPassword.touched && passwordChangeForm.controls.confirmPassword.errors?.['required']">
+                  Debes confirmar la contrasena.
+                </small>
+                <small *ngIf="passwordChangeForm.controls.confirmPassword.touched && passwordChangeForm.controls.confirmPassword.errors?.['minlength']">
+                  La confirmacion debe tener al menos 6 caracteres.
+                </small>
+              </div>
+            </div>
+
+            <div class="messages">
+              <p *ngIf="passwordSuccessMessage" class="message success">{{ passwordSuccessMessage }}</p>
+              <p *ngIf="passwordErrorMessage" class="message error">{{ passwordErrorMessage }}</p>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" [disabled]="changingPassword">
+                {{ changingPassword ? 'Actualizando...' : 'Guardar nueva contrasena' }}
+              </button>
+            </div>
+          </form>
+        </section>
+      </article>
+
+      <article class="panel side-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Sesion activa</p>
+            <h3>Resumen visual</h3>
+          </div>
+          <span class="pill neutral">{{ today | date: 'yyyy-MM-dd' }}</span>
+        </div>
+
+        <div class="profile-highlight">
+          <div class="profile-avatar">{{ initials }}</div>
+          <div>
+            <strong>{{ userProfile().fullName }}</strong>
+            <p>{{ userProfile().role }} | {{ userProfile().country || 'Sin pais definido' }}</p>
+          </div>
+        </div>
+
+        <p class="profile-role-clean">{{ userProfile().areaCode || 'Sin area' }} | {{ userProfile().city || 'Sin ciudad definida' }}</p>
+
+        <div class="summary-block">
+          <span class="summary-label">Usuario logueado</span>
+          <strong>{{ userProfile().email }}</strong>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Telefono</span>
+          <strong>{{ userProfile().celular || 'Sin telefono definido' }}</strong>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Pais y area</span>
+          <strong>{{ userProfile().country || 'Sin pais definido' }} {{ userProfile().areaCode || '' }}</strong>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Ciudad</span>
+          <strong>{{ userProfile().city || 'Sin ciudad definida' }}</strong>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Nivel de perfil</span>
+          <div class="profile-progress">
+            <div class="profile-progress-bar">
+              <span [style.width.%]="profileCompletion()"></span>
+            </div>
+            <strong>{{ profileCompletion() }}%</strong>
+          </div>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-label">Notificaciones</span>
+          <p>{{ userProfile().notificationsLabel }}</p>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>
