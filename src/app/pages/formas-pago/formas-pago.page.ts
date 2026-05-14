@@ -5,6 +5,7 @@ import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angu
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { catchError, firstValueFrom, of, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
@@ -116,10 +117,10 @@ export class FormasPagoPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly alerts = inject(SweetAlertService);
-  private readonly apiUrl = 'http://localhost:3001/api/formas-pago';
-  private readonly entidadesUrl = 'http://localhost:3001/api/entidades-financieras';
-  private readonly tiposEntidadUrl = 'http://localhost:3001/api/tipo-entidad';
-  private readonly tiposUrl = 'http://localhost:3001/api/tipo-producto';
+  private readonly apiUrl = apiUrl('formas-pago');
+  private readonly entidadesUrl = apiUrl('entidades-financieras');
+  private readonly tiposEntidadUrl = apiUrl('tipo-entidad');
+  private readonly tiposUrl = apiUrl('tipo-producto');
   private readonly currentUserId = getCurrentUserId();
   get isAdminSession(): boolean {
     return isAdminUser();

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../config/api.config';
 import { CatalogosTransaccionService } from './catalogos-transaccion.service';
 
 export interface NotificacionItem {
@@ -27,7 +28,7 @@ export class NotificacionesService {
   private readonly http = inject(HttpClient);
   private readonly catalogosTransaccionService = inject(CatalogosTransaccionService);
   private readonly timeoutMs = 10000;
-  private readonly baseUrl = 'http://localhost:3001/api/notificaciones';
+  private readonly baseUrl = apiUrl('notificaciones');
 
   async loadResumen(limite = 8): Promise<NotificacionesResumen> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();

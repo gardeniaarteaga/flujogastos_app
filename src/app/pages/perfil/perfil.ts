@@ -12,6 +12,7 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import { UserProfile, isAdminUser, loadUserProfile, saveUserProfile } from '../../shared/user-profile';
 
@@ -45,7 +46,7 @@ interface UsuarioPerfilResponse {
 export class PerfilPage {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3001/api/usuarios';
+  private readonly apiUrl = apiUrl('usuarios');
 
   readonly countryOptions: CountryOption[] = [
     { name: 'Argentina', areaCode: '+54' },

@@ -5,6 +5,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize, firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
+
 type Estado = 'activo' | 'inactivo';
 
 interface TipoEntidad {
@@ -35,7 +37,7 @@ export class TipoEntidadPage {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly apiUrl = 'http://localhost:3001/api/tipo-entidad';
+  private readonly apiUrl = apiUrl('tipo-entidad');
 
   tiposEntidad: TipoEntidad[] = [];
   maintenanceOpen = true;

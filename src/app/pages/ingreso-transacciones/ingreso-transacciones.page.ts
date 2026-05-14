@@ -15,6 +15,7 @@ import {
 import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import {
   CatalogoCategoria,
@@ -112,7 +113,7 @@ export class IngresoTransaccionesPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly legacyCurrentUserDisplayName = `${this.currentUserProfile.fullName || this.currentUserProfile.username
   } (Tú)`;
-  private readonly apiUrl = 'http://localhost:3001/api/transacciones';
+  private readonly apiUrl = apiUrl('transacciones');
   private readonly flowConfig = this.resolveFlowConfig();
   get isAdminSession(): boolean {
     return isAdminUser();

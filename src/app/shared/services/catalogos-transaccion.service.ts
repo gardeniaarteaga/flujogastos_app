@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 
+import { apiUrl } from '../config/api.config';
 import { getCurrentUserId, loadUserProfile, saveUserProfile } from '../user-profile';
 
 export interface CatalogoFormaPago {
@@ -102,7 +103,7 @@ interface UsuarioResuelto {
 export class CatalogosTransaccionService {
   private readonly http = inject(HttpClient);
   private readonly timeoutMs = 10000;
-  private readonly baseUrl = 'http://localhost:3001/api';
+  private readonly baseUrl = apiUrl();
   private pendingCatalogosRequest: Promise<CatalogosTransaccion> | null = null;
 
   async loadCatalogos(forceRefresh = false): Promise<CatalogosTransaccion> {

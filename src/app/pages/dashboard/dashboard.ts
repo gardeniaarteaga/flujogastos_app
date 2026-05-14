@@ -10,6 +10,7 @@ import {
   CatalogoFormaPago,
   CatalogosTransaccionService,
 } from '../../shared/services/catalogos-transaccion.service';
+import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
 type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -205,7 +206,7 @@ interface DashboardAnalytics {
 export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly catalogosService = inject(CatalogosTransaccionService);
-  private readonly apiUrl = 'http://localhost:3001/api/transacciones';
+  private readonly apiUrl = apiUrl('transacciones');
   private readonly timeoutMs = 10000;
   private readonly currencyFormatter = new Intl.NumberFormat('es-SV', {
     style: 'currency',

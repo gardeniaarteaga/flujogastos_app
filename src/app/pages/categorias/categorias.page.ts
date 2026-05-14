@@ -7,6 +7,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
+import { apiUrl } from '../../shared/config/api.config';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
 import { getCurrentUserId, getCurrentUserRoleId, isAdminUser } from '../../shared/user-profile';
 
@@ -80,8 +81,8 @@ export class CategoriasPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly alerts = inject(SweetAlertService);
-  private readonly apiUrl = 'http://localhost:3001/api/categorias';
-  private readonly subcategoriasUrl = 'http://localhost:3001/api/subcategorias';
+  private readonly apiUrl = apiUrl('categorias');
+  private readonly subcategoriasUrl = apiUrl('subcategorias');
   private readonly currentUserId = getCurrentUserId();
   private readonly currentUserRoleId = getCurrentUserRoleId();
   get isAdminSession(): boolean {

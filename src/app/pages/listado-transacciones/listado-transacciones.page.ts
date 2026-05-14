@@ -24,6 +24,7 @@ import {
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import {
   CatalogoCategoria,
@@ -216,8 +217,8 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly alerts = inject(SweetAlertService);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly router = inject(Router);
-  private readonly apiUrl = 'http://localhost:3001/api/transacciones';
-  private readonly interesesApiUrl = 'http://localhost:3001/api/intereses/calcular';
+  private readonly apiUrl = apiUrl('transacciones');
+  private readonly interesesApiUrl = apiUrl('intereses', 'calcular');
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly currentMonthStartValue = this.formatDateInput(this.getStartOfMonth(this.today));

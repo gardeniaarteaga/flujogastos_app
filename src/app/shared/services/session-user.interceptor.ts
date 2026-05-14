@@ -1,10 +1,11 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
+import { isApiUrl } from '../config/api.config';
 import { getCurrentUserId } from '../user-profile';
 
 export const sessionUserInterceptor: HttpInterceptorFn = (req, next) => {
   const currentUserId = getCurrentUserId();
-  const isApiRequest = req.url.startsWith('http://localhost:3001/api/');
+  const isApiRequest = isApiUrl(req.url);
   const alreadyHasUserParam = req.params.has('id_usuario');
 
   if (!isApiRequest || currentUserId <= 0 || alreadyHasUserParam) {

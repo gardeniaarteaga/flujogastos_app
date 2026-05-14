@@ -5,6 +5,8 @@ import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angu
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize, firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
+
 type Estado = 'activo' | 'inactivo';
 
 interface TipoEntidad {
@@ -51,8 +53,8 @@ interface EntidadFinancieraPayload {
 export class EntidadesFinancierasPage {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3001/api/entidades-financieras';
-  private readonly tiposEntidadUrl = 'http://localhost:3001/api/tipo-entidad';
+  private readonly apiUrl = apiUrl('entidades-financieras');
+  private readonly tiposEntidadUrl = apiUrl('tipo-entidad');
 
   entidades: EntidadFinanciera[] = [];
   tiposEntidad: TipoEntidad[] = [];

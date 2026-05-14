@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { CatalogosTransaccionService } from '../../shared/services/catalogos-transaccion.service';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
 import { seedUserProfileFromLogin } from '../../shared/user-profile';
@@ -36,7 +37,7 @@ export class Login {
   private readonly router = inject(Router);
   private readonly catalogosTransaccionService = inject(CatalogosTransaccionService);
   private readonly alerts = inject(SweetAlertService);
-  private readonly usuariosBaseUrl = 'http://localhost:3001/api/usuarios';
+  private readonly usuariosBaseUrl = apiUrl('usuarios');
   private readonly usuariosUrl = `${this.usuariosBaseUrl}/login`;
 
   loginForm = this.fb.group({

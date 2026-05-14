@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { apiUrl } from '../../shared/config/api.config';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
@@ -57,7 +58,7 @@ export class ParticipantesPage {
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly alerts = inject(SweetAlertService);
-  private readonly apiUrl = 'http://localhost:3001/api/participantes';
+  private readonly apiUrl = apiUrl('participantes');
   private readonly currentUserId = getCurrentUserId();
   readonly pageSize = 10;
   get isAdminSession(): boolean {
