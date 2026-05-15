@@ -229,7 +229,7 @@
 }
 
 .participant-row--titular-cuotas {
-  grid-template-columns: minmax(120px, 0.55fr) minmax(170px, 0.8fr);
+  grid-template-columns: minmax(160px, 0.8fr) minmax(120px, 0.55fr) minmax(170px, 0.8fr);
 }
 
 .cuotas-accordion {

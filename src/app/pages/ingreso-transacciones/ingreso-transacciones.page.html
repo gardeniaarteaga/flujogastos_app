@@ -198,6 +198,9 @@
                 <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['maxTwoDecimals']">
                   Solo se permiten 2 decimales.
                 </small>
+                <small *ngIf="isIncomeMode && incomeMontoHint" class="field-hint">
+                  {{ incomeMontoHint }}
+                </small>
               </div>
             </div>
 
@@ -287,6 +290,19 @@
             </div>
             <div class="participant-block" [formGroup]="titularGroup">
               <div class="participant-row participant-row--titular-cuotas">
+                <div class="field">
+                  <label for="titular_modo_cuotas_ingreso">Modo de cuotas</label>
+                  <select
+                    id="titular_modo_cuotas_ingreso"
+                    formControlName="modo_cuotas"
+                    (change)="onCuotaModeChange(titularGroup)"
+                  >
+                    <option *ngFor="let modo of modosCuotas" [ngValue]="modo.value">
+                      {{ modo.label }}
+                    </option>
+                  </select>
+                </div>
+
                 <div class="field">
                   <label for="titular_cuotas_ingreso">Cuotas</label>
                   <input
@@ -492,6 +508,19 @@
                     </div>
 
                     <div class="field">
+                      <label [for]="'participante_modo_cuotas_' + i">Modo de cuotas</label>
+                      <select
+                        [id]="'participante_modo_cuotas_' + i"
+                        formControlName="modo_cuotas"
+                        (change)="onCuotaModeChange(participanteGroup)"
+                      >
+                        <option *ngFor="let modo of modosCuotas" [ngValue]="modo.value">
+                          {{ modo.label }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div class="field">
                       <label [for]="'participante_cuotas_' + i">Cuotas</label>
                       <input
                         [id]="'participante_cuotas_' + i"
@@ -505,7 +534,7 @@
                     </div>
 
                     <div class="field">
-                      <label [for]="'participante_monto_' + i">Monto</label>
+                      <label [for]="'participante_monto_' + i">{{ getParticipanteMontoLabel(participanteGroup) }}</label>
                       <input
                         [id]="'participante_monto_' + i"
                         type="number"
@@ -530,6 +559,9 @@
                       </small>
                       <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['maxTwoDecimals']">
                         Solo se permiten 2 decimales.
+                      </small>
+                      <small *ngIf="isIncomeMode" class="field-hint">
+                        {{ getParticipanteMontoHint(participanteGroup) }}
                       </small>
                     </div>
 
