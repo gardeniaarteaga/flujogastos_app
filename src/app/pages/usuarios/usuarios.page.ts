@@ -18,6 +18,7 @@ interface Usuario {
   username: string;
   nombre_completo: string | null;
   celular: string | null;
+  pais: string | null;
   codigo_area: string | number | null;
   id_rol: number | null;
   estado: string | null;
@@ -33,10 +34,16 @@ interface UsuarioPayload {
   password?: string;
   nombre_completo?: string;
   celular?: string | null;
+  pais?: string | null;
   codigo_area?: string | number | null;
   id_rol?: number | null;
   estado: 'ACTIVO' | 'INACTIVO';
   cambiar_password?: boolean;
+}
+
+interface CountryOption {
+  name: string;
+  areaCode: string;
 }
 
 interface RoleOption {
@@ -72,6 +79,30 @@ export class UsuariosPage {
     { value: 1, label: 'Administrador' },
     { value: 2, label: 'Usuario' },
   ];
+  readonly countryOptions: CountryOption[] = [
+    { name: 'Argentina', areaCode: '+54' },
+    { name: 'Belice', areaCode: '+501' },
+    { name: 'Bolivia', areaCode: '+591' },
+    { name: 'Brasil', areaCode: '+55' },
+    { name: 'Canada', areaCode: '+1' },
+    { name: 'Chile', areaCode: '+56' },
+    { name: 'Colombia', areaCode: '+57' },
+    { name: 'Costa Rica', areaCode: '+506' },
+    { name: 'Ecuador', areaCode: '+593' },
+    { name: 'El Salvador', areaCode: '+503' },
+    { name: 'Espana', areaCode: '+34' },
+    { name: 'Estados Unidos', areaCode: '+1' },
+    { name: 'Guatemala', areaCode: '+502' },
+    { name: 'Honduras', areaCode: '+504' },
+    { name: 'Mexico', areaCode: '+52' },
+    { name: 'Nicaragua', areaCode: '+505' },
+    { name: 'Panama', areaCode: '+507' },
+    { name: 'Paraguay', areaCode: '+595' },
+    { name: 'Peru', areaCode: '+51' },
+    { name: 'Republica Dominicana', areaCode: '+1' },
+    { name: 'Uruguay', areaCode: '+598' },
+    { name: 'Venezuela', areaCode: '+58' },
+  ];
 
   usuarios: Usuario[] = [];
   currentPage = 1;
@@ -89,6 +120,7 @@ export class UsuariosPage {
     username: this.fb.control('', [Validators.required, Validators.email, Validators.maxLength(255)]),
     password: this.fb.control('', [Validators.required, Validators.minLength(6), Validators.maxLength(255)]),
     nombre_completo: this.fb.control('', [Validators.maxLength(255)]),
+    pais: this.fb.control('', [Validators.maxLength(80)]),
     codigo_area: this.fb.control('', [Validators.maxLength(10)]),
     celular: this.fb.control('', [Validators.maxLength(9)]),
     id_rol: this.fb.control(2, [Validators.required]),
@@ -98,6 +130,9 @@ export class UsuariosPage {
 
   constructor() {
     this.setPasswordRequired(true);
+    this.usuarioForm.controls.pais.valueChanges.subscribe((pais) => {
+      this.syncAreaCodeForCountry(pais ?? '');
+    });
     void this.loadUsuarios();
   }
 
@@ -149,11 +184,13 @@ export class UsuariosPage {
       const currentProfile = loadUserProfile();
       const currentProfilePhone = currentProfile.celular.trim();
       const currentProfileAreaCode = currentProfile.areaCode.trim();
+      const currentProfileCountry = currentProfile.country.trim();
       this.usuarios = usuarios.map((usuario) =>
         usuario.id_usuario === currentProfile.id_usuario
           ? {
               ...usuario,
               celular: usuario.celular || currentProfilePhone || null,
+              pais: usuario.pais || currentProfileCountry || null,
               codigo_area: usuario.codigo_area || currentProfileAreaCode || null,
             }
           : usuario,
@@ -185,7 +222,8 @@ export class UsuariosPage {
       username: usuario.username,
       password: '',
       nombre_completo: usuario.nombre_completo ?? '',
-      codigo_area: this.normalizeAreaCodeInput(usuario.codigo_area),
+      pais: usuario.pais ?? '',
+      codigo_area: this.getAreaCodeForCountry(usuario.pais) || this.normalizeAreaCodeInput(usuario.codigo_area),
       celular: this.formatCelular(usuario.celular),
       id_rol: usuario.id_rol ?? 2,
       estado: usuario.estado === 'INACTIVO' ? 'inactivo' : 'activo',
@@ -200,6 +238,7 @@ export class UsuariosPage {
       username: '',
       password: '',
       nombre_completo: '',
+      pais: '',
       codigo_area: '',
       celular: '',
       id_rol: 2,
@@ -218,15 +257,6 @@ export class UsuariosPage {
   onCelularInput(): void {
     const control = this.usuarioForm.controls.celular;
     const formattedValue = this.formatCelular(control.value);
-
-    if (control.value !== formattedValue) {
-      control.setValue(formattedValue, { emitEvent: false });
-    }
-  }
-
-  onAreaCodeInput(): void {
-    const control = this.usuarioForm.controls.codigo_area;
-    const formattedValue = this.normalizeAreaCodeInput(control.value);
 
     if (control.value !== formattedValue) {
       control.setValue(formattedValue, { emitEvent: false });
@@ -261,7 +291,8 @@ export class UsuariosPage {
     const payload: UsuarioPayload = {
       username: rawValue.username?.trim().toLowerCase() ?? '',
       nombre_completo: rawValue.nombre_completo?.trim() || undefined,
-      codigo_area: this.normalizeAreaCodeForStorage(rawValue.codigo_area),
+      pais: rawValue.pais?.trim() || null,
+      codigo_area: this.normalizeAreaCodeForStorage(this.getAreaCodeForCountry(rawValue.pais)),
       celular: this.normalizeCelularForStorage(rawValue.celular),
       estado: rawValue.estado === 'inactivo' ? 'INACTIVO' : 'ACTIVO',
     };
@@ -377,7 +408,8 @@ export class UsuariosPage {
       [
         { label: 'Usuario', value: usuario.username },
         { label: 'Nombre completo', value: usuario.nombre_completo },
-        { label: 'Telefono', value: this.formatPhoneDisplay(usuario.codigo_area, usuario.celular) || '-' },
+        { label: 'Pais', value: usuario.pais || '-' },
+        { label: 'Telefono', value: this.formatPhoneDisplay(usuario.codigo_area, usuario.celular, usuario.pais) || '-' },
         { label: 'Rol', value: this.getRoleLabel(usuario.id_rol) },
         { label: 'Estado', value: usuario.estado === 'INACTIVO' ? 'Inactivo' : 'Activo' },
         { label: 'Fecha creacion', value: usuario.fecha_creacion.slice(0, 10) },
@@ -414,8 +446,13 @@ export class UsuariosPage {
     return `${digits.slice(0, 4)}-${digits.slice(4)}`;
   }
 
-  formatPhoneDisplay(codigoArea?: string | number | null, celular?: string | null): string {
-    const areaCode = this.normalizeAreaCodeInput(codigoArea);
+  formatPhoneDisplay(
+    codigoArea?: string | number | null,
+    celular?: string | null,
+    pais?: string | null,
+  ): string {
+    const areaCode =
+      this.normalizeAreaCodeInput(codigoArea) || this.normalizeAreaCodeInput(this.getAreaCodeForCountry(pais));
     const phone = this.formatCelular(celular);
 
     if (areaCode && phone) {
@@ -479,7 +516,21 @@ export class UsuariosPage {
 
   private normalizeAreaCodeInput(value?: string | number | null): string {
     return String(value ?? '')
-      .replace(/\D/g, '')
+      .replace(/[^\d+]/g, '')
       .slice(0, 10);
+  }
+
+  private getAreaCodeForCountry(countryName?: string | null): string {
+    const normalizedCountry = countryName?.trim() ?? '';
+    return this.countryOptions.find((country) => country.name === normalizedCountry)?.areaCode ?? '';
+  }
+
+  private syncAreaCodeForCountry(countryName: string): void {
+    const areaCodeControl = this.usuarioForm.controls.codigo_area;
+    const nextAreaCode = this.getAreaCodeForCountry(countryName);
+
+    if ((areaCodeControl.value ?? '') !== nextAreaCode) {
+      areaCodeControl.setValue(nextAreaCode, { emitEvent: false });
+    }
   }
 }

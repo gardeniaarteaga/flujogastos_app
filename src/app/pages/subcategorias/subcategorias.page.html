@@ -94,6 +94,9 @@
           <div>
             <p class="panel-title">Formulario</p>
             <h3>{{ isEditing ? 'Editar subcategoria' : 'Registrar subcategoria' }}</h3>
+            <p *ngIf="isRole2Session" class="empty-text">
+              Puedes agregar subcategorias a categorias predeterminadas y propias, pero no eliminarlas.
+            </p>
           </div>
           <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
         </div>

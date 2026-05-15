@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   HostListener,
@@ -23,16 +24,21 @@ import { clearUserProfile, loadUserProfile, saveUserProfile } from '../user-prof
   styleUrl: './session-strip.component.css',
 })
 export class SessionStripComponent implements OnInit, OnDestroy {
+  private readonly notificationsAutoOpenStorageKey =
+    'flujo-gastos.notifications.auto-open';
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly catalogosTransaccionService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
+  private readonly notificationsLimit = 8;
   readonly userProfile = loadUserProfile();
   notifications: NotificacionItem[] = [];
   unreadNotifications = 0;
   notificationsOpen = false;
   isLoadingNotifications = false;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private destroyed = false;
 
   get userInitials(): string {
     return this.userProfile.fullName
@@ -44,13 +50,15 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.loadNotifications();
+    void this.loadNotifications({ openAfterLoad: this.consumeNotificationsAutoOpenRequest() });
     this.refreshTimer = setInterval(() => {
       void this.loadNotifications();
     }, 45000);
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
       this.refreshTimer = null;
@@ -66,6 +74,7 @@ export class SessionStripComponent implements OnInit, OnDestroy {
 
   async toggleNotifications(): Promise<void> {
     this.notificationsOpen = !this.notificationsOpen;
+    this.flushView();
 
     if (this.notificationsOpen) {
       await this.loadNotifications();
@@ -74,21 +83,30 @@ export class SessionStripComponent implements OnInit, OnDestroy {
 
   async openNotification(notification: NotificacionItem): Promise<void> {
     if (!notification.leida) {
-      const updatedNotification = await this.notificacionesService.markAsRead(
-        notification.id_notificacion,
-      );
-
-      this.notifications = this.notifications.map((currentNotification) =>
-        currentNotification.id_notificacion === updatedNotification.id_notificacion
-          ? updatedNotification
-          : currentNotification,
-      );
-      this.unreadNotifications = Math.max(0, this.unreadNotifications - 1);
-      this.syncNotificationsLabel();
+      await this.markNotificationAsRead(notification);
     }
 
     this.notificationsOpen = false;
     await this.router.navigate(['/transacciones/listado']);
+  }
+
+  async markNotificationAsRead(notification: NotificacionItem): Promise<void> {
+    if (notification.leida) {
+      return;
+    }
+
+    const updatedNotification = await this.notificacionesService.markAsRead(
+      notification.id_notificacion,
+    );
+
+    this.notifications = this.notifications.filter(
+      (currentNotification) =>
+        currentNotification.id_notificacion !== updatedNotification.id_notificacion,
+    );
+    this.unreadNotifications = Math.max(0, this.unreadNotifications - 1);
+    this.syncNotificationsLabel();
+    this.flushView();
+    await this.loadNotifications({ preserveStateOnError: true });
   }
 
   async markAllNotificationsAsRead(): Promise<void> {
@@ -98,14 +116,16 @@ export class SessionStripComponent implements OnInit, OnDestroy {
       return;
     }
 
-    await this.notificacionesService.markAllAsRead();
-    this.notifications = this.notifications.map((notification) => ({
-      ...notification,
-      leida: true,
-      fecha_leida: notification.fecha_leida ?? new Date().toISOString(),
-    }));
-    this.unreadNotifications = 0;
+    const result = await this.notificacionesService.markAllAsRead();
+    const readIds = new Set(result.ids_notificacion);
+
+    this.notifications = this.notifications.filter(
+      (notification) => !readIds.has(notification.id_notificacion),
+    );
+    this.unreadNotifications = Math.max(0, this.unreadNotifications - result.updated);
     this.syncNotificationsLabel();
+    this.flushView();
+    await this.loadNotifications({ preserveStateOnError: true });
   }
 
   formatNotificationDate(value: string): string {
@@ -123,11 +143,14 @@ export class SessionStripComponent implements OnInit, OnDestroy {
 
   async logout(): Promise<void> {
     this.catalogosTransaccionService.clearCache();
+    this.clearNotificationsAutoOpenRequest();
     clearUserProfile();
     await this.router.navigate(['/']);
   }
 
-  private async loadNotifications(): Promise<void> {
+  private async loadNotifications(
+    options: { preserveStateOnError?: boolean; openAfterLoad?: boolean } = {},
+  ): Promise<void> {
     if (this.isLoadingNotifications) {
       return;
     }
@@ -135,17 +158,56 @@ export class SessionStripComponent implements OnInit, OnDestroy {
     this.isLoadingNotifications = true;
 
     try {
-      const resumen = await this.notificacionesService.loadResumen();
+      const resumen = await this.notificacionesService.loadResumen(this.notificationsLimit);
       this.notifications = resumen.items;
       this.unreadNotifications = resumen.pendientes;
       this.syncNotificationsLabel();
+      if (options.openAfterLoad) {
+        this.notificationsOpen = true;
+      }
+      this.flushView();
     } catch {
-      this.notifications = [];
-      this.unreadNotifications = 0;
-      this.syncNotificationsLabel();
+      if (!options.preserveStateOnError) {
+        this.notifications = [];
+        this.unreadNotifications = 0;
+        this.syncNotificationsLabel();
+        this.flushView();
+      }
     } finally {
       this.isLoadingNotifications = false;
+      this.flushView();
     }
+  }
+
+  private consumeNotificationsAutoOpenRequest(): boolean {
+    if (typeof sessionStorage === 'undefined') {
+      return false;
+    }
+
+    const shouldAutoOpen =
+      sessionStorage.getItem(this.notificationsAutoOpenStorageKey) === '1';
+
+    if (shouldAutoOpen) {
+      sessionStorage.removeItem(this.notificationsAutoOpenStorageKey);
+    }
+
+    return shouldAutoOpen;
+  }
+
+  private clearNotificationsAutoOpenRequest(): void {
+    if (typeof sessionStorage === 'undefined') {
+      return;
+    }
+
+    sessionStorage.removeItem(this.notificationsAutoOpenStorageKey);
+  }
+
+  private flushView(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.cdr.detectChanges();
   }
 
   private syncNotificationsLabel(): void {

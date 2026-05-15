@@ -8,6 +8,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import { apiUrl } from '../../shared/config/api.config';
+import { filterVisibleForCurrentUser } from '../../shared/catalog-visibility';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
 import { getCurrentUserId, getCurrentUserRoleId, isAdminUser } from '../../shared/user-profile';
 
@@ -85,11 +86,15 @@ export class CategoriasPage implements OnInit {
   private readonly subcategoriasUrl = apiUrl('subcategorias');
   private readonly currentUserId = getCurrentUserId();
   private readonly currentUserRoleId = getCurrentUserRoleId();
+  private categoriaEditMode: 'full' | 'subcategorias' | null = null;
+  private categoriaEnEdicion: Categoria | null = null;
   get isAdminSession(): boolean {
     return isAdminUser();
   }
 
   categorias: Categoria[] = [];
+  catalogSubcategorias: Subcategoria[] = [];
+  expandedCategoriaIds = new Set<number>();
   currentPage = 1;
   transactionsOpen = false;
   maintenanceOpen = false;
@@ -133,8 +138,28 @@ export class CategoriasPage implements OnInit {
     return this.editingId !== null;
   }
 
+  get isRole2Session(): boolean {
+    return this.currentUserRoleId === 2;
+  }
+
+  get isSubcategoriaAppendMode(): boolean {
+    return this.categoriaEditMode === 'subcategorias';
+  }
+
   get shouldShowSubcategoriasSection(): boolean {
     return this.loadingSubcategorias || this.subcategoriasSectionEnabled;
+  }
+
+  get submitButtonLabel(): string {
+    if (this.saving) {
+      return 'Guardando...';
+    }
+
+    if (this.isSubcategoriaAppendMode) {
+      return 'Guardar subcategorias';
+    }
+
+    return this.isEditing ? 'Actualizar categoria' : 'Guardar categoria';
   }
 
   get subcategoriasArray(): FormArray<FormControl<string | null>> {
@@ -163,16 +188,34 @@ export class CategoriasPage implements OnInit {
     this.errorMessage = '';
 
     try {
-      this.categorias = await firstValueFrom(
-        this.http
-          .get<Categoria[]>(this.apiUrl, {
-            params: { id_usuario: this.currentUserId },
-          })
-          .pipe(timeout(10000)),
+      const [categorias, subcategorias] = await Promise.all([
+        firstValueFrom(
+          this.http
+            .get<Categoria[]>(this.apiUrl, {
+              params: { id_usuario: this.currentUserId },
+            })
+            .pipe(timeout(10000)),
+        ),
+        firstValueFrom(
+          this.http
+            .get<Subcategoria[]>(this.subcategoriasUrl, {
+              params: { id_usuario: this.currentUserId },
+            })
+            .pipe(timeout(10000)),
+        ),
+      ]);
+
+      this.categorias = filterVisibleForCurrentUser(categorias, this.currentUserId);
+      this.catalogSubcategorias = filterVisibleForCurrentUser(
+        subcategorias,
+        this.currentUserId,
       );
+      this.expandedCategoriaIds.clear();
       this.currentPage = 1;
     } catch {
       this.categorias = [];
+      this.catalogSubcategorias = [];
+      this.expandedCategoriaIds.clear();
       this.currentPage = 1;
       this.errorMessage =
         'No se pudieron cargar las categorias. Revisa si el backend esta encendido, si responde en localhost:3001 y vuelve a intentar.';
@@ -184,18 +227,22 @@ export class CategoriasPage implements OnInit {
   }
 
   async editCategoria(categoria: Categoria): Promise<void> {
-    if (!this.canManageCategoria(categoria)) {
-      this.errorMessage = 'No tienes permisos para editar esta categoria.';
+    if (!this.canOpenCategoriaEditor(categoria)) {
+      this.errorMessage = 'No tienes permisos para gestionar esta categoria.';
       await this.alerts.warning('Accion no permitida', this.errorMessage);
       return;
     }
 
+    const appendOnlyMode = !this.canManageCategoria(categoria) && this.canAppendSubcategoriasToCategoria(categoria);
+
     this.editingId = categoria.id_categoria;
+    this.categoriaEnEdicion = categoria;
     this.successMessage = '';
     this.errorMessage = '';
     this.categoriaForm.controls.nombre_categoria.setValue(categoria.nombre_categoria);
     this.categoriaForm.controls.descripcion.setValue(categoria.descripcion ?? '');
     this.categoriaForm.controls.estado.setValue(categoria.estado ? 'activo' : 'inactivo');
+    this.setCategoriaEditMode(appendOnlyMode ? 'subcategorias' : 'full');
     await this.loadSubcategoriasForCategoria(categoria.id_categoria);
     this.categoriaForm.markAsPristine();
     this.categoriaForm.markAsUntouched();
@@ -203,12 +250,14 @@ export class CategoriasPage implements OnInit {
 
   resetForm(): void {
     this.editingId = null;
+    this.categoriaEnEdicion = null;
     this.categoriaForm.controls.nombre_categoria.reset('');
     this.categoriaForm.controls.descripcion.reset('');
     this.categoriaForm.controls.estado.reset('activo');
     this.loadedSubcategorias = [];
     this.subcategoriaFieldIds = [];
     this.subcategoriasSectionEnabled = false;
+    this.setCategoriaEditMode(null);
     this.resetSubcategoriaFields();
     this.categoriaForm.markAsPristine();
     this.categoriaForm.markAsUntouched();
@@ -235,6 +284,14 @@ export class CategoriasPage implements OnInit {
 
     this.saving = true;
     const subcategoriasDraft = this.getSubcategoriasDraft();
+    const appendOnlyMode = this.isSubcategoriaAppendMode;
+
+    if (appendOnlyMode && subcategoriasDraft.length === 0) {
+      this.saving = false;
+      this.errorMessage = 'Agrega al menos una subcategoria nueva antes de guardar.';
+      await this.alerts.warning('Sin cambios', this.errorMessage);
+      return;
+    }
 
     const payload: CategoriaPayload = {
       nombre_categoria: this.categoriaForm.value.nombre_categoria?.trim() ?? '',
@@ -249,17 +306,31 @@ export class CategoriasPage implements OnInit {
       let savedCategoria: Categoria;
 
       if (wasEditing && currentId !== null) {
-        savedCategoria = await firstValueFrom(
-          this.http.patch<Categoria>(`${this.apiUrl}/${currentId}`, payload, {
-            params: { id_usuario: this.currentUserId },
-          }),
-        );
+        if (appendOnlyMode) {
+          const categoriaActual = this.categoriaEnEdicion ?? this.categorias.find(
+            (categoria) => categoria.id_categoria === currentId,
+          );
 
-        this.categorias = this.categorias
-          .map((categoria) =>
-            categoria.id_categoria === savedCategoria.id_categoria ? savedCategoria : categoria,
-          )
-          .sort((a, b) => a.id_categoria - b.id_categoria);
+          if (!categoriaActual) {
+            throw new Error('No se encontro la categoria en edicion.');
+          }
+
+          savedCategoria = categoriaActual;
+        } else {
+          savedCategoria = await firstValueFrom(
+            this.http.patch<Categoria>(`${this.apiUrl}/${currentId}`, payload, {
+              params: { id_usuario: this.currentUserId },
+            }),
+          );
+        }
+
+        if (!appendOnlyMode) {
+          this.categorias = this.categorias
+            .map((categoria) =>
+              categoria.id_categoria === savedCategoria.id_categoria ? savedCategoria : categoria,
+            )
+            .sort((a, b) => a.id_categoria - b.id_categoria);
+        }
       } else {
         savedCategoria = await firstValueFrom(
           this.http.post<Categoria>(this.apiUrl, payload, {
@@ -270,15 +341,19 @@ export class CategoriasPage implements OnInit {
       }
 
       const subcategoriasResult = await this.syncSubcategorias(savedCategoria, subcategoriasDraft);
-      const baseMessage = wasEditing
-        ? 'Categoria actualizada correctamente.'
-        : 'Categoria guardada correctamente.';
+      const baseMessage = appendOnlyMode
+        ? 'Subcategorias guardadas correctamente.'
+        : wasEditing
+          ? 'Categoria actualizada correctamente.'
+          : 'Categoria guardada correctamente.';
 
       if (subcategoriasResult.failed.length > 0) {
         this.editingId = savedCategoria.id_categoria;
+        this.categoriaEnEdicion = savedCategoria;
         this.categoriaForm.controls.nombre_categoria.setValue(savedCategoria.nombre_categoria);
         this.categoriaForm.controls.descripcion.setValue(savedCategoria.descripcion ?? '');
         this.categoriaForm.controls.estado.setValue(savedCategoria.estado ? 'activo' : 'inactivo');
+        this.setCategoriaEditMode(appendOnlyMode ? 'subcategorias' : 'full');
         this.subcategoriasSectionEnabled = true;
         this.resetSubcategoriaFields(
           [
@@ -290,6 +365,7 @@ export class CategoriasPage implements OnInit {
             ...Array.from({ length: subcategoriasResult.failed.length }, () => null),
           ],
         );
+        this.syncLoadedSubcategoriaControlsState();
         this.successMessage =
           this.buildSubcategoriasSuccessMessage(baseMessage, subcategoriasResult);
         this.errorMessage =
@@ -366,12 +442,15 @@ export class CategoriasPage implements OnInit {
   }
 
   async showCategoriaDetail(categoria: Categoria): Promise<void> {
+    const subcategoriasDetalle = this.getCategoriaSubcategoriasDetail(categoria.id_categoria);
+
     await this.alerts.detail(
       'Detalle de categoria',
       [
         { label: 'Nombre', value: categoria.nombre_categoria },
         { label: 'Descripcion', value: categoria.descripcion },
         { label: 'Estado', value: categoria.estado ? 'Activo' : 'Inactivo' },
+        { label: 'Subcategorias asociadas', value: subcategoriasDetalle },
         {
           label: 'Origen',
           value: categoria.es_predeterminada ? 'Predeterminada' : 'Personalizada',
@@ -380,11 +459,17 @@ export class CategoriasPage implements OnInit {
       ],
       {
         subtitle: `Categoria #${categoria.id_categoria}`,
+        width: '56rem',
       },
     );
   }
 
   onSubcategoriasToggle(event: Event): void {
+    if (this.isSubcategoriaAppendMode) {
+      this.subcategoriasSectionEnabled = true;
+      return;
+    }
+
     const enabled = (event.target as HTMLInputElement).checked;
     this.subcategoriasSectionEnabled = enabled;
 
@@ -396,6 +481,7 @@ export class CategoriasPage implements OnInit {
   addSubcategoriaField(): void {
     this.subcategoriasArray.push(this.createSubcategoriaControl());
     this.subcategoriaFieldIds.push(null);
+    this.syncLoadedSubcategoriaControlsState();
   }
 
   async removeSubcategoriaField(index: number): Promise<void> {
@@ -433,6 +519,9 @@ export class CategoriasPage implements OnInit {
         this.loadedSubcategorias = this.loadedSubcategorias.filter(
           (subcategoria) => subcategoria.id_subcategoria !== subcategoriaId,
         );
+        this.catalogSubcategorias = this.catalogSubcategorias.filter(
+          (item) => item.id_subcategoria !== subcategoriaId,
+        );
         await this.alerts.success(
           'Subcategoria eliminada',
           'La subcategoria seleccionada fue eliminada correctamente.',
@@ -463,12 +552,20 @@ export class CategoriasPage implements OnInit {
       return true;
     }
 
+    if (this.isRole2Session && categoria.es_predeterminada) {
+      return false;
+    }
+
     return categoria.puede_editar ?? categoria.id_usuario === this.currentUserId;
   }
 
   canDeleteCategoria(categoria: Categoria): boolean {
     if (this.isAdminSession) {
       return true;
+    }
+
+    if (this.isRole2Session && categoria.es_predeterminada) {
+      return false;
     }
 
     return categoria.puede_eliminar ?? categoria.id_usuario === this.currentUserId;
@@ -479,7 +576,23 @@ export class CategoriasPage implements OnInit {
       return true;
     }
 
+    if (this.isRole2Session) {
+      return false;
+    }
+
     return subcategoria.puede_eliminar ?? subcategoria.id_usuario === this.currentUserId;
+  }
+
+  canManageSubcategoria(subcategoria: Subcategoria): boolean {
+    if (this.isAdminSession) {
+      return true;
+    }
+
+    if (this.isRole2Session && subcategoria.es_predeterminada) {
+      return false;
+    }
+
+    return subcategoria.puede_editar ?? subcategoria.id_usuario === this.currentUserId;
   }
 
   canDeleteLoadedSubcategoriaAt(index: number): boolean {
@@ -489,6 +602,37 @@ export class CategoriasPage implements OnInit {
     );
 
     return !subcategoria || this.canDeleteSubcategoria(subcategoria);
+  }
+
+  canOpenCategoriaEditor(categoria: Categoria): boolean {
+    return this.canManageCategoria(categoria) || this.canAppendSubcategoriasToCategoria(categoria);
+  }
+
+  canAppendSubcategoriasToCategoria(categoria: Categoria): boolean {
+    return this.isRole2Session && Boolean(categoria.es_predeterminada);
+  }
+
+  getCategoriaEditTitle(categoria: Categoria): string {
+    return this.canManageCategoria(categoria) ? 'Editar' : 'Agregar subcategorias';
+  }
+
+  toggleCategoriaAccordion(idCategoria: number): void {
+    if (this.expandedCategoriaIds.has(idCategoria)) {
+      this.expandedCategoriaIds.delete(idCategoria);
+      return;
+    }
+
+    this.expandedCategoriaIds.add(idCategoria);
+  }
+
+  isCategoriaAccordionExpanded(idCategoria: number): boolean {
+    return this.expandedCategoriaIds.has(idCategoria);
+  }
+
+  getCategoriaSubcategorias(idCategoria: number): Subcategoria[] {
+    return this.catalogSubcategorias
+      .filter((subcategoria) => subcategoria.id_categoria === idCategoria)
+      .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
   }
 
   goToPage(page: number): void {
@@ -521,6 +665,8 @@ export class CategoriasPage implements OnInit {
       this.subcategoriasArray.push(this.createSubcategoriaControl(values[index] ?? ''));
       this.subcategoriaFieldIds.push(ids[index] ?? null);
     }
+
+    this.syncLoadedSubcategoriaControlsState();
   }
 
   private getSubcategoriasDraft(): SubcategoriaDraft[] {
@@ -548,6 +694,10 @@ export class CategoriasPage implements OnInit {
       const loadedSubcategoria = this.loadedSubcategorias.find(
         (subcategoria) => subcategoria.id_subcategoria === idSubcategoria,
       );
+
+      if (loadedSubcategoria && !this.canManageSubcategoria(loadedSubcategoria)) {
+        return [];
+      }
 
       return [
         {
@@ -656,6 +806,16 @@ export class CategoriasPage implements OnInit {
       : baseMessage;
   }
 
+  private getCategoriaSubcategoriasDetail(idCategoria: number): string {
+    const visibles = this.getCategoriaSubcategorias(idCategoria);
+
+    if (visibles.length === 0) {
+      return 'Sin subcategorias asociadas';
+    }
+
+    return visibles.map((subcategoria, index) => `${index + 1}. ${subcategoria.nombre_subcategoria}`).join('\n');
+  }
+
   private async loadSubcategoriasForCategoria(idCategoria: number): Promise<void> {
     this.loadingSubcategorias = true;
     this.loadedSubcategorias = [];
@@ -670,14 +830,16 @@ export class CategoriasPage implements OnInit {
           })
           .pipe(timeout(10000)),
       );
-      const subcategoriasCategoria = subcategorias
+      const visibles = filterVisibleForCurrentUser(subcategorias, this.currentUserId);
+      const subcategoriasCategoria = visibles
         .filter((subcategoria) => subcategoria.id_categoria === idCategoria)
         .sort((a, b) =>
           a.nombre_subcategoria.localeCompare(b.nombre_subcategoria),
         );
 
+      this.catalogSubcategorias = visibles;
       this.loadedSubcategorias = subcategoriasCategoria;
-      this.subcategoriasSectionEnabled = subcategoriasCategoria.length > 0;
+      this.subcategoriasSectionEnabled = this.isSubcategoriaAppendMode || subcategoriasCategoria.length > 0;
       this.resetSubcategoriaFields(
         subcategoriasCategoria.map((subcategoria) => subcategoria.nombre_subcategoria),
         subcategoriasCategoria.map((subcategoria) => subcategoria.id_subcategoria),
@@ -693,5 +855,40 @@ export class CategoriasPage implements OnInit {
       this.loadingSubcategorias = false;
       this.cdr.detectChanges();
     }
+  }
+
+  private setCategoriaEditMode(mode: 'full' | 'subcategorias' | null): void {
+    this.categoriaEditMode = mode;
+
+    const { nombre_categoria, descripcion, estado } = this.categoriaForm.controls;
+    const shouldLockCategoriaFields = mode === 'subcategorias';
+
+    if (shouldLockCategoriaFields) {
+      nombre_categoria.disable({ emitEvent: false });
+      descripcion.disable({ emitEvent: false });
+      estado.disable({ emitEvent: false });
+    } else {
+      nombre_categoria.enable({ emitEvent: false });
+      descripcion.enable({ emitEvent: false });
+      estado.enable({ emitEvent: false });
+    }
+
+    this.syncLoadedSubcategoriaControlsState();
+  }
+
+  private syncLoadedSubcategoriaControlsState(): void {
+    this.subcategoriaControls.forEach((control, index) => {
+      const subcategoriaId = this.subcategoriaFieldIds[index] ?? null;
+      const loadedSubcategoria = this.loadedSubcategorias.find(
+        (subcategoria) => subcategoria.id_subcategoria === subcategoriaId,
+      );
+      const shouldDisable = loadedSubcategoria ? !this.canManageSubcategoria(loadedSubcategoria) : false;
+
+      if (shouldDisable) {
+        control.disable({ emitEvent: false });
+      } else {
+        control.enable({ emitEvent: false });
+      }
+    });
   }
 }

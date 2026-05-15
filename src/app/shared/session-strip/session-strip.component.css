@@ -227,19 +227,27 @@
 .notification-item {
   width: 100%;
   display: grid;
-  gap: 0.25rem;
-  padding: 0.8rem 0.85rem;
+  gap: 0.55rem;
+  padding: 0.75rem 0.8rem;
   border: 1px solid #e3eaf2;
   border-radius: 0.8rem;
   background: #f9fbfd;
-  text-align: left;
-  cursor: pointer;
   box-shadow: none;
 }
 
 .notification-item.is-unread {
   border-color: rgba(41, 98, 255, 0.24);
   background: rgba(41, 98, 255, 0.06);
+}
+
+.notification-open {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .notification-item strong {
@@ -257,6 +265,22 @@
 .notification-item span {
   color: #8b97a6;
   font-size: 0.72rem;
+}
+
+.notification-mark-read {
+  justify-self: end;
+  border: 1px solid #d7e1ec;
+  border-radius: 999px;
+  padding: 0.32rem 0.65rem;
+  background: #ffffff;
+  color: #4f5f70;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notification-mark-read:hover {
+  background: #f3f7fb;
 }
 
 .notifications-empty {

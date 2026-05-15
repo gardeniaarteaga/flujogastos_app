@@ -6,6 +6,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
+import { filterVisibleForCurrentUser } from '../../shared/catalog-visibility';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
@@ -120,6 +121,10 @@ export class SubcategoriasPage implements OnInit {
     return this.editingId !== null;
   }
 
+  get isRole2Session(): boolean {
+    return this.currentUserRoleId === 2;
+  }
+
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.subcategorias.length / this.pageSize));
   }
@@ -173,13 +178,14 @@ export class SubcategoriasPage implements OnInit {
     this.errorMessage = '';
 
     try {
-      this.subcategorias = await firstValueFrom(
+      const subcategorias = await firstValueFrom(
         this.http
           .get<Subcategoria[]>(this.apiUrl, {
             params: { id_usuario: this.currentUserId },
           })
           .pipe(timeout(10000)),
       );
+      this.subcategorias = filterVisibleForCurrentUser(subcategorias, this.currentUserId);
       this.expandedCategoriaIds.clear();
       this.currentPage = 1;
     } catch {
@@ -210,13 +216,14 @@ export class SubcategoriasPage implements OnInit {
 
   async loadCategorias(): Promise<void> {
     try {
-      this.categorias = await firstValueFrom(
+      const categorias = await firstValueFrom(
         this.http
           .get<CategoriaOption[]>(this.categoriasUrl, {
             params: { id_usuario: this.currentUserId },
           })
           .pipe(timeout(10000)),
       );
+      this.categorias = filterVisibleForCurrentUser(categorias, this.currentUserId);
     } catch {
       this.categorias = [];
     }
@@ -389,12 +396,20 @@ export class SubcategoriasPage implements OnInit {
       return true;
     }
 
+    if (this.isRole2Session && subcategoria.es_predeterminada) {
+      return false;
+    }
+
     return subcategoria.puede_editar ?? subcategoria.id_usuario === this.currentUserId;
   }
 
   canDeleteSubcategoria(subcategoria: Subcategoria): boolean {
     if (this.isAdminSession) {
       return true;
+    }
+
+    if (this.isRole2Session) {
+      return false;
     }
 
     return subcategoria.puede_eliminar ?? subcategoria.id_usuario === this.currentUserId;

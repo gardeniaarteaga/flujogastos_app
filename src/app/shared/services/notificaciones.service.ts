@@ -23,6 +23,12 @@ export interface NotificacionesResumen {
   items: NotificacionItem[];
 }
 
+export interface MarcarTodasLeidasResponse {
+  updated: number;
+  ids_notificacion: number[];
+  fecha_leida: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificacionesService {
   private readonly http = inject(HttpClient);
@@ -45,12 +51,12 @@ export class NotificacionesService {
     );
   }
 
-  async markAllAsRead(): Promise<{ updated: number }> {
+  async markAllAsRead(): Promise<MarcarTodasLeidasResponse> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
 
     return firstValueFrom(
       this.http
-        .patch<{ updated: number }>(
+        .patch<MarcarTodasLeidasResponse>(
           `${this.baseUrl}/marcar-todas`,
           {},
           {

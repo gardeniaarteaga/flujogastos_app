@@ -141,6 +141,19 @@
           </div>
 
           <div class="field">
+            <label for="pais">Pais</label>
+            <select id="pais" formControlName="pais">
+              <option value="">Selecciona un pais</option>
+              <option *ngFor="let country of countryOptions" [value]="country.name">
+                {{ country.name }}
+              </option>
+            </select>
+            <small *ngIf="usuarioForm.controls.pais.touched && usuarioForm.controls.pais.errors?.['maxlength']">
+              El pais no puede exceder 80 caracteres.
+            </small>
+          </div>
+
+          <div class="field">
             <label for="celular">Telefono</label>
             <div class="phone-field-grid">
               <input
@@ -149,11 +162,10 @@
                 type="text"
                 formControlName="codigo_area"
                 maxlength="10"
-                inputmode="numeric"
+                readonly
                 autocomplete="tel-country-code"
                 placeholder="Area"
                 aria-label="Codigo de area"
-                (input)="onAreaCodeInput()"
               />
               <input
                 id="celular"
@@ -237,7 +249,7 @@
               <tr *ngFor="let usuario of paginatedUsuarios">
                 <td>{{ usuario.username }}</td>
                 <td>{{ usuario.nombre_completo || '-' }}</td>
-                <td>{{ formatPhoneDisplay(usuario.codigo_area, usuario.celular) || '-' }}</td>
+                <td>{{ formatPhoneDisplay(usuario.codigo_area, usuario.celular, usuario.pais) || '-' }}</td>
                 <td>{{ getRoleLabel(usuario.id_rol) }}</td>
                 <td>
                   <span class="status" [ngClass]="usuario.estado === 'INACTIVO' ? 'inactive' : 'active'">

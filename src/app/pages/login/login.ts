@@ -31,6 +31,8 @@ interface UsuarioSesion {
   styleUrl: './login.css',
 })
 export class Login {
+  private readonly notificationsAutoOpenStorageKey =
+    'flujo-gastos.notifications.auto-open';
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
@@ -199,8 +201,17 @@ export class Login {
       areaCode: usuario.codigo_area,
       city: usuario.ciudad,
     });
+    this.requestNotificationsAutoOpen();
     this.catalogosTransaccionService.clearCache();
     await this.router.navigate(['/dashboard']);
+  }
+
+  private requestNotificationsAutoOpen(): void {
+    if (typeof sessionStorage === 'undefined') {
+      return;
+    }
+
+    sessionStorage.setItem(this.notificationsAutoOpenStorageKey, '1');
   }
 
   private async showAuthError(title: string, message: string): Promise<void> {

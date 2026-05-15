@@ -53,16 +53,27 @@
             @if (notifications.length > 0) {
               <div class="notifications-list">
                 @for (notification of notifications; track notification.id_notificacion) {
-                  <button
-                    type="button"
-                    class="notification-item"
-                    [class.is-unread]="!notification.leida"
-                    (click)="openNotification(notification)"
-                  >
-                    <strong>{{ notification.titulo }}</strong>
-                    <p>{{ notification.mensaje }}</p>
-                    <span>{{ formatNotificationDate(notification.fecha_creacion) }}</span>
-                  </button>
+                  <article class="notification-item" [class.is-unread]="!notification.leida">
+                    <button
+                      type="button"
+                      class="notification-open"
+                      (click)="openNotification(notification)"
+                    >
+                      <strong>{{ notification.titulo }}</strong>
+                      <p>{{ notification.mensaje }}</p>
+                      <span>{{ formatNotificationDate(notification.fecha_creacion) }}</span>
+                    </button>
+
+                    @if (!notification.leida) {
+                      <button
+                        type="button"
+                        class="notification-mark-read"
+                        (click)="markNotificationAsRead(notification)"
+                      >
+                        Marcar leida
+                      </button>
+                    }
+                  </article>
                 }
               </div>
             } @else {

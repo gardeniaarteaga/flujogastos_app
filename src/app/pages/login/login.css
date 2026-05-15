@@ -41,8 +41,7 @@
   color: #ffffff;
 }
 
-.hero-badge,
-.section-kicker {
+.hero-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.4rem 0.72rem;
@@ -153,24 +152,6 @@
   gap: 1rem;
   padding: 2.4rem 2.1rem;
   background: linear-gradient(180deg, #fffefb 0%, #ffffff 100%);
-}
-
-.card-top {
-  display: grid;
-  gap: 1rem;
-}
-
-.section-kicker {
-  margin: 0;
-  background: #dbf5ef;
-  color: #0f766e;
-}
-
-.card-preview {
-  overflow: hidden;
-  border-radius: 1.2rem;
-  border: 1px solid #d9ebe5;
-  box-shadow: 0 1rem 2rem rgba(148, 163, 184, 0.12);
 }
 
 .login-card h2 {

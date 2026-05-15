@@ -93,9 +93,12 @@
         <div class="panel-header">
           <div>
             <p class="panel-title">Formulario</p>
-            <h3>{{ isEditing ? 'Editar categoria' : 'Registrar categoria' }}</h3>
+            <h3>{{ isSubcategoriaAppendMode ? 'Agregar subcategorias' : (isEditing ? 'Editar categoria' : 'Registrar categoria') }}</h3>
+            <p *ngIf="isSubcategoriaAppendMode" class="empty-text">
+              Esta categoria es predeterminada. Puedes agregar nuevas subcategorias y editar solo las creadas por tu usuario.
+            </p>
           </div>
-          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+          <span class="pill">{{ isSubcategoriaAppendMode ? 'Subcategorias' : (isEditing ? 'Edicion' : 'Nuevo') }}</span>
         </div>
 
         <form [formGroup]="categoriaForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
@@ -126,6 +129,7 @@
                     id="crear_subcategorias"
                     type="checkbox"
                     [checked]="shouldShowSubcategoriasSection"
+                    [disabled]="isSubcategoriaAppendMode"
                     (change)="onSubcategoriasToggle($event)"
                   />
                   <span>Agregar subcategorias</span>
@@ -185,9 +189,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" [disabled]="saving">
-              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar categoria' : 'Guardar categoria') }}
-            </button>
+            <button type="submit" [disabled]="saving">{{ submitButtonLabel }}</button>
             <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
               Cancelar
             </button>
@@ -209,45 +211,114 @@
           No hay registros en la tabla <strong>categorias</strong>.
         </div>
 
-        <div *ngIf="!loading && categorias.length > 0" class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre categoria</th>
-                <th>Origen</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let categoria of paginatedCategorias">
-                <td>{{ categoria.nombre_categoria }}</td>
-                <td>
+        <div *ngIf="!loading && categorias.length > 0" class="accordion-section-label">
+          <span>Categorias</span>
+        </div>
+
+        <div *ngIf="!loading && categorias.length > 0" class="accordion-list">
+          <article *ngFor="let categoria of paginatedCategorias" class="accordion-item">
+            <div class="accordion-trigger categoria-accordion-trigger">
+              <div class="accordion-copy categoria-accordion-grid">
+                <div class="categoria-accordion-main">
+                  <strong>{{ categoria.nombre_categoria }}</strong>
+                </div>
+
+                <div class="categoria-accordion-field">
+                  <span class="categoria-accordion-label">Origen</span>
                   <span
                     class="origin-badge"
                     [ngClass]="categoria.es_predeterminada ? 'default' : 'custom'"
                   >
                     {{ categoria.es_predeterminada ? 'Predeterminada' : 'Personalizada' }}
                   </span>
-                </td>
-                <td>
+                </div>
+
+                <div class="categoria-accordion-field">
+                  <span class="categoria-accordion-label">Estado</span>
                   <span class="status" [ngClass]="categoria.estado ? 'active' : 'inactive'">
                     {{ categoria.estado ? 'Activo' : 'Inactivo' }}
                   </span>
-                </td>
-                <td class="actions-cell">
-                  <app-maintenance-actions
-                    [showEdit]="canManageCategoria(categoria)"
-                    [showDelete]="canDeleteCategoria(categoria)"
-                    [deleteDisabled]="deletingId === categoria.id_categoria"
-                    (detail)="showCategoriaDetail(categoria)"
-                    (edit)="editCategoria(categoria)"
-                    (remove)="removeCategoria(categoria)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+
+                <div class="categoria-accordion-field categoria-accordion-actions">
+                  <span class="categoria-accordion-label">Acciones</span>
+                  <div class="actions-cell">
+                    <app-maintenance-actions
+                      [showEdit]="canOpenCategoriaEditor(categoria)"
+                      [showDelete]="canDeleteCategoria(categoria)"
+                      [editTitle]="getCategoriaEditTitle(categoria)"
+                      [deleteDisabled]="deletingId === categoria.id_categoria"
+                      (detail)="showCategoriaDetail(categoria)"
+                      (edit)="editCategoria(categoria)"
+                      (remove)="removeCategoria(categoria)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="accordion-meta categoria-accordion-meta categoria-accordion-toggle"
+                (click)="toggleCategoriaAccordion(categoria.id_categoria)"
+              >
+                <span class="accordion-count">
+                  {{ getCategoriaSubcategorias(categoria.id_categoria).length }} subcategorias
+                </span>
+                <span
+                  class="accordion-caret"
+                  [class.expanded]="isCategoriaAccordionExpanded(categoria.id_categoria)"
+                >
+                  v
+                </span>
+              </button>
+            </div>
+
+            <div *ngIf="isCategoriaAccordionExpanded(categoria.id_categoria)" class="accordion-panel">
+              <div class="categoria-subcategorias-panel-header">
+                <strong>Subcategorias asociadas</strong>
+                <span>Solo consulta</span>
+              </div>
+
+              <div
+                *ngIf="getCategoriaSubcategorias(categoria.id_categoria).length > 0; else emptyCategoriaSubcategorias"
+                class="table-wrap"
+              >
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nombre subcategoria</th>
+                      <th>Origen</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let subcategoria of getCategoriaSubcategorias(categoria.id_categoria)">
+                      <td>{{ subcategoria.nombre_subcategoria }}</td>
+                      <td>
+                        <span
+                          class="origin-badge"
+                          [ngClass]="subcategoria.es_predeterminada ? 'default' : 'custom'"
+                        >
+                          {{ subcategoria.es_predeterminada ? 'Predeterminada' : 'Personalizada' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="status" [ngClass]="subcategoria.estado ? 'active' : 'inactive'">
+                          {{ subcategoria.estado ? 'Activo' : 'Inactivo' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <ng-template #emptyCategoriaSubcategorias>
+                <p class="empty-text categoria-subcategorias-empty">
+                  Esta categoria no tiene subcategorias visibles asociadas.
+                </p>
+              </ng-template>
+            </div>
+          </article>
         </div>
 
         <div *ngIf="!loading && categorias.length > 0" class="pagination">

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 
 import { apiUrl } from '../config/api.config';
+import { filterVisibleForCurrentUser } from '../catalog-visibility';
 import { getCurrentUserId, loadUserProfile, saveUserProfile } from '../user-profile';
 
 export interface CatalogoFormaPago {
@@ -190,8 +191,8 @@ export class CatalogosTransaccionService {
       entidadesFinancieras: entidadesFinancierasResult.data,
       tiposEntidad: tiposEntidadResult.data,
       participantes: participantesResult.data,
-      categorias: categoriasResult.data,
-      subcategorias: subcategoriasResult.data,
+      categorias: filterVisibleForCurrentUser(categoriasResult.data, currentUserId),
+      subcategorias: filterVisibleForCurrentUser(subcategoriasResult.data, currentUserId),
       estadosTransaccion: estadosTransaccionResult.data,
       failedCatalogs,
     };
