@@ -344,6 +344,7 @@ export class ListadoTransaccionesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.refreshProgramacionForAllGroups();
+        this.refreshEstadoTransaccionForEdit();
       });
 
     this.aplicarPagosForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -516,6 +517,10 @@ export class ListadoTransaccionesPage implements OnInit {
 
   get currentUserProfileValue() {
     return loadUserProfile();
+  }
+
+  get isImmediatePaymentSelectedForEdit(): boolean {
+    return this.selectedFormaPago?.tipo_producto?.pago_inmediato === true;
   }
 
   get currentUserDisplayName(): string {
@@ -1881,6 +1886,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.refreshProgramacionForAllGroups();
     this.onFormaPagoChange();
     this.onCategoriaChange();
+    this.refreshEstadoTransaccionForEdit();
   }
 
   private async openEditModal(transaccion: TransaccionListado): Promise<void> {
@@ -2001,6 +2007,7 @@ export class ListadoTransaccionesPage implements OnInit {
         tipo_entidad: '',
         cuotas_sin_intereses: false,
       });
+      this.refreshEstadoTransaccionForEdit();
       return;
     }
 
@@ -2021,6 +2028,8 @@ export class ListadoTransaccionesPage implements OnInit {
         emitEvent: false,
       });
     }
+
+    this.refreshEstadoTransaccionForEdit();
   }
 
   onCategoriaChange(): void {
@@ -2036,11 +2045,154 @@ export class ListadoTransaccionesPage implements OnInit {
     }
   }
 
+  private refreshEstadoTransaccionForEdit(): void {
+    if (!this.isEditing) {
+      return;
+    }
+
+    const estadoName = this.resolveEstadoTransaccionNameForEdit();
+    const estadoSeleccionado =
+      this.estadosTransaccion.find(
+        (item) => item.nombre_estado.trim().toUpperCase() === estadoName,
+      ) ?? null;
+
+    if (!estadoSeleccionado) {
+      return;
+    }
+
+    this.transaccionForm.controls.id_estado.setValue(estadoSeleccionado.id_estado, {
+      emitEvent: false,
+    });
+    this.transaccionForm.controls.id_estado.updateValueAndValidity({
+      emitEvent: false,
+    });
+  }
+
+  private resolveEstadoTransaccionNameForEdit(): string {
+    return this.isEditingIncomeMode
+      ? this.resolveIncomeEstadoNameForEdit()
+      : this.resolveExpenseEstadoNameForEdit();
+  }
+
+  private resolveExpenseEstadoNameForEdit(): string {
+    if (!this.hasAppliedPagosInEditor) {
+      return this.isImmediatePaymentSelectedForEdit ? 'PAGADO' : 'PENDIENTE';
+    }
+
+    const detalles = this.buildDetallesEstadoSnapshotForEdit();
+    const hayPendientes = detalles.some(
+      (detalle) => detalle.saldoPendienteCentavos > 0,
+    );
+    const hayPagados = detalles.some(
+      (detalle) => detalle.montoPagadoTotalCentavos > 0,
+    );
+
+    if (hayPendientes && hayPagados) {
+      return 'PAGO PARCIAL';
+    }
+
+    if (hayPagados || (this.isImmediatePaymentSelectedForEdit && !hayPendientes)) {
+      return 'PAGADO';
+    }
+
+    return this.isImmediatePaymentSelectedForEdit ? 'PAGADO' : 'PENDIENTE';
+  }
+
+  private resolveIncomeEstadoNameForEdit(): string {
+    const detalles = this.buildDetallesEstadoSnapshotForEdit();
+
+    if (detalles.length === 0) {
+      return 'PENDIENTE';
+    }
+
+    if (detalles.every((detalle) => detalle.saldoPendienteCentavos === 0)) {
+      return 'PAGADO';
+    }
+
+    const today = this.normalizeDateOnly(this.today);
+    const hayFechaProgramadaVencida = detalles.some((detalle) => {
+      const fechaProgramada = this.normalizeDateOnly(detalle.fecha_programada);
+      return Boolean(fechaProgramada) && fechaProgramada < today;
+    });
+    const hayPagosAplicados = detalles.some(
+      (detalle) => detalle.montoPagadoTotalCentavos > 0,
+    );
+
+    return hayFechaProgramadaVencida || hayPagosAplicados
+      ? 'PAGO PARCIAL'
+      : 'PENDIENTE';
+  }
+
+  private buildDetallesEstadoSnapshotForEdit(): Array<{
+    fecha_programada: string | null;
+    montoPagadoTotalCentavos: number;
+    saldoPendienteCentavos: number;
+  }> {
+    const detallesPorParticipante = new Map<number, ParticipanteDetalleListado[]>();
+
+    [...this.editorDetallesOriginales]
+      .filter((detalle) => detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID)
+      .sort((left, right) => {
+        if (left.id_participante !== right.id_participante) {
+          return left.id_participante - right.id_participante;
+        }
+
+        if (left.numero_cuota !== right.numero_cuota) {
+          return left.numero_cuota - right.numero_cuota;
+        }
+
+        return left.id - right.id;
+      })
+      .forEach((detalle) => {
+        const detallesParticipante =
+          detallesPorParticipante.get(detalle.id_participante) ?? [];
+        detallesParticipante.push(detalle);
+        detallesPorParticipante.set(detalle.id_participante, detallesParticipante);
+      });
+
+    return this.participantesDetalleArray.controls.flatMap((group) => {
+      const cuotasActuales = this.getCuotasPayload(group);
+      const idParticipante = group.controls.id_participante.value;
+      const detallesOriginales =
+        idParticipante !== null
+          ? (detallesPorParticipante.get(idParticipante) ?? [])
+          : [];
+
+      return cuotasActuales.map((cuota, index) => {
+        const detalleOriginal = detallesOriginales[index] ?? null;
+        const montoCuotaCentavos = this.toCents(
+          this.normalizeDecimalValue(Number(cuota.monto ?? 0)),
+        );
+        const montoPagadoCentavos = this.toCents(
+          Number(detalleOriginal?.monto_pagado ?? 0),
+        );
+        const interesPagadoCentavos = this.toCents(
+          Number(detalleOriginal?.interes_pagado ?? 0),
+        );
+        const interesPendienteCentavos = Math.max(
+          0,
+          this.toCents(Number(detalleOriginal?.interes_pendiente ?? 0)),
+        );
+
+        return {
+          fecha_programada:
+            cuota.fecha_programada ?? detalleOriginal?.fecha_programada ?? null,
+          montoPagadoTotalCentavos:
+            Math.max(0, montoPagadoCentavos) + Math.max(0, interesPagadoCentavos),
+          saldoPendienteCentavos:
+            Math.max(0, montoCuotaCentavos - montoPagadoCentavos) +
+            interesPendienteCentavos,
+        };
+      });
+    });
+  }
+
   async onSubmit(): Promise<void> {
     this.successMessage = '';
     this.errorMessage = '';
 
     this.normalizeFormForSubmit();
+    this.refreshEstadoTransaccionForEdit();
 
     if (!this.isEditing || this.editingTransaccionId === null) {
       await this.alerts.warning(
@@ -2325,6 +2477,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   onDiaProgramadoBlur(group: ParticipanteDetalleForm): void {
@@ -2343,6 +2496,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     diaControl.updateValueAndValidity({ emitEvent: false });
     this.refreshProgramacionCuotas(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   onCuotaModeChange(group: ParticipanteDetalleForm): void {
@@ -2364,10 +2518,12 @@ export class ListadoTransaccionesPage implements OnInit {
       this.transaccionForm.controls.monto.setValue(siguienteMonto, { emitEvent: false });
       this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
       this.syncCuotasWithMonto(group);
+      this.refreshEstadoTransaccionForEdit();
       return;
     }
 
     this.updatePorcentajeFromMonto(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   onParticipantePorcentajeInput(group: ParticipanteDetalleForm): void {
@@ -3532,6 +3688,7 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   private syncCuotasCount(group: ParticipanteDetalleForm): void {
@@ -3551,6 +3708,7 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   private getMinimumCuotasAllowedForGroup(group: ParticipanteDetalleForm): number {
@@ -3685,6 +3843,7 @@ export class ListadoTransaccionesPage implements OnInit {
       );
       cuotasEditables[0]?.controls.monto.updateValueAndValidity({ emitEvent: false });
       this.refreshProgramacionCuotas(group);
+      this.refreshEstadoTransaccionForEdit();
       return;
     }
 
@@ -3701,6 +3860,7 @@ export class ListadoTransaccionesPage implements OnInit {
     ultimaCuota?.controls.monto.setValue(montoUltimaCuota, { emitEvent: false });
     ultimaCuota?.controls.monto.updateValueAndValidity({ emitEvent: false });
     this.refreshProgramacionCuotas(group);
+    this.refreshEstadoTransaccionForEdit();
   }
 
   private validateCuotasConfiguration(): boolean {
