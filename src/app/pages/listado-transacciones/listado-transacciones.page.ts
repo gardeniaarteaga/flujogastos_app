@@ -21,7 +21,13 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import { filter, firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
@@ -155,6 +161,16 @@ interface TransaccionListado {
   participantes_detalle: ParticipanteDetalleListado[];
 }
 
+interface DetalleTransaccionListadoRow {
+  transaccion: TransaccionListado;
+  detalle: ParticipanteDetalleListado;
+  nombre_mostrado: string;
+  descripcion: string;
+  metodo_pago: string | null;
+  categoria: string | null;
+  subcategoria: string | null;
+}
+
 interface UpdateTransaccionPayload {
   fecha: string;
   monto: number;
@@ -231,8 +247,11 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly alerts = inject(SweetAlertService);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly apiUrl = apiUrl('transacciones');
   private readonly interesesApiUrl = apiUrl('intereses', 'calcular');
+  readonly viewMode =
+    this.route.snapshot.data['viewMode'] === 'detalle' ? 'detalle' : 'transacciones';
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly currentMonthStartValue = this.formatDateInput(this.getStartOfMonth(this.today));
@@ -486,6 +505,52 @@ export class ListadoTransaccionesPage implements OnInit {
 
       return true;
     });
+  }
+
+  get isDetalleViewMode(): boolean {
+    return this.viewMode === 'detalle';
+  }
+
+  get filteredDetalleTransacciones(): DetalleTransaccionListadoRow[] {
+    const filtros = this.filtrosForm.getRawValue();
+    const estadoFiltro = this.normalizeText(filtros.estado ?? '');
+
+    return this.buildDetalleTransaccionRows()
+      .filter((row) => {
+        const estadoDetalle = this.normalizeText(row.detalle.nombre_estado ?? '');
+        const estadoCoincideFiltro = !!estadoFiltro && estadoDetalle === estadoFiltro;
+
+        if (!this.isEstadoVisibleEnListado(estadoDetalle) && !estadoCoincideFiltro) {
+          return false;
+        }
+
+        if (filtros.prioritarios && !this.isDetallePrioritario(row.detalle)) {
+          return false;
+        }
+
+        if (estadoFiltro && estadoDetalle !== estadoFiltro) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((left, right) => this.compareDetalleRowsByFechaProgramada(left, right));
+  }
+
+  get pageEyebrow(): string {
+    return this.isDetalleViewMode ? 'Resumen' : 'Transacciones';
+  }
+
+  get pageTitle(): string {
+    return this.isDetalleViewMode ? 'Pago Rapido' : 'Listado de Transacciones';
+  }
+
+  get panelTitle(): string {
+    return this.isDetalleViewMode ? 'Detalle de cuotas' : 'Transacciones';
+  }
+
+  get panelSubtitle(): string {
+    return this.isDetalleViewMode ? 'Detalle programado para pago' : 'Listado general';
   }
 
   get currentUserIdValue(): number {
@@ -1061,6 +1126,38 @@ export class ListadoTransaccionesPage implements OnInit {
     }
   }
 
+  async openPaymentModalForDetalle(
+    row: DetalleTransaccionListadoRow,
+    event?: Event,
+  ): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (!this.canPagarDetalle(row)) {
+      return;
+    }
+
+    try {
+      const transaccionParaPago = this.buildPaymentModalTransaccion(
+        row.transaccion,
+        [row.detalle],
+      );
+      this.editModalOpen = false;
+      this.paymentTransaccionId = row.transaccion.id_transaccion;
+      this.paymentModalTransaccion = transaccionParaPago;
+      this.loadTransaccionIntoEditor(transaccionParaPago, false);
+      this.paymentModalOpenedAt = Date.now();
+      setTimeout(() => {
+        this.paymentModalOpen = true;
+        this.cdr.detectChanges();
+      });
+    } catch (error) {
+      console.error('Error opening detail payment modal', error);
+      this.errorMessage = 'No se pudieron cargar los datos del detalle para pagar.';
+      await this.alerts.error('No se pudo abrir pago', this.errorMessage);
+    }
+  }
+
   openDetailModal(transaccion: TransaccionListado, event?: Event): void {
     event?.stopPropagation();
     this.detailModalTransaccion = this.buildDetailModalTransaccion(transaccion);
@@ -1073,11 +1170,27 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   canPagarTransaccion(transaccion: TransaccionListado): boolean {
-    return !this.isCreditoTransaccion(transaccion) && !this.isAnuladaTransaccion(transaccion);
+    if (this.isAnuladaTransaccion(transaccion)) {
+      return false;
+    }
+
+    return this.getParticipantesDetalleForPayment(transaccion).some(
+      (detalle) =>
+        detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID &&
+        this.toCents(Number(detalle.saldo_pendiente ?? 0)) > 0,
+    );
+  }
+
+  canPagarDetalle(row: DetalleTransaccionListadoRow): boolean {
+    return (
+      this.canPagarTransaccion(row.transaccion) &&
+      row.detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID &&
+      this.toCents(Number(row.detalle.saldo_pendiente ?? 0)) > 0
+    );
   }
 
   canEditTransaccion(transaccion: TransaccionListado): boolean {
-    return transaccion.es_propietario && !this.isCreditoTransaccion(transaccion);
+    return transaccion.es_propietario;
   }
 
   canAnularTransaccion(transaccion: TransaccionListado): boolean {
@@ -2636,8 +2749,26 @@ export class ListadoTransaccionesPage implements OnInit {
     return transaccion.id_transaccion;
   }
 
+  trackDetalleTransaccion(index: number, row: DetalleTransaccionListadoRow): number {
+    return row.detalle.id;
+  }
+
   trackDetalleCuota(_index: number, detalle: ParticipanteDetalleListado): number {
     return detalle.id;
+  }
+
+  getDetalleRowParticipanteLabel(row: DetalleTransaccionListadoRow): string {
+    if (row.detalle.es_titular) {
+      return this.currentUserDisplayName;
+    }
+
+    return row.detalle.nombre_participante?.trim() || 'Participante';
+  }
+
+  getDetalleRowCategoriaLabel(row: DetalleTransaccionListadoRow): string {
+    const categoria = row.categoria?.trim() || 'Sin categoria';
+    const subcategoria = row.subcategoria?.trim();
+    return subcategoria ? `${categoria} / ${subcategoria}` : categoria;
   }
 
   getTransaccionTitle(
@@ -2870,6 +3001,22 @@ export class ListadoTransaccionesPage implements OnInit {
     return detallesAsociados.length > 0 ? detallesAsociados : detalles;
   }
 
+  private buildDetalleTransaccionRows(): DetalleTransaccionListadoRow[] {
+    return this.transacciones.flatMap((transaccion) =>
+      this.getParticipantesDetalleForPayment(transaccion).map((detalle) => ({
+        transaccion,
+        detalle,
+        nombre_mostrado: detalle.es_titular
+          ? this.currentUserDisplayName
+          : (detalle.nombre_participante ?? 'Participante'),
+        descripcion: this.getTransaccionTitle(transaccion),
+        metodo_pago: transaccion.nombre_forma_pago ?? detalle.nombre_forma_pago ?? null,
+        categoria: transaccion.nombre_categoria ?? null,
+        subcategoria: transaccion.nombre_subcategoria ?? null,
+      })),
+    );
+  }
+
   private hasPriorityPendingSchedule(transaccion: TransaccionListado): boolean {
     const today = this.getDateOnlyValue(new Date());
     const limitDate = this.addDays(today, PRIORITY_WINDOW_DAYS);
@@ -2891,6 +3038,56 @@ export class ListadoTransaccionesPage implements OnInit {
 
       return scheduledDate >= today && scheduledDate <= limitDate;
     });
+  }
+
+  private isDetallePrioritario(detalle: ParticipanteDetalleListado): boolean {
+    if (detalle.id_estado === ESTADO_TRANSACCION_ANULADA_ID) {
+      return false;
+    }
+
+    if (Number(detalle.saldo_pendiente ?? 0) <= 0) {
+      return false;
+    }
+
+    const today = this.getDateOnlyValue(new Date());
+    const limitDate = this.addDays(today, PRIORITY_WINDOW_DAYS);
+    const scheduledDate = this.parseIsoDateOnly(detalle.fecha_programada);
+
+    if (!scheduledDate) {
+      return false;
+    }
+
+    return scheduledDate >= today && scheduledDate <= limitDate;
+  }
+
+  private compareDetalleRowsByFechaProgramada(
+    left: DetalleTransaccionListadoRow,
+    right: DetalleTransaccionListadoRow,
+  ): number {
+    const leftDate = this.parseIsoDateOnly(left.detalle.fecha_programada);
+    const rightDate = this.parseIsoDateOnly(right.detalle.fecha_programada);
+
+    if (leftDate && rightDate && leftDate.getTime() !== rightDate.getTime()) {
+      return leftDate.getTime() - rightDate.getTime();
+    }
+
+    if (leftDate && !rightDate) {
+      return -1;
+    }
+
+    if (!leftDate && rightDate) {
+      return 1;
+    }
+
+    if (left.transaccion.id_transaccion !== right.transaccion.id_transaccion) {
+      return left.transaccion.id_transaccion - right.transaccion.id_transaccion;
+    }
+
+    if (left.detalle.numero_cuota !== right.detalle.numero_cuota) {
+      return left.detalle.numero_cuota - right.detalle.numero_cuota;
+    }
+
+    return left.detalle.id - right.detalle.id;
   }
 
   private detalleTienePagosAplicados(
@@ -3163,6 +3360,11 @@ export class ListadoTransaccionesPage implements OnInit {
 
     try {
       await this.loadTransacciones();
+
+      if (this.isDetalleViewMode) {
+        this.closePaymentModal();
+        this.clearSelection(false);
+      }
     } catch (error) {
       this.errorMessage = this.getErrorMessage(error, fallbackErrorMessage);
       throw error;
@@ -4284,11 +4486,50 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private buildPaymentModalTransaccion(
     transaccion: TransaccionListado,
+    detallesOverride?: ParticipanteDetalleListado[],
   ): TransaccionListado {
-    return this.buildTransaccionWithInteresEnCuotas({
+    const detalles = detallesOverride ?? this.getParticipantesDetalleForPayment(transaccion);
+    const transaccionParaPago = this.buildTransaccionWithInteresEnCuotas({
       ...transaccion,
-      participantes_detalle: this.getParticipantesDetalleForPayment(transaccion),
+      participantes_detalle: detalles,
     });
+
+    if (!detallesOverride) {
+      return transaccionParaPago;
+    }
+
+    const detallesAjustados = this.getParticipantesDetalleSafe(transaccionParaPago);
+    const monto = this.roundMoneyValue(
+      detallesAjustados.reduce((sum, detalle) => sum + Number(detalle.monto ?? 0), 0),
+    );
+    const intereses = this.roundMoneyValue(
+      detallesAjustados.reduce(
+        (sum, detalle) =>
+          sum +
+          Number(detalle.interes_pagado ?? 0) +
+          Number(detalle.interes_pendiente ?? 0),
+        0,
+      ),
+    );
+    const saldoPendiente = this.roundMoneyValue(
+      detallesAjustados.reduce((sum, detalle) => sum + Number(detalle.saldo_pendiente ?? 0), 0),
+    );
+    const detalleEstado = detallesAjustados[0]?.nombre_estado ?? transaccionParaPago.nombre_estado;
+    const fechaUltimoPago =
+      detallesAjustados
+        .map((detalle) => detalle.fecha_pago)
+        .filter((value): value is string => Boolean(value))
+        .sort()
+        .pop() ?? transaccionParaPago.fecha_ultimo_pago;
+
+    return {
+      ...transaccionParaPago,
+      monto,
+      intereses,
+      saldo_pendiente: saldoPendiente,
+      nombre_estado: detalleEstado,
+      fecha_ultimo_pago: fechaUltimoPago,
+    };
   }
 
   private shouldApplyInteresToCuota(
@@ -4939,6 +5180,11 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private isListadoTransaccionesRoute(url: string): boolean {
-    return url === '/transacciones/listado' || url.startsWith('/transacciones/listado?');
+    return (
+      url === '/transacciones/listado' ||
+      url.startsWith('/transacciones/listado?') ||
+      url === '/resumen/detalle-transacciones' ||
+      url.startsWith('/resumen/detalle-transacciones?')
+    );
   }
 }

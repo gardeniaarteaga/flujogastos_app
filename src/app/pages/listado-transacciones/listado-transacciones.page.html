@@ -11,8 +11,11 @@
           Resumen
         </a>
         <div class="submenu">
-          <a class="submenu-item submenu-item-child active" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Listado de Transacciones
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
           </a>
         </div>
       </div>
@@ -71,11 +74,12 @@
 
     <header class="page-header">
       <div>
-        <p class="eyebrow">Transacciones</p>
-        <h2>Listado de Transacciones</h2>
+        <p class="eyebrow">{{ pageEyebrow }}</p>
+        <h2>{{ pageTitle }}</h2>
       </div>
       <div class="header-actions">
         <button
+          *ngIf="!isDetalleViewMode"
           type="button"
           class="secondary-button"
           [disabled]="calculatingIntereses"
@@ -96,8 +100,8 @@
       <article class="panel table-panel">
         <div class="panel-header">
           <div>
-            <p class="panel-title">Transacciones</p>
-            <h3>Listado general</h3>
+            <p class="panel-title">{{ panelTitle }}</p>
+            <h3>{{ panelSubtitle }}</h3>
           </div>
         </div>
 
@@ -107,116 +111,10 @@
         </div>
 
         <form [formGroup]="filtrosForm" class="filters-panel" novalidate>
-          <div class="filter-toggle-group filter-toggle-group-compact">
-            <label class="checkbox-row checkbox-row-compact" for="soloHoy">
-              <input id="soloHoy" type="checkbox" formControlName="soloHoy" (change)="onSoloHoyToggle()" />
-              <span>Hoy</span>
-            </label>
-
-            <label class="checkbox-row checkbox-row-compact" for="mesActual">
-              <input id="mesActual" type="checkbox" formControlName="mesActual" (change)="onMesActualToggle()" />
-              <span>Mes actual</span>
-            </label>
-
-            <label class="checkbox-row" for="prioritarios">
-              <input id="prioritarios" type="checkbox" formControlName="prioritarios" />
-              <span>Prioritarios</span>
-            </label>
-
-            <label class="checkbox-row" for="pendientePago">
-              <input id="pendientePago" type="checkbox" formControlName="pendientePago" />
-              <span>Pendiente / pago parcial</span>
-            </label>
-
-            <button
-              type="button"
-              class="secondary-button compact-button"
-              (click)="toggleAdvancedFilters()"
-            >
-              {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
-            </button>
-          </div>
-
-          <div *ngIf="showAdvancedFilters" class="filters-grid">
+          <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones" class="filters-grid">
             <div class="field">
-              <label for="fechaDesde">Fecha desde</label>
-              <div class="date-entry">
-                <input
-                  id="fechaDesde"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="10"
-                  placeholder="DD/MM/AAAA"
-                  formControlName="fechaDesde"
-                  (input)="onFiltroFechaInput('fechaDesde', $event)"
-                  (paste)="onFiltroFechaPaste('fechaDesde', $event)"
-                  (blur)="onFiltroFechaBlur('fechaDesde')"
-                />
-                <button
-                  type="button"
-                  class="date-picker-button"
-                  (click)="openNativeDatePicker(fechaDesdeCalendarPicker)"
-                  aria-label="Abrir calendario"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                    />
-                  </svg>
-                </button>
-                <input
-                  #fechaDesdeCalendarPicker
-                  class="date-picker-native"
-                  type="date"
-                  [value]="fechaDesdeCalendarioValue"
-                  (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
-                  tabindex="-1"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="fechaHasta">Fecha hasta</label>
-              <div class="date-entry">
-                <input
-                  id="fechaHasta"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="10"
-                  placeholder="DD/MM/AAAA"
-                  formControlName="fechaHasta"
-                  (input)="onFiltroFechaInput('fechaHasta', $event)"
-                  (paste)="onFiltroFechaPaste('fechaHasta', $event)"
-                  (blur)="onFiltroFechaBlur('fechaHasta')"
-                />
-                <button
-                  type="button"
-                  class="date-picker-button"
-                  (click)="openNativeDatePicker(fechaHastaCalendarPicker)"
-                  aria-label="Abrir calendario"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                    />
-                  </svg>
-                </button>
-                <input
-                  #fechaHastaCalendarPicker
-                  class="date-picker-native"
-                  type="date"
-                  [value]="fechaHastaCalendarioValue"
-                  (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
-                  tabindex="-1"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="estado">Estado</label>
-              <select id="estado" formControlName="estado">
+              <label for="estadoDetalle">Estado</label>
+              <select id="estadoDetalle" formControlName="estado">
                 <option [ngValue]="null">Todos</option>
                 <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
                   {{ estado.nombre_estado }}
@@ -224,43 +122,176 @@
               </select>
             </div>
 
-            <div class="field">
-              <label for="idMetodoPago">Metodo de pago</label>
-              <select id="idMetodoPago" formControlName="idMetodoPago">
-                <option [ngValue]="null">Todos</option>
-                <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
-                  {{ forma.nombre_forma }}
-                </option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="idParticipante">Participante</label>
-              <select id="idParticipante" formControlName="idParticipante">
-                <option [ngValue]="null">Todos</option>
-                <option *ngFor="let participante of participantes" [ngValue]="participante.id_participante">
-                  {{ getParticipanteDisplayName(participante) }}
-                </option>
-              </select>
+            <div class="field" style="display:flex;align-items:flex-end;">
+              <label class="checkbox-row" for="prioritariosDetalle" style="margin:0;">
+                <input id="prioritariosDetalle" type="checkbox" formControlName="prioritarios" />
+                <span>Proximos a vencer</span>
+              </label>
             </div>
           </div>
+
+          <ng-template #filtrosListadoTransacciones>
+            <div class="filter-toggle-group filter-toggle-group-compact">
+              <label class="checkbox-row checkbox-row-compact" for="soloHoy">
+                <input id="soloHoy" type="checkbox" formControlName="soloHoy" (change)="onSoloHoyToggle()" />
+                <span>Hoy</span>
+              </label>
+
+              <label class="checkbox-row checkbox-row-compact" for="mesActual">
+                <input id="mesActual" type="checkbox" formControlName="mesActual" (change)="onMesActualToggle()" />
+                <span>Mes actual</span>
+              </label>
+
+              <label class="checkbox-row" for="prioritarios">
+                <input id="prioritarios" type="checkbox" formControlName="prioritarios" />
+                <span>Prioritarios</span>
+              </label>
+
+              <label class="checkbox-row" for="pendientePago">
+                <input id="pendientePago" type="checkbox" formControlName="pendientePago" />
+                <span>Pendiente / pago parcial</span>
+              </label>
+
+              <button
+                type="button"
+                class="secondary-button compact-button"
+                (click)="toggleAdvancedFilters()"
+              >
+                {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
+              </button>
+            </div>
+
+            <div *ngIf="showAdvancedFilters" class="filters-grid">
+              <div class="field">
+                <label for="fechaDesde">Fecha desde</label>
+                <div class="date-entry">
+                  <input
+                    id="fechaDesde"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="DD/MM/AAAA"
+                    formControlName="fechaDesde"
+                    (input)="onFiltroFechaInput('fechaDesde', $event)"
+                    (paste)="onFiltroFechaPaste('fechaDesde', $event)"
+                    (blur)="onFiltroFechaBlur('fechaDesde')"
+                  />
+                  <button
+                    type="button"
+                    class="date-picker-button"
+                    (click)="openNativeDatePicker(fechaDesdeCalendarPicker)"
+                    aria-label="Abrir calendario"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                      />
+                    </svg>
+                  </button>
+                  <input
+                    #fechaDesdeCalendarPicker
+                    class="date-picker-native"
+                    type="date"
+                    [value]="fechaDesdeCalendarioValue"
+                    (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="fechaHasta">Fecha hasta</label>
+                <div class="date-entry">
+                  <input
+                    id="fechaHasta"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="DD/MM/AAAA"
+                    formControlName="fechaHasta"
+                    (input)="onFiltroFechaInput('fechaHasta', $event)"
+                    (paste)="onFiltroFechaPaste('fechaHasta', $event)"
+                    (blur)="onFiltroFechaBlur('fechaHasta')"
+                  />
+                  <button
+                    type="button"
+                    class="date-picker-button"
+                    (click)="openNativeDatePicker(fechaHastaCalendarPicker)"
+                    aria-label="Abrir calendario"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                      />
+                    </svg>
+                  </button>
+                  <input
+                    #fechaHastaCalendarPicker
+                    class="date-picker-native"
+                    type="date"
+                    [value]="fechaHastaCalendarioValue"
+                    (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="estado">Estado</label>
+                <select id="estado" formControlName="estado">
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
+                    {{ estado.nombre_estado }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="idMetodoPago">Metodo de pago</label>
+                <select id="idMetodoPago" formControlName="idMetodoPago">
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                    {{ forma.nombre_forma }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="idParticipante">Participante</label>
+                <select id="idParticipante" formControlName="idParticipante">
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let participante of participantes" [ngValue]="participante.id_participante">
+                    {{ getParticipanteDisplayName(participante) }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </ng-template>
         </form>
 
-        <p *ngIf="loading" class="empty-text">Cargando transacciones...</p>
+        <p *ngIf="loading" class="empty-text">
+          {{ isDetalleViewMode ? 'Cargando detalle de transacciones...' : 'Cargando transacciones...' }}
+        </p>
         <div *ngIf="!loading && transacciones.length === 0" class="empty-box">
-          <h3>Aun no hay transacciones</h3>
+          <h3>{{ isDetalleViewMode ? 'Aun no hay detalles de transacciones' : 'Aun no hay transacciones' }}</h3>
         </div>
 
-        <div *ngIf="!loading && transacciones.length > 0 && filteredTransacciones.length === 0" class="empty-box">
+        <div *ngIf="!loading && transacciones.length > 0 && !isDetalleViewMode && filteredTransacciones.length === 0" class="empty-box">
           No hay transacciones que coincidan con los filtros actuales.
         </div>
 
-        <div *ngIf="!loading && filteredTransacciones.length > 0" class="table-wrap">
+        <div *ngIf="!loading && transacciones.length > 0 && isDetalleViewMode && filteredDetalleTransacciones.length === 0" class="empty-box">
+          No hay detalles que coincidan con los filtros actuales.
+        </div>
+
+        <div *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0" class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Fecha Gasto</th>
+                <th>Fecha</th>
                 <th>Tipo</th>
                 <th>Descripcion</th>
                 <th>Monto</th>
@@ -405,7 +436,6 @@
                       </svg>
                     </button>
                     <button
-                      *ngIf="!isCreditoTransaccion(transaccion)"
                       type="button"
                       class="icon-action-button pay"
                       title="Pagar"
@@ -478,6 +508,99 @@
                         </svg>
                       </button>
                     </ng-template>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!loading && isDetalleViewMode && filteredDetalleTransacciones.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID detalle</th>
+                <th>Transaccion</th>
+                <th>Participante</th>
+                <th>Fecha programada</th>
+                <th>Cuota</th>
+                <th>Monto</th>
+                <th>Pagado</th>
+                <th>Saldo pendiente</th>
+                <th>Estado</th>
+                <th>Metodo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of filteredDetalleTransacciones; trackBy: trackDetalleTransaccion">
+                <td>{{ row.detalle.id }}</td>
+                <td>
+                  <div style="display:grid;gap:0.3rem;">
+                    <strong>#{{ row.transaccion.id_transaccion }}</strong>
+                    <span [attr.title]="row.descripcion">{{ row.descripcion }}</span>
+                  </div>
+                </td>
+                <td>{{ getDetalleRowParticipanteLabel(row) }}</td>
+                <td>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
+                <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
+                <td>${{ row.detalle.monto_pagado | number: '1.2-2' }}</td>
+                <td>${{ row.detalle.saldo_pendiente | number: '1.2-2' }}</td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [ngClass]="getEstadoClass(row.detalle.nombre_estado || 'Sin estado')"
+                  >
+                    {{ row.detalle.nombre_estado || 'Sin estado' }}
+                  </span>
+                </td>
+                <td>{{ row.metodo_pago || '-' }}</td>
+                <td class="table-actions-cell">
+                  <div class="icon-actions">
+                    <button
+                      type="button"
+                      class="icon-action-button detail"
+                      title="Detalle"
+                      aria-label="Detalle"
+                      (click)="openDetailModal(row.transaccion, $event)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M1.5 12s3.75-6.75 10.5-6.75S22.5 12 22.5 12s-3.75 6.75-10.5 6.75S1.5 12 1.5 12Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="1.8"
+                        />
+                        <circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="1.8" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="icon-action-button pay"
+                      title="Pagar"
+                      aria-label="Pagar"
+                      [disabled]="!canPagarDetalle(row)"
+                      (click)="openPaymentModalForDetalle(row, $event)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                        />
+                        <path
+                          d="M3 9.75h18M15.75 15h2.25"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-width="1.8"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -1298,6 +1421,7 @@
           </div>
           <div class="header-actions">
             <button
+              *ngIf="!isDetalleViewMode"
               type="button"
               class="table-button complete compact-button"
               [disabled]="!canApplyFullTransaction"

@@ -102,12 +102,6 @@
                 <p class="panel-title">Datos base</p>
                 <h4>Captura principal</h4>
               </div>
-              <div *ngIf="shouldShowEstadoPago" class="transaction-status-inline">
-                <div class="status-chip">
-                  <span>Pago</span>
-                  <strong>{{ transaccionForm.controls.estado_transaccion.value }}</strong>
-                </div>
-              </div>
             </div>
 
             <div class="field-grid field-grid-compact field-grid-primary">
@@ -278,6 +272,22 @@
                 </small>
                 <small *ngIf="transaccionForm.controls.id_categoria.value && filteredSubcategorias.length === 0">
                   La categoria seleccionada no tiene subcategorias activas.
+                </small>
+              </div>
+
+              <div *ngIf="shouldShowEstadoPago" class="field">
+                <label for="id_estado_ingreso">Estado</label>
+                <select
+                  id="id_estado_ingreso"
+                  formControlName="id_estado"
+                  (change)="onEstadoIngresoChange()"
+                >
+                  <option *ngFor="let estado of estadosIngresoDisponibles" [ngValue]="estado.id_estado">
+                    {{ estado.nombre_estado }}
+                  </option>
+                </select>
+                <small *ngIf="ingresoEstadoHint" class="field-hint">
+                  {{ ingresoEstadoHint }}
                 </small>
               </div>
             </div>

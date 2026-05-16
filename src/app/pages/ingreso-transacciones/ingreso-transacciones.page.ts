@@ -181,6 +181,35 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isIncomeMode || Boolean(this.transaccionForm.controls.forma_pago.value);
   }
 
+  get estadosIngresoDisponibles(): CatalogoEstadoTransaccion[] {
+    if (!this.isIncomeMode) {
+      return this.estadosTransaccion;
+    }
+
+    return this.estadosTransaccion.filter((item) => {
+      const nombreEstado = item.nombre_estado.trim().toUpperCase();
+      return nombreEstado === 'PAGADO' || nombreEstado === 'PENDIENTE';
+    });
+  }
+
+  get isIngresoPagadoSelected(): boolean {
+    return this.transaccionForm.controls.estado_transaccion.value?.trim().toUpperCase() === 'PAGADO';
+  }
+
+  get shouldShowIngresoPagadoCuotasHint(): boolean {
+    return this.isIncomeMode && this.isIngresoPagadoSelected && this.hasConfiguredMultipleIncomeCuotas();
+  }
+
+  get ingresoEstadoHint(): string {
+    if (!this.isIncomeMode) {
+      return '';
+    }
+
+    return this.isIngresoPagadoSelected
+      ? 'Si lo guardas como PAGADO, todas las cuotas nacen pagadas.'
+      : 'Si lo guardas como PENDIENTE, las cuotas seguiran pendientes hasta que registres su pago desde Listado o Pago Rapido.';
+  }
+
   get requiresDeferredPaymentSetup(): boolean {
     return !this.isIncomeMode && this.selectedFormaPago?.tipo_producto?.pago_inmediato === false;
   }
@@ -819,6 +848,10 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (!(await this.confirmIngresoPagadoConCuotasIfNeeded())) {
+      return;
+    }
+
     if (!this.validateCuotasConfiguration()) {
       await this.alerts.warning(
         'Cuotas inconsistentes',
@@ -1291,7 +1324,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return {
         defaultTipoTransaccionId: 2,
         sectionLabel: 'Ingresos',
-        pageTitle: 'Ingreso de Ingresos',
+        pageTitle: 'Ingreso de Entradas',
         formTitle: 'Registrar ingreso',
         submitLabel: 'Guardar ingreso',
         successMessage: 'Ingreso guardado correctamente.',
@@ -1301,7 +1334,7 @@ export class IngresoTransaccionesPage implements OnInit {
     return {
       defaultTipoTransaccionId: 1,
       sectionLabel: 'Transacciones',
-      pageTitle: 'Ingreso de Transacciones',
+      pageTitle: 'Ingreso de Gastos',
       formTitle: 'Registrar transaccion',
       submitLabel: 'Guardar transaccion',
       successMessage: 'Transaccion guardada correctamente.',
@@ -1311,9 +1344,9 @@ export class IngresoTransaccionesPage implements OnInit {
   private applyDefaultEstado(): void {
     const estadoDefaultName = this.getDefaultStatusName();
     const estadoDefault =
-      this.estadosTransaccion.find(
+      this.getEstadosDisponiblesParaSeleccion().find(
         (item) => item.nombre_estado.trim().toUpperCase() === estadoDefaultName,
-      ) ?? this.estadosTransaccion[0];
+      ) ?? this.getEstadosDisponiblesParaSeleccion()[0];
 
     this.transaccionForm.patchValue({
       id_estado: estadoDefault?.id_estado ?? null,
@@ -1324,7 +1357,7 @@ export class IngresoTransaccionesPage implements OnInit {
   private setEstadoTransaccionByName(estadoName: string): void {
     const normalizedEstadoName = estadoName.trim().toUpperCase();
     const estadoSeleccionado =
-      this.estadosTransaccion.find(
+      this.getEstadosDisponiblesParaSeleccion().find(
         (item) => item.nombre_estado.trim().toUpperCase() === normalizedEstadoName,
       ) ?? null;
 
@@ -1335,6 +1368,31 @@ export class IngresoTransaccionesPage implements OnInit {
       },
       { emitEvent: false },
     );
+  }
+
+  onEstadoIngresoChange(): void {
+    const estadoId = this.transaccionForm.controls.id_estado.value;
+    this.syncEstadoTransaccionFromId(estadoId);
+    this.updateEstadoRegistroPreview();
+  }
+
+  private syncEstadoTransaccionFromId(estadoId: number | null): void {
+    const estadoSeleccionado =
+      this.getEstadosDisponiblesParaSeleccion().find((item) => item.id_estado === estadoId) ?? null;
+
+    this.transaccionForm.patchValue(
+      {
+        id_estado: estadoSeleccionado?.id_estado ?? null,
+        estado_transaccion:
+          estadoSeleccionado?.nombre_estado ??
+          (this.isIncomeMode ? this.getDefaultStatusName() : this.transaccionForm.controls.estado_transaccion.value),
+      },
+      { emitEvent: false },
+    );
+  }
+
+  private getEstadosDisponiblesParaSeleccion(): CatalogoEstadoTransaccion[] {
+    return this.isIncomeMode ? this.estadosIngresoDisponibles : this.estadosTransaccion;
   }
 
   private applyExpenseFormaPagoRules(): void {
@@ -1389,7 +1447,33 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private getDefaultStatusName(): string {
-    return this.isIncomeMode ? 'PAGADO' : 'PENDIENTE';
+    return 'PENDIENTE';
+  }
+
+  private hasConfiguredMultipleIncomeCuotas(): boolean {
+    if (!this.isIncomeMode) {
+      return false;
+    }
+
+    return this.participantesDetalleArray.controls.some(
+      (group) => Number(group.controls.cantidad_cuotas.value ?? 1) > 1,
+    );
+  }
+
+  private async confirmIngresoPagadoConCuotasIfNeeded(): Promise<boolean> {
+    if (!this.shouldShowIngresoPagadoCuotasHint) {
+      return true;
+    }
+
+    return this.alerts.confirm(
+      'Confirmar estado pagado',
+      'Este ingreso se guardara como PAGADO, por lo que todas sus cuotas naceran pagadas. Deseas continuar?',
+      'Aceptar',
+      {
+        icon: 'warning',
+        confirmButtonColor: '#2563eb',
+      },
+    );
   }
 
   private applyIncomeModeRestrictions(): void {
@@ -1413,7 +1497,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.transaccionForm.patchValue(
       {
         usar_participantes: false,
-        estado_registro: this.getDefaultStatusName(),
+        estado_registro: this.resolveEstadoRegistroPreview(),
       },
       { emitEvent: false },
     );
@@ -2151,7 +2235,7 @@ export class IngresoTransaccionesPage implements OnInit {
 
   private resolveEstadoRegistroPreview(): string {
     if (this.isIncomeMode) {
-      return this.getDefaultStatusName();
+      return this.transaccionForm.controls.estado_transaccion.value?.trim().toUpperCase() || this.getDefaultStatusName();
     }
 
     if (this.isImmediatePaymentSelected) {

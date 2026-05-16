@@ -27,7 +27,16 @@ export const routes: Routes = [
     component: IngresoTransaccionesPage,
     data: { transactionFlow: 'expense' },
   },
-  { path: 'transacciones/listado', component: ListadoTransaccionesPage },
+  {
+    path: 'transacciones/listado',
+    component: ListadoTransaccionesPage,
+    data: { viewMode: 'transacciones' },
+  },
+  {
+    path: 'resumen/detalle-transacciones',
+    component: ListadoTransaccionesPage,
+    data: { viewMode: 'detalle' },
+  },
   { path: 'categorias', component: CategoriasPage },
   { path: 'subcategorias', component: SubcategoriasPage },
   { path: 'formas-pago', component: FormasPagoPage },
