@@ -299,6 +299,8 @@ export class ListadoTransaccionesPage implements OnInit {
   paymentModalTransaccion: TransaccionListado | null = null;
   pagosDetalleGroupViews: PagoDetalleGroupView[] = [];
   editorDetallesOriginales: ParticipanteDetalleListado[] = [];
+  private hasManualEstadoSelectionInEdit = false;
+  private isSyncingEstadoTransaccion = false;
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
   readonly cuotasPageSize = 12;
 
@@ -345,6 +347,16 @@ export class ListadoTransaccionesPage implements OnInit {
       .subscribe(() => {
         this.refreshProgramacionForAllGroups();
         this.refreshEstadoTransaccionForEdit();
+      });
+
+    this.transaccionForm.controls.id_estado.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.isEditing || this.isSyncingEstadoTransaccion) {
+          return;
+        }
+
+        this.hasManualEstadoSelectionInEdit = true;
       });
 
     this.aplicarPagosForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -1698,9 +1710,12 @@ export class ListadoTransaccionesPage implements OnInit {
     this.paymentModalOpen = false;
     this.selectedFormaPago = null;
     this.montoAplicarDrafts = {};
+    this.hasManualEstadoSelectionInEdit = false;
+    this.isSyncingEstadoTransaccion = false;
     this.participantesDetalleArray.clear();
     this.pagosDetalleArray.clear();
     this.refreshPagosDetalleGroups();
+    this.isSyncingEstadoTransaccion = true;
     this.transaccionForm.reset({
       fecha_transaccion: '',
       id_tipo_transaccion: null,
@@ -1717,6 +1732,7 @@ export class ListadoTransaccionesPage implements OnInit {
       monto: null,
       descripcion: '',
     });
+    this.isSyncingEstadoTransaccion = false;
 
     if (clearMessages) {
       this.successMessage = '';
@@ -1755,6 +1771,8 @@ export class ListadoTransaccionesPage implements OnInit {
     this.editorDetallesOriginales = detalles.map((detalle) => ({ ...detalle }));
     this.participantesDetalleArray.clear();
     this.pagosDetalleArray.clear();
+    this.hasManualEstadoSelectionInEdit = false;
+    this.isSyncingEstadoTransaccion = true;
 
     this.transaccionForm.reset({
       fecha_transaccion: this.formatDateDisplayFromApi(this.normalizeDateOnly(transaccion.fecha)),
@@ -1772,6 +1790,7 @@ export class ListadoTransaccionesPage implements OnInit {
       monto: this.resolveEditorMontoBase(transaccion, detalles, incomeCuotasMode),
       descripcion: transaccion.descripcion ?? '',
     });
+    this.isSyncingEstadoTransaccion = false;
 
     const detallesAgrupados = this.summarizeDetallesForEditor(detalles);
 
@@ -2050,6 +2069,10 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (this.hasManualEstadoSelectionInEdit) {
+      return;
+    }
+
     const estadoName = this.resolveEstadoTransaccionNameForEdit();
     const estadoSeleccionado =
       this.estadosTransaccion.find(
@@ -2060,12 +2083,14 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    this.isSyncingEstadoTransaccion = true;
     this.transaccionForm.controls.id_estado.setValue(estadoSeleccionado.id_estado, {
       emitEvent: false,
     });
     this.transaccionForm.controls.id_estado.updateValueAndValidity({
       emitEvent: false,
     });
+    this.isSyncingEstadoTransaccion = false;
   }
 
   private resolveEstadoTransaccionNameForEdit(): string {
