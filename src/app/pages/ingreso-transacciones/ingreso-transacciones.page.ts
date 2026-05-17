@@ -147,7 +147,7 @@ export class IngresoTransaccionesPage implements OnInit {
 
   get montoPrincipalLabel(): string {
     if (!this.isIncomeMode) {
-      return 'Monto';
+      return this.requiresDeferredPaymentSetup ? 'Monto total' : 'Monto';
     }
 
     const titularGroup = this.titularDetalleGroup;
@@ -162,14 +162,28 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get titularMontoLabel(): string {
-    return this.isIncomeMode ? 'Monto total programado' : 'Monto del titular';
+    const titularGroup = this.titularDetalleGroup;
+
+    if (this.isIncomeMode) {
+      return 'Monto total programado';
+    }
+
+    if (!titularGroup) {
+      return 'Monto del titular';
+    }
+
+    return this.isFixedCuotasMode(titularGroup)
+      ? 'Monto por cuota'
+      : 'Monto total a dividir';
   }
 
-  get incomeMontoHint(): string {
+  get montoPrincipalHint(): string {
     const titularGroup = this.titularDetalleGroup;
 
     if (!titularGroup || !this.isIncomeTitularGroup(titularGroup)) {
-      return '';
+      return this.requiresDeferredPaymentSetup
+        ? 'Este campo muestra el total acumulado de las cuotas del gasto.'
+        : '';
     }
 
     return this.isFixedCuotasMode(titularGroup)
@@ -226,23 +240,17 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   getParticipanteMontoLabel(group: ParticipanteDetalleForm): string {
-    if (!this.isIncomeMode) {
-      return 'Monto';
-    }
-
     return this.isFixedCuotasMode(group)
       ? 'Monto por cuota'
       : 'Monto total a dividir';
   }
 
   getParticipanteMontoHint(group: ParticipanteDetalleForm): string {
-    if (!this.isIncomeMode) {
-      return '';
-    }
-
     return this.isFixedCuotasMode(group)
-      ? 'Este monto se repetira en cada cuota de la persona.'
-      : 'Este monto total se dividira automaticamente entre las cuotas de la persona.';
+      ? `Este monto se repetira en cada cuota. Total programado: $${this.getGroupMontoTarget(group).toFixed(2)}.`
+      : this.isIncomeMode
+        ? 'Este monto total se dividira automaticamente entre las cuotas de la persona.'
+        : 'Este monto total se dividira automaticamente entre las cuotas.';
   }
 
   readonly tiposTransaccion: Array<{ value: TipoTransaccionId; label: string }> = [
@@ -732,6 +740,7 @@ export class IngresoTransaccionesPage implements OnInit {
       group,
       this.buildCuotasForConfiguredCount(group, cuotasCount),
     );
+    this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
   }
@@ -892,9 +901,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    const montoTotal = this.isIncomeMode
-      ? Number(this.titularDetalleGroup?.controls.monto.value ?? formValue.monto ?? 0)
-      : Number(formValue.monto);
+    const montoTotal = this.getResolvedSubmitMontoTotal(Number(formValue.monto ?? 0));
     const montoTitular = this.titularDetalleGroup
       ? this.getGroupMontoTarget(this.titularDetalleGroup)
       : 0;
@@ -1809,6 +1816,7 @@ export class IngresoTransaccionesPage implements OnInit {
       group,
       this.buildCuotasForConfiguredCount(group, cantidadCuotas),
     );
+    this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
   }
@@ -2450,6 +2458,34 @@ export class IngresoTransaccionesPage implements OnInit {
     titularGroup.controls.porcentaje.setValue(porcentajeTitular, { emitEvent: false });
     titularGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
     this.syncCuotasWithMonto(titularGroup);
+  }
+
+  private syncStandaloneExpenseMonto(group: ParticipanteDetalleForm): void {
+    if (
+      this.isIncomeMode ||
+      !group.controls.es_titular.value ||
+      this.getAdditionalParticipants().length > 0
+    ) {
+      return;
+    }
+
+    const montoTotal = this.getGroupMontoTarget(group);
+    this.transaccionForm.controls.monto.setValue(montoTotal, { emitEvent: false });
+    this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private getResolvedSubmitMontoTotal(formMonto: number): number {
+    if (this.isIncomeMode) {
+      return Number(this.titularDetalleGroup?.controls.monto.value ?? formMonto ?? 0);
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+
+    if (titularGroup && this.getAdditionalParticipants().length === 0) {
+      return this.getGroupMontoTarget(titularGroup);
+    }
+
+    return this.normalizeDecimalValue(Number(formMonto ?? 0));
   }
 
   private isIncomeTitularGroup(group: ParticipanteDetalleForm): boolean {

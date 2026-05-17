@@ -192,8 +192,8 @@
                 <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['maxTwoDecimals']">
                   Solo se permiten 2 decimales.
                 </small>
-                <small *ngIf="isIncomeMode && incomeMontoHint" class="field-hint">
-                  {{ incomeMontoHint }}
+                <small *ngIf="montoPrincipalHint" class="field-hint">
+                  {{ montoPrincipalHint }}
                 </small>
               </div>
             </div>
@@ -567,10 +567,10 @@
                             : 'El monto debe ser mayor que 0.'
                         }}
                       </small>
-                      <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['maxTwoDecimals']">
+                  <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['maxTwoDecimals']">
                         Solo se permiten 2 decimales.
                       </small>
-                      <small *ngIf="isIncomeMode" class="field-hint">
+                      <small *ngIf="getParticipanteMontoHint(participanteGroup)" class="field-hint">
                         {{ getParticipanteMontoHint(participanteGroup) }}
                       </small>
                     </div>

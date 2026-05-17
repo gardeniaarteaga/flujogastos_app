@@ -279,13 +279,13 @@ export class ListadoTransaccionesPage implements OnInit {
   readonly diasProgramacion = Array.from({ length: 30 }, (_, index) => index + 1);
 
   readonly filtrosForm = this.fb.group({
-    soloHoy: [false],
+    soloHoy: [true],
     mesActual: [false],
     prioritarios: [false],
     pendientePago: [false],
     pendienteRegistro: [false],
-    fechaDesde: ['', [this.dateDisplayValidator()]],
-    fechaHasta: ['', [this.dateDisplayValidator()]],
+    fechaDesde: [this.formatDateDisplayFromApi(this.todayFilterValue), [this.dateDisplayValidator()]],
+    fechaHasta: [this.formatDateDisplayFromApi(this.todayFilterValue), [this.dateDisplayValidator()]],
     estado: [null as string | null],
     idMetodoPago: [null as number | null],
     idParticipante: [null as number | null],
@@ -584,12 +584,18 @@ export class ListadoTransaccionesPage implements OnInit {
     const titularGroup = this.titularDetalleGroup;
 
     if (!titularGroup || !this.isIncomeTitularGroup(titularGroup)) {
-      return '';
+      return this.isImmediatePaymentSelectedForEdit
+        ? ''
+        : 'Este campo muestra el monto total acumulado de las cuotas.';
     }
 
     return this.isFixedCuotasMode(titularGroup)
       ? ''
       : 'El monto principal se toma como monto total y se distribuye automaticamente entre las cuotas.';
+  }
+
+  get editingMontoLabel(): string {
+    return this.isEditingIncomeMode ? 'Monto' : 'Monto total';
   }
 
   get currentUserProfileValue() {
@@ -656,6 +662,18 @@ export class ListadoTransaccionesPage implements OnInit {
 
   isCuotaMontoReadonly(group: ParticipanteDetalleForm): boolean {
     return this.isIncomeTitularGroup(group) || this.isFixedCuotasMode(group);
+  }
+
+  getEditorParticipanteMontoLabel(group: ParticipanteDetalleForm): string {
+    return this.isFixedCuotasMode(group)
+      ? 'Monto por cuota'
+      : 'Monto total a dividir';
+  }
+
+  getEditorParticipanteMontoHint(group: ParticipanteDetalleForm): string {
+    return this.isFixedCuotasMode(group)
+      ? `Total programado: $${this.getGroupMontoTarget(group).toFixed(2)}.`
+      : 'Este monto total se dividira automaticamente entre las cuotas.';
   }
 
   getPaginatedCuotas(group: ParticipanteDetalleForm): CuotaPageItem[] {
@@ -2398,9 +2416,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const montoTotal = this.isEditingIncomeMode
-      ? Number(this.titularDetalleGroup?.controls.monto.value ?? formValue.monto ?? 0)
-      : Number(formValue.monto);
+    const montoTotal = this.getResolvedSubmitMontoTotal(Number(formValue.monto ?? 0));
     const montoTitular = this.titularDetalleGroup
       ? this.getGroupMontoTarget(this.titularDetalleGroup)
       : 0;
@@ -3913,6 +3929,7 @@ export class ListadoTransaccionesPage implements OnInit {
         fecha_programada: cuota.fecha_programada,
       })),
     );
+    this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
     this.refreshEstadoTransaccionForEdit();
@@ -3933,6 +3950,7 @@ export class ListadoTransaccionesPage implements OnInit {
         fecha_programada: cuota.fecha_programada,
       })),
     );
+    this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
     this.refreshEstadoTransaccionForEdit();
@@ -4886,6 +4904,37 @@ export class ListadoTransaccionesPage implements OnInit {
     this.syncCuotasWithMonto(titularGroup);
   }
 
+  private syncStandaloneExpenseMonto(group: ParticipanteDetalleForm): void {
+    if (
+      this.isEditingIncomeMode ||
+      !group.controls.es_titular.value ||
+      this.participantesDetalleArray.controls.some((item) => !item.controls.es_titular.value)
+    ) {
+      return;
+    }
+
+    const montoTotal = this.getGroupMontoTarget(group);
+    this.transaccionForm.controls.monto.setValue(montoTotal, { emitEvent: false });
+    this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private getResolvedSubmitMontoTotal(formMonto: number): number {
+    if (this.isEditingIncomeMode) {
+      return Number(this.titularDetalleGroup?.controls.monto.value ?? formMonto ?? 0);
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+
+    if (
+      titularGroup &&
+      !this.participantesDetalleArray.controls.some((group) => !group.controls.es_titular.value)
+    ) {
+      return this.getGroupMontoTarget(titularGroup);
+    }
+
+    return this.normalizeDecimalValue(Number(formMonto ?? 0));
+  }
+
   private getErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {
       const backendMessage = error.error?.message;
@@ -4987,13 +5036,13 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private resetDefaultFilters(): void {
     this.filtrosForm.reset({
-      soloHoy: false,
+      soloHoy: true,
       mesActual: false,
       prioritarios: false,
       pendientePago: false,
       pendienteRegistro: false,
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde: this.formatDateDisplayFromApi(this.todayFilterValue),
+      fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
       estado: null,
       idMetodoPago: null,
       idParticipante: null,

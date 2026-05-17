@@ -700,7 +700,7 @@
             </div>
 
             <div class="field">
-              <label for="edit_monto">Monto</label>
+              <label for="edit_monto">{{ editingMontoLabel }}</label>
               <input
                 id="edit_monto"
                 type="number"
@@ -936,7 +936,9 @@
                     </div>
 
                     <div class="field">
-                      <label [for]="'edit_participante_monto_' + i">Monto</label>
+                      <label [for]="'edit_participante_monto_' + i">
+                        {{ getEditorParticipanteMontoLabel(participanteGroup) }}
+                      </label>
                       <input
                         [id]="'edit_participante_monto_' + i"
                         type="number"
@@ -950,6 +952,9 @@
                         (input)="onParticipanteMontoInput(participanteGroup)"
                         (blur)="normalizeMoneyInput('monto', participanteGroup)"
                       />
+                      <small *ngIf="getEditorParticipanteMontoHint(participanteGroup)" class="user-hint">
+                        {{ getEditorParticipanteMontoHint(participanteGroup) }}
+                      </small>
                     </div>
 
                     <div class="participant-actions" style="display:flex;gap:.55rem;align-items:end;flex-wrap:wrap;">
