@@ -10,10 +10,25 @@ import {
   CatalogoFormaPago,
   CatalogosTransaccionService,
 } from '../../shared/services/catalogos-transaccion.service';
+import {
+  ConfiguracionNotificacionPago,
+  NotificacionesService,
+} from '../../shared/services/notificaciones.service';
 import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
 type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
+
+interface ScheduledNotificationView {
+  id_notificacion_programada: number;
+  descripcion: string;
+  dia_pago_programado: number;
+  periodicidad_nombre: string;
+  nextDateLabel: string;
+  relativeLabel: string;
+  statusLabel: string;
+  tone: DashboardTone;
+}
 
 interface ParticipanteDetalleListado {
   id_usuario_relacionado: number | null;
@@ -206,6 +221,7 @@ interface DashboardAnalytics {
 export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly catalogosService = inject(CatalogosTransaccionService);
+  private readonly notificacionesService = inject(NotificacionesService);
   private readonly apiUrl = apiUrl('transacciones');
   private readonly timeoutMs = 10000;
   private readonly currencyFormatter = new Intl.NumberFormat('es-SV', {
@@ -231,15 +247,20 @@ export class Dashboard implements OnInit {
     month: 'short',
     year: 'numeric',
   });
+  private readonly relativeDayFormatter = new Intl.RelativeTimeFormat('es', {
+    numeric: 'auto',
+  });
   private readonly chartColors = ['#2563eb', '#f97316', '#e11d48', '#0f766e', '#8b5cf6'];
 
   loading = false;
   errorMessage = '';
+  scheduledNotificationsError = '';
   transactionsOpen = true;
   maintenanceOpen = false;
   readonly userProfile = loadUserProfile();
   currentUserId = getCurrentUserId();
   analytics = this.createEmptyAnalytics();
+  scheduledNotifications: ScheduledNotificationView[] = [];
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -252,12 +273,13 @@ export class Dashboard implements OnInit {
   async loadDashboard(): Promise<void> {
     this.loading = true;
     this.errorMessage = '';
+    this.scheduledNotificationsError = '';
 
     try {
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
       this.currentUserId = resolvedUserId > 0 ? resolvedUserId : this.currentUserId;
 
-      const [catalogos, transacciones] = await Promise.all([
+      const [catalogos, transacciones, programadas] = await Promise.all([
         this.catalogosService.loadCatalogos(true),
         firstValueFrom(
           this.http
@@ -266,6 +288,11 @@ export class Dashboard implements OnInit {
             })
             .pipe(timeout(this.timeoutMs)),
         ),
+        this.notificacionesService.loadConfiguracionesPago().catch(() => {
+          this.scheduledNotificationsError =
+            'No se pudieron cargar las notificaciones programadas del usuario actual.';
+          return [];
+        }),
       ]);
 
       this.analytics = this.buildAnalytics(
@@ -273,8 +300,10 @@ export class Dashboard implements OnInit {
         catalogos.formasPago,
         catalogos.entidadesFinancieras,
       );
+      this.scheduledNotifications = this.buildScheduledNotifications(programadas);
     } catch {
       this.analytics = this.createEmptyAnalytics();
+      this.scheduledNotifications = [];
       this.errorMessage =
         'No se pudo construir la reporteria financiera con la informacion disponible.';
     } finally {
@@ -310,6 +339,10 @@ export class Dashboard implements OnInit {
     }
 
     return this.fullDateFormatter.format(date);
+  }
+
+  formatScheduledDateLabel(configuracion: ScheduledNotificationView): string {
+    return `${configuracion.nextDateLabel} | ${configuracion.relativeLabel}`;
   }
 
   private buildAnalytics(
@@ -1146,6 +1179,52 @@ export class Dashboard implements OnInit {
     return `${balanceText} ${debtText} ${trendText} ${interestText}`;
   }
 
+  private buildScheduledNotifications(
+    configuraciones: ConfiguracionNotificacionPago[],
+  ): ScheduledNotificationView[] {
+    return configuraciones
+      .flatMap((configuracion) => {
+        const nextDate = this.resolveScheduledNotificationDate(configuracion);
+
+        if (!nextDate) {
+          return [];
+        }
+
+        const diffInDays = this.calculateScheduledDiffInDays(nextDate, this.getToday());
+        const tone: DashboardTone =
+          diffInDays === 0 ? 'danger' : diffInDays <= 3 ? 'warning' : 'info';
+        const statusLabel =
+          diffInDays === 0
+            ? 'Vence hoy'
+            : diffInDays === 1
+              ? 'Vence manana'
+              : diffInDays < 0
+                ? 'Pendiente'
+                : 'Proximo recordatorio';
+
+        return [
+          {
+            id_notificacion_programada: configuracion.id_notificacion_programada,
+            descripcion: configuracion.descripcion,
+            dia_pago_programado: configuracion.dia_pago_programado,
+            periodicidad_nombre: configuracion.periodicidad_nombre,
+            nextDateLabel: this.fullDateFormatter.format(nextDate),
+            relativeLabel: this.relativeDayFormatter.format(diffInDays, 'day'),
+            statusLabel,
+            tone,
+          },
+        ];
+      })
+      .sort((a, b) => {
+        const toneRank = { danger: 0, warning: 1, info: 2, good: 3, neutral: 4 };
+        return (
+          (toneRank[a.tone] ?? 5) - (toneRank[b.tone] ?? 5) ||
+          a.dia_pago_programado - b.dia_pago_programado
+        );
+      })
+      .slice(0, 4);
+  }
+
   private buildHealthScore(
     expenseRatio: number | null,
     savingsRate: number | null,
@@ -1231,6 +1310,33 @@ export class Dashboard implements OnInit {
       .pop();
 
     return latestDate ? this.fullDateFormatter.format(latestDate) : 'Sin fecha definida';
+  }
+
+  private resolveScheduledNotificationDate(
+    configuracion: ConfiguracionNotificacionPago,
+  ): Date | null {
+    const today = this.getToday();
+    const day = configuracion.dia_pago_programado;
+
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+      return null;
+    }
+
+    if (configuracion.periodicidad_codigo === 'fecha-especifica') {
+      return this.buildMonthlyOccurrence(today, day);
+    }
+
+    if (configuracion.periodicidad_codigo === 'mensual') {
+      const currentMonthDate = this.buildMonthlyOccurrence(today, day);
+      return currentMonthDate.getTime() >= today.getTime()
+        ? currentMonthDate
+        : this.buildMonthlyOccurrence(new Date(today.getFullYear(), today.getMonth() + 1, 1), day);
+    }
+
+    const currentYearDate = this.buildYearlyOccurrence(today.getFullYear(), today.getMonth(), day);
+    return currentYearDate.getTime() >= today.getTime()
+      ? currentYearDate
+      : this.buildYearlyOccurrence(today.getFullYear() + 1, today.getMonth(), day);
   }
 
   private buildDeltaLabel(current: number, previous: number): string {
@@ -1341,8 +1447,32 @@ export class Dashboard implements OnInit {
     return new Date(date.getFullYear(), date.getMonth(), 1);
   }
 
+  private getToday(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
   private getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private buildMonthlyOccurrence(referenceDate: Date, day: number): Date {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const maxDay = new Date(year, month + 1, 0).getDate();
+
+    return new Date(year, month, Math.min(day, maxDay));
+  }
+
+  private buildYearlyOccurrence(year: number, month: number, day: number): Date {
+    const maxDay = new Date(year, month + 1, 0).getDate();
+
+    return new Date(year, month, Math.min(day, maxDay));
+  }
+
+  private calculateScheduledDiffInDays(left: Date, right: Date): number {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.round((left.getTime() - right.getTime()) / msPerDay);
   }
 
   private parseDateOnly(value: string | null | undefined): Date | null {
