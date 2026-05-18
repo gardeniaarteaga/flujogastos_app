@@ -276,12 +276,12 @@ export class ListadoTransaccionesPage implements OnInit {
     { value: 'fijas', label: 'Cuotas fijas' },
     { value: 'divididas', label: 'Variables / divididas' },
   ];
-  readonly diasProgramacion = Array.from({ length: 30 }, (_, index) => index + 1);
+  readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
 
   readonly filtrosForm = this.fb.group({
     soloHoy: [true],
     mesActual: [false],
-    prioritarios: [false],
+    prioritarios: [this.viewMode === 'detalle'],
     pendientePago: [false],
     pendienteRegistro: [false],
     fechaDesde: [this.formatDateDisplayFromApi(this.todayFilterValue), [this.dateDisplayValidator()]],
@@ -570,10 +570,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   get showCuotasSinInteresesOption(): boolean {
-    return (
-      this.selectedFormaPago?.tipo_producto?.pago_inmediato === false &&
-      this.selectedFormaPago?.calcula_interes === true
-    );
+    return this.selectedFormaPago?.calcula_interes === true;
   }
 
   get isEditingIncomeMode(): boolean {
@@ -3815,6 +3812,7 @@ export class ListadoTransaccionesPage implements OnInit {
     requestedCuotasCount: number,
   ): CuotaPayload[] {
     const montoObjetivo = this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0));
+    const montoObjetivoTotal = this.getGroupMontoTarget(group);
     const cuotasCount = Math.max(1, Math.trunc(Number(requestedCuotasCount ?? 1)));
 
     if (this.isIncomeTitularGroup(group)) {
@@ -3864,7 +3862,7 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     const montoEditableCentavos = Math.max(
       0,
-      this.toCents(montoObjetivo) - totalBloqueadoCentavos,
+      this.toCents(montoObjetivoTotal) - totalBloqueadoCentavos,
     );
     const minCuotasPermitidas =
       cuotasBloqueadas.length + (montoEditableCentavos > 0 ? 1 : 0);
@@ -3965,9 +3963,7 @@ export class ListadoTransaccionesPage implements OnInit {
       (sum, cuota) => sum + this.toCents(cuota.monto),
       0,
     );
-    const montoObjetivoCentavos = this.toCents(
-      this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0)),
-    );
+    const montoObjetivoCentavos = this.toCents(this.getGroupMontoTarget(group));
     const montoEditableCentavos = Math.max(0, montoObjetivoCentavos - totalBloqueadoCentavos);
 
     return cuotasBloqueadas.length + (montoEditableCentavos > 0 ? 1 : 0);
@@ -3984,6 +3980,7 @@ export class ListadoTransaccionesPage implements OnInit {
       }))
       .filter((_item, index) => index !== cuotaIndex);
     const montoObjetivo = this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0));
+    const montoObjetivoTotal = this.getGroupMontoTarget(group);
 
     if (cuotasRestantes.length === 0) {
       return [];
@@ -4020,7 +4017,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const cuotasEditablesRestantes = cuotasRestantes.filter((item) => !item.bloqueada).length;
     const montoEditableCentavos = Math.max(
       0,
-      this.toCents(montoObjetivo) - totalBloqueadoCentavos,
+      this.toCents(montoObjetivoTotal) - totalBloqueadoCentavos,
     );
     const montosEditablesRedistribuidos =
       cuotasEditablesRestantes > 0
@@ -4061,9 +4058,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const cuotasEditables = cuotasArray.controls.filter(
       (_cuotaGroup, index) => !this.isCuotaBloqueadaEnEditor(group, index),
     );
-    const montoObjetivoCentavos = this.toCents(
-      this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0)),
-    );
+    const montoObjetivoCentavos = this.toCents(this.getGroupMontoTarget(group));
     const totalBloqueadoCentavos = cuotasArray.controls.reduce(
       (sum, cuotaGroup, index) =>
         sum +
@@ -5035,14 +5030,19 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private resetDefaultFilters(): void {
+    const useTodayDefaults = this.viewMode === 'detalle';
     this.filtrosForm.reset({
-      soloHoy: true,
+      soloHoy: useTodayDefaults,
       mesActual: false,
-      prioritarios: false,
+      prioritarios: this.viewMode === 'detalle',
       pendientePago: false,
       pendienteRegistro: false,
-      fechaDesde: this.formatDateDisplayFromApi(this.todayFilterValue),
-      fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
+      fechaDesde: useTodayDefaults
+        ? this.formatDateDisplayFromApi(this.todayFilterValue)
+        : '',
+      fechaHasta: useTodayDefaults
+        ? this.formatDateDisplayFromApi(this.todayFilterValue)
+        : '',
       estado: null,
       idMetodoPago: null,
       idParticipante: null,

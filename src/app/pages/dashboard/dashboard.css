@@ -11,6 +11,49 @@
   margin-top: 1rem;
 }
 
+.scheduled-notifications-panel {
+  margin-top: 1rem;
+}
+
+.scheduled-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.scheduled-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid #e4ebf2;
+  background: #f8fafc;
+}
+
+.scheduled-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.scheduled-card strong {
+  color: #172033;
+}
+
+.scheduled-card p,
+.scheduled-card small {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.scheduled-link {
+  min-height: 2.5rem;
+  padding: 0.7rem 1rem;
+}
+
 .hero-finance {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
@@ -590,4 +633,16 @@
 .recommendation-card[class*='tone-'] {
   background: var(--tone-bg);
   color: var(--tone-text);
+}
+
+@media (max-width: 1420px) {
+  .scheduled-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1220px) {
+  .scheduled-grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -12,6 +12,7 @@ import { UsuariosPage } from './pages/usuarios/usuarios.page';
 import { IngresoTransaccionesPage } from './pages/ingreso-transacciones/ingreso-transacciones.page';
 import { ListadoTransaccionesPage } from './pages/listado-transacciones/listado-transacciones.page';
 import { TipoProductoPage } from './pages/tipo-producto/tipo-producto.page';
+import { ResumenNotificacionesPage } from './pages/resumen-notificaciones/resumen-notificaciones.page';
 import { adminOnlyGuard } from './shared/guards/admin-only.guard';
 
 export const routes: Routes = [
@@ -36,6 +37,10 @@ export const routes: Routes = [
     path: 'resumen/detalle-transacciones',
     component: ListadoTransaccionesPage,
     data: { viewMode: 'detalle' },
+  },
+  {
+    path: 'resumen/notificaciones',
+    component: ResumenNotificacionesPage,
   },
   { path: 'categorias', component: CategoriasPage },
   { path: 'subcategorias', component: SubcategoriasPage },

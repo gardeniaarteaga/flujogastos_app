@@ -519,7 +519,6 @@
           <table>
             <thead>
               <tr>
-                <th>ID detalle</th>
                 <th>Transaccion</th>
                 <th>Participante</th>
                 <th>Fecha programada</th>
@@ -534,7 +533,6 @@
             </thead>
             <tbody>
               <tr *ngFor="let row of filteredDetalleTransacciones; trackBy: trackDetalleTransaccion">
-                <td>{{ row.detalle.id }}</td>
                 <td>
                   <div style="display:grid;gap:0.3rem;">
                     <strong>#{{ row.transaccion.id_transaccion }}</strong>

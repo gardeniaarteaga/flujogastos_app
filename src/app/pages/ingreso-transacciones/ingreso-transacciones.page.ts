@@ -145,9 +145,13 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isIncomeMode || Boolean(this.usarParticipantesControl.value);
   }
 
+  get shouldShowExpenseCuotasSetup(): boolean {
+    return !this.isIncomeMode && Boolean(this.selectedFormaPago);
+  }
+
   get montoPrincipalLabel(): string {
     if (!this.isIncomeMode) {
-      return this.requiresDeferredPaymentSetup ? 'Monto total' : 'Monto';
+      return this.shouldShowExpenseCuotasSetup ? 'Monto total' : 'Monto';
     }
 
     const titularGroup = this.titularDetalleGroup;
@@ -181,7 +185,7 @@ export class IngresoTransaccionesPage implements OnInit {
     const titularGroup = this.titularDetalleGroup;
 
     if (!titularGroup || !this.isIncomeTitularGroup(titularGroup)) {
-      return this.requiresDeferredPaymentSetup
+      return this.shouldShowExpenseCuotasSetup
         ? 'Este campo muestra el total acumulado de las cuotas del gasto.'
         : '';
     }
@@ -229,10 +233,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get showCuotasSinInteresesOption(): boolean {
-    return (
-      this.requiresDeferredPaymentSetup &&
-      this.selectedFormaPago?.calcula_interes === true
-    );
+    return this.selectedFormaPago?.calcula_interes === true;
   }
 
   get isImmediatePaymentSelected(): boolean {
@@ -269,7 +270,7 @@ export class IngresoTransaccionesPage implements OnInit {
     { value: 'fijas', label: 'Cuotas fijas' },
     { value: 'divididas', label: 'Variables / divididas' },
   ];
-  readonly diasProgramacion = Array.from({ length: 30 }, (_, index) => index + 1);
+  readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
 
   maintenanceOpen = false;
   transactionsOpen = false;
@@ -1424,25 +1425,15 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    if (this.selectedFormaPago.tipo_producto?.pago_inmediato === true) {
-      this.transaccionForm.controls.cuotas_sin_intereses.setValue(false, {
-        emitEvent: false,
-      });
-      this.setEstadoTransaccionByName('PAGADO');
-      this.usarParticipantesControl.setValue(false, { emitEvent: false });
-      this.titularManualOverride = false;
-      this.participantesDetalleArray.clear();
-      this.updateEstadoRegistroPreview();
-      return;
-    }
-
     if (!this.showCuotasSinInteresesOption) {
       this.transaccionForm.controls.cuotas_sin_intereses.setValue(false, {
         emitEvent: false,
       });
     }
 
-    this.setEstadoTransaccionByName('PENDIENTE');
+    this.setEstadoTransaccionByName(
+      this.selectedFormaPago.tipo_producto?.pago_inmediato === true ? 'PAGADO' : 'PENDIENTE',
+    );
     this.usarParticipantesControl.setValue(true, { emitEvent: false });
 
     if (!this.titularDetalleGroup) {
@@ -1841,9 +1832,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    const montoObjetivoCentavos = this.toCents(
-      this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0)),
-    );
+    const montoObjetivoCentavos = this.toCents(this.getGroupMontoTarget(group));
     const sumaSinUltimaCentavos = cuotasArray.controls.slice(0, -1).reduce(
       (sum, cuotaGroup) =>
         sum + this.toCents(this.normalizeDecimalValue(Number(cuotaGroup.controls.monto.value ?? 0))),

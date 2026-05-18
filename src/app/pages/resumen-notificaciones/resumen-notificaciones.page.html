@@ -1,0 +1,365 @@
+<div class="module-page">
+  <aside class="sidebar">
+    <div class="brand">
+      <p class="eyebrow">Flujo de Gastos</p>
+      <h1>Panel</h1>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a
+          class="nav-item"
+          routerLink="/dashboard"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Resumen
+        </a>
+        <div class="submenu">
+          <a
+            class="submenu-item submenu-item-child"
+            routerLink="/transacciones/listado"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Listado de Transacciones
+          </a>
+          <a
+            class="submenu-item submenu-item-child"
+            routerLink="/resumen/detalle-transacciones"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Pago Rapido
+          </a>
+          <a
+            class="submenu-item submenu-item-child active"
+            routerLink="/resumen/notificaciones"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Configurar notificaciones
+          </a>
+        </div>
+      </div>
+      <a
+        class="nav-item"
+        routerLink="/ingresos/ingreso"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Ingresos
+      </a>
+      <a
+        class="nav-item"
+        routerLink="/transacciones/ingreso"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Gastos
+      </a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias">Categorias</a>
+            </div>
+          </div>
+          <a
+            class="submenu-item"
+            routerLink="/formas-pago"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Formas de Pago
+          </a>
+          <a
+            class="submenu-item"
+            routerLink="/participantes"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Participantes
+          </a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias">
+                Subcategorias
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras">
+                Entidades financieras
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad">
+                Tipo de entidad
+              </a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto">
+                Tipo de producto
+              </a>
+            </div>
+          </details>
+          <a
+            *ngIf="isAdminSession"
+            class="submenu-item"
+            routerLink="/usuarios"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Usuarios
+          </a>
+        </div>
+      </div>
+
+      <a class="nav-item" routerLink="/perfil">Mi perfil</a>
+    </nav>
+
+    <section class="sidebar-card">
+      <span class="sidebar-label">Recordatorios</span>
+      <strong>{{ totalConfiguraciones }} configuraciones</strong>
+      <p>
+        {{ proximaConfiguracion ? ('Siguiente aviso: ' + getRelativeExecutionLabel(proximaConfiguracion)) : 'Aun no has programado recordatorios de pago.' }}
+      </p>
+    </section>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <section class="hero-banner panel">
+      <div class="hero-copy">
+        <span class="hero-kicker">Resumen</span>
+        <h2>Configura alertas para tus pagos programados.</h2>
+        <p>
+          Registra una descripcion, el dia de pago y la periodicidad para mantener visibles
+          tus compromisos mensuales, de fecha unica o anuales.
+        </p>
+      </div>
+
+      <div class="hero-metrics">
+        <article class="metric-card">
+          <span>Total configurado</span>
+          <strong>{{ totalConfiguraciones }}</strong>
+          <small>{{ totalConfiguraciones === 1 ? 'recordatorio guardado' : 'recordatorios guardados' }}</small>
+        </article>
+        <article class="metric-card">
+          <span>Proxima notificacion</span>
+          <strong>{{ proximaConfiguracion ? getRelativeExecutionLabel(proximaConfiguracion) : 'Sin datos' }}</strong>
+          <small>{{ proximaConfiguracion ? getNextExecutionLabel(proximaConfiguracion) : 'Agrega tu primer aviso' }}</small>
+        </article>
+      </div>
+    </section>
+
+    <header class="page-header summary-header">
+      <div>
+        <p class="eyebrow">Configuracion</p>
+        <h2>Notificaciones de pago</h2>
+        <p class="lead">
+          Esta pantalla ya trabaja con dia de pago del 1 al 31. La periodicidad se carga desde
+          la tabla del backend cuando el endpoint correspondiente esta disponible.
+        </p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="secondary-button" (click)="cancelEdit()">
+          Nueva configuracion
+        </button>
+        <button type="button" class="secondary-button" routerLink="/dashboard">
+          Volver al resumen
+        </button>
+      </div>
+    </header>
+
+    <section class="workspace notifications-workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>{{ isEditing ? 'Editar recordatorio' : 'Registrar recordatorio' }}</h3>
+          </div>
+          <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
+        </div>
+
+        <form [formGroup]="notificacionForm" (ngSubmit)="onSubmit()" class="notification-form" novalidate>
+          <div class="field">
+            <label for="descripcion">Descripcion</label>
+            <textarea
+              id="descripcion"
+              rows="4"
+              formControlName="descripcion"
+              maxlength="120"
+              placeholder="Ejemplo: Pago de tarjeta, membresia, seguro o colegiatura"
+            ></textarea>
+            <small
+              *ngIf="
+                notificacionForm.controls.descripcion.touched &&
+                notificacionForm.controls.descripcion.errors?.['required']
+              "
+            >
+              La descripcion es obligatoria.
+            </small>
+            <small
+              *ngIf="
+                notificacionForm.controls.descripcion.touched &&
+                notificacionForm.controls.descripcion.errors?.['maxlength']
+              "
+            >
+              La descripcion no puede exceder 120 caracteres.
+            </small>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="dia_pago_programado">Dia de pago programado</label>
+              <input
+                id="dia_pago_programado"
+                type="number"
+                min="1"
+                max="31"
+                step="1"
+                formControlName="dia_pago_programado"
+                placeholder="1"
+              />
+              <small
+                *ngIf="
+                  notificacionForm.controls.dia_pago_programado.touched &&
+                  notificacionForm.controls.dia_pago_programado.errors?.['required']
+                "
+              >
+                El dia programado es obligatorio.
+              </small>
+              <small
+                *ngIf="
+                  notificacionForm.controls.dia_pago_programado.touched &&
+                  (
+                    notificacionForm.controls.dia_pago_programado.errors?.['min'] ||
+                    notificacionForm.controls.dia_pago_programado.errors?.['max']
+                  )
+                "
+              >
+                El dia de pago debe estar entre 1 y 31.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="periodicidad">Periodicidad</label>
+              <select id="periodicidad" formControlName="id_periodicidad">
+                <option [ngValue]="null">Selecciona una periodicidad</option>
+                <option
+                  *ngFor="let option of periodicidadOptions"
+                  [ngValue]="option.id_periodicidad"
+                >
+                  {{ option.nombre }}
+                </option>
+              </select>
+              <small
+                *ngIf="
+                  notificacionForm.controls.id_periodicidad.touched &&
+                  notificacionForm.controls.id_periodicidad.errors?.['required']
+                "
+              >
+                Debes seleccionar una periodicidad valida.
+              </small>
+            </div>
+          </div>
+
+          <section class="periodicity-guide">
+            <div
+              *ngFor="let option of periodicidadOptions"
+              class="guide-card"
+              [ngClass]="{
+                selected: option.id_periodicidad === notificacionForm.controls.id_periodicidad.value
+              }"
+            >
+              <strong>{{ option.nombre }}</strong>
+              <p>{{ option.descripcion || 'Periodicidad disponible desde catalogo del sistema.' }}</p>
+            </div>
+          </section>
+
+          <div class="messages">
+            <p *ngIf="loadingPeriodicidades" class="message">Cargando periodicidad...</p>
+            <p *ngIf="successMessage" class="message success">{{ successMessage }}</p>
+            <p *ngIf="errorMessage" class="message error">{{ errorMessage }}</p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" [disabled]="saving || !periodicidadesDisponibles">
+              {{ submitButtonLabel }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="secondary-button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Agenda configurada</p>
+            <h3>Recordatorios guardados</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadConfiguraciones()">
+            Recargar
+          </button>
+        </div>
+
+        <div *ngIf="configuraciones.length === 0" class="empty-box">
+          Todavia no hay configuraciones de notificaciones registradas.
+        </div>
+
+        <div *ngIf="configuraciones.length > 0" class="notification-list">
+          <article
+            *ngFor="let configuracion of configuraciones; trackBy: trackConfiguracion"
+            class="notification-row"
+          >
+            <div class="notification-main">
+              <div class="notification-copy">
+                <strong>{{ configuracion.descripcion }}</strong>
+                <p>
+                  {{ getPeriodicidadLabel(configuracion) }} |
+                  Dia {{ configuracion.dia_pago_programado }}
+                </p>
+              </div>
+
+              <div class="notification-meta">
+                <span class="timeline-badge" [ngClass]="'tone-' + getTimelineTone(configuracion)">
+                  {{ getTimelineLabel(configuracion) }}
+                </span>
+                <span class="next-date">{{ getNextExecutionLabel(configuracion) }}</span>
+                <small>{{ getRelativeExecutionLabel(configuracion) }}</small>
+              </div>
+            </div>
+
+            <div class="notification-actions">
+              <button
+                type="button"
+                class="secondary-button table-button"
+                (click)="showConfiguracionDetail(configuracion)"
+              >
+                Ver detalle
+              </button>
+              <button
+                type="button"
+                class="secondary-button table-button"
+                (click)="editConfiguracion(configuracion)"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                class="table-button danger"
+                [disabled]="deletingId === configuracion.id_notificacion_programada"
+                (click)="removeConfiguracion(configuracion)"
+              >
+                {{ deletingId === configuracion.id_notificacion_programada ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>

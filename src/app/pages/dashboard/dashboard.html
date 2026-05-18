@@ -25,6 +25,14 @@
           >
             Pago Rapido
           </a>
+          <a
+            class="submenu-item submenu-item-child"
+            routerLink="/resumen/notificaciones"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Configurar notificaciones
+          </a>
         </div>
       </div>
       <a
@@ -145,6 +153,42 @@
     <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
       <strong>No se pudo generar la reporteria.</strong>
       <p>{{ errorMessage }}</p>
+    </section>
+
+    <section *ngIf="!loading" class="panel scheduled-notifications-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Primer plano</span>
+          <h3>Notificaciones programadas</h3>
+        </div>
+        <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">
+          Configurar
+        </a>
+      </div>
+
+      <p class="panel-copy">
+        Tus proximos recordatorios de pago aparecen aqui para que no pierdan visibilidad dentro del resumen.
+      </p>
+
+      <div *ngIf="scheduledNotifications.length > 0; else emptyScheduledNotifications" class="scheduled-grid">
+        <article
+          *ngFor="let item of scheduledNotifications"
+          class="scheduled-card"
+          [ngClass]="'tone-' + item.tone"
+        >
+          <div class="scheduled-card-header">
+            <strong>{{ item.descripcion }}</strong>
+            <span class="score-chip" [ngClass]="'tone-' + item.tone">{{ item.statusLabel }}</span>
+          </div>
+          <p>{{ item.periodicidad_nombre }} | Dia {{ item.dia_pago_programado }}</p>
+          <small>{{ formatScheduledDateLabel(item) }}</small>
+        </article>
+      </div>
+
+      <div *ngIf="scheduledNotificationsError" class="chart-empty">
+        <strong>No se pudieron cargar las programaciones</strong>
+        <p>{{ scheduledNotificationsError }}</p>
+      </div>
     </section>
 
     <section *ngIf="!loading && analytics.hasData; else loadingOrEmpty" class="dashboard-body">
@@ -505,6 +549,13 @@
       <div class="chart-empty">
         <strong>No se detectan gastos hormiga relevantes</strong>
         <p>De momento no hay un patron fuerte de consumos pequenos y repetitivos.</p>
+      </div>
+    </ng-template>
+
+    <ng-template #emptyScheduledNotifications>
+      <div class="chart-empty">
+        <strong>No tienes recordatorios programados</strong>
+        <p>Crea tus notificaciones de pago para verlas destacadas aqui en el dashboard.</p>
       </div>
     </ng-template>
   </main>
