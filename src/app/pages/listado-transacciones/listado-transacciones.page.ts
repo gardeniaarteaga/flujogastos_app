@@ -50,6 +50,7 @@ type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
 type ModoCuotas = 'fijas' | 'divididas';
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
 const PRIORITY_WINDOW_DAYS = 7;
+const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
 const ESTADOS_LISTADO_PERMITIDOS = new Set([
   'pagado',
   'pagada',
@@ -277,11 +278,15 @@ export class ListadoTransaccionesPage implements OnInit {
     { value: 'divididas', label: 'Variables / divididas' },
   ];
   readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
-
   readonly filtrosForm = this.fb.group({
     soloHoy: [this.viewMode === 'detalle'],
     mesActual: [this.viewMode !== 'detalle'],
     prioritarios: [this.viewMode === 'detalle'],
+    diasPrioridad: [
+      this.viewMode === 'detalle'
+        ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
+        : PRIORITY_WINDOW_DAYS,
+    ],
     pendientePago: [false],
     enviadas: [false],
     pendienteRegistro: [false],
@@ -539,7 +544,11 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
-        if (filtros.prioritarios && !this.isDetallePrioritario(row.detalle)) {
+        if (!this.isDetallePrioritario(row.detalle)) {
+          return false;
+        }
+
+        if (filtros.enviadas && row.transaccion.es_propietario) {
           return false;
         }
 
@@ -3047,7 +3056,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private hasPriorityPendingSchedule(transaccion: TransaccionListado): boolean {
     const today = this.getDateOnlyValue(new Date());
-    const limitDate = this.addDays(today, PRIORITY_WINDOW_DAYS);
+    const limitDate = this.addDays(today, this.getPriorityWindowDays());
 
     return this.getParticipantesDetalleSafe(transaccion).some((detalle) => {
       if (detalle.id_estado === ESTADO_TRANSACCION_ANULADA_ID) {
@@ -3078,7 +3087,7 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     const today = this.getDateOnlyValue(new Date());
-    const limitDate = this.addDays(today, PRIORITY_WINDOW_DAYS);
+    const limitDate = this.addDays(today, this.getPriorityWindowDays());
     const scheduledDate = this.parseIsoDateOnly(detalle.fecha_programada);
 
     if (!scheduledDate) {
@@ -3116,6 +3125,20 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return left.detalle.id - right.detalle.id;
+  }
+
+  private getPriorityWindowDays(): number {
+    if (!this.isDetalleViewMode) {
+      return PRIORITY_WINDOW_DAYS;
+    }
+
+    const selectedDays = Number(this.filtrosForm.controls.diasPrioridad.value ?? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS);
+
+    if (!Number.isFinite(selectedDays)) {
+      return QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS;
+    }
+
+    return Math.min(30, Math.max(1, Math.trunc(selectedDays)));
   }
 
   private detalleTienePagosAplicados(
@@ -5051,6 +5074,9 @@ export class ListadoTransaccionesPage implements OnInit {
       soloHoy: useTodayDefaults,
       mesActual: useCurrentMonthDefaults,
       prioritarios: this.viewMode === 'detalle',
+      diasPrioridad: this.viewMode === 'detalle'
+        ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
+        : PRIORITY_WINDOW_DAYS,
       pendientePago: false,
       enviadas: false,
       pendienteRegistro: false,

@@ -25,6 +25,7 @@ interface ScheduledNotificationView {
   prioridad: string;
   vigenciaLabel: string;
   frecuenciaLabel: string;
+  quincenaLabel: string;
   periodicidadNombre: string;
   nextDateLabel: string;
   relativeLabel: string;
@@ -1203,6 +1204,7 @@ export class Dashboard implements OnInit {
           prioridad: this.getNotificationPriorityLabel(configuracion.prioridad),
           vigenciaLabel: `${this.formatFullDate(configuracion.fecha_inicio)} al ${this.formatFullDate(configuracion.fecha_fin)}`,
           frecuenciaLabel: this.getScheduledFrequencyLabel(configuracion),
+          quincenaLabel: this.getScheduledQuincenaLabel(configuracion, nextDate),
           periodicidadNombre:
             configuracion.periodicidad?.nombre_periodicidad || 'Sin periodicidad',
           nextDateLabel: nextDate ? this.fullDateFormatter.format(nextDate) : 'Sin proxima fecha',
@@ -1409,6 +1411,24 @@ export class Dashboard implements OnInit {
       : `Dia ${configuracion.dia_pago_programado}`;
   }
 
+  private getScheduledQuincenaLabel(
+    configuracion: ConfiguracionNotificacionPago,
+    nextDate: Date | null,
+  ): string {
+    if (this.resolvePeriodicidadCode(configuracion) === 'quincenal') {
+      return nextDate ? this.getQuincenaLabelFromDay(nextDate.getDate()) : 'Primera y segunda quincena';
+    }
+
+    if (nextDate) {
+      return this.getQuincenaLabelFromDay(nextDate.getDate());
+    }
+
+    const day = Number(configuracion.dia_pago_programado);
+    return Number.isInteger(day) && day >= 1 && day <= 31
+      ? this.getQuincenaLabelFromDay(day)
+      : 'Sin quincena definida';
+  }
+
   private resolvePeriodicidadCode(configuracion: ConfiguracionNotificacionPago): string {
     const code = this.normalizeText(configuracion.periodicidad?.codigo || '');
 
@@ -1475,6 +1495,10 @@ export class Dashboard implements OnInit {
 
   private getEndOfMonthDate(year: number, month: number): Date {
     return new Date(year, month + 1, 0);
+  }
+
+  private getQuincenaLabelFromDay(day: number): string {
+    return day >= 15 ? 'Primera quincena' : 'Segunda quincena';
   }
 
   private calculateScheduledDiffInDays(left: Date, right: Date): number {

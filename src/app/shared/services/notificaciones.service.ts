@@ -210,7 +210,7 @@ export class NotificacionesService {
     payload: ConfiguracionNotificacionPagoPayload,
   ): Promise<ConfiguracionNotificacionPago> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
-    const descripcion = payload.descripcion.trim();
+    const descripcion = this.normalizeDescripcion(payload.descripcion);
     const prioridad = this.normalizePrioridad(payload.prioridad);
     const fechaInicio = this.normalizeDateOnly(payload.fecha_inicio);
     const fechaFin = this.normalizeDateOnly(payload.fecha_fin);
@@ -327,6 +327,10 @@ export class NotificacionesService {
     throw new Error('La prioridad debe ser alta, media o baja.');
   }
 
+  private normalizeDescripcion(value: string | null | undefined): string {
+    return (value ?? '').trim().toUpperCase();
+  }
+
   private normalizeDateOnly(value: string | null | undefined): string {
     const normalized = (value ?? '').trim();
 
@@ -346,7 +350,7 @@ export class NotificacionesService {
       const idUsuario = Number(item.id_usuario);
       const diaPagoProgramado = Number(item.dia_pago_programado);
       const idPeriodicidad = Number(item.id_periodicidad);
-      const descripcion = item.descripcion?.trim() || '';
+      const descripcion = this.normalizeDescripcion(item.descripcion);
       const prioridad = item.prioridad ? this.normalizePrioridad(item.prioridad) : null;
       const fechaInicio = item.fecha_inicio?.trim() || '';
       const fechaFin = item.fecha_fin?.trim() || '';

@@ -25,12 +25,72 @@ type PrioridadOption = {
   label: string;
 };
 
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DISPLAY_DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/;
+
 const QUINCENAL_FALLBACK: PeriodicidadCatalogo = {
   id_periodicidad: 4,
   nombre_periodicidad: 'Quincenal',
   descripcion: 'Se ejecutara dos veces al mes: el dia 15 y el ultimo dia del mes.',
   codigo: 'quincenal',
   estado: true,
+};
+
+const parseSupportedDate = (value: string | null | undefined): Date | null => {
+  const normalized = (value ?? '').trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  let year = 0;
+  let month = 0;
+  let day = 0;
+
+  if (ISO_DATE_PATTERN.test(normalized)) {
+    [year, month, day] = normalized.split('-').map((part) => Number(part));
+  } else if (DISPLAY_DATE_PATTERN.test(normalized)) {
+    [day, month, year] = normalized.split('/').map((part) => Number(part));
+  } else {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const formatDisplayDate = (date: Date): string => {
+  const day = `${date.getDate()}`.padStart(2, '0');
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatApiDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const dateInputValidator = (control: AbstractControl): ValidationErrors | null => {
+  const value = control.value as string | null | undefined;
+
+  if (!value) {
+    return null;
+  }
+
+  return parseSupportedDate(value) ? null : { invalidDate: true };
 };
 
 const dateRangeValidator = (
@@ -43,7 +103,14 @@ const dateRangeValidator = (
     return null;
   }
 
-  return fechaFin >= fechaInicio ? null : { invalidDateRange: true };
+  const parsedInicio = parseSupportedDate(fechaInicio);
+  const parsedFin = parseSupportedDate(fechaFin);
+
+  if (!parsedInicio || !parsedFin) {
+    return null;
+  }
+
+  return parsedFin.getTime() >= parsedInicio.getTime() ? null : { invalidDateRange: true };
 };
 
 @Component({
@@ -88,6 +155,7 @@ export class ResumenNotificacionesPage implements OnInit {
   periodicidadesDisponibles = false;
   readonly today = new Date();
   readonly todayDateInput = this.toDateInputValue(this.today);
+  readonly defaultEndDateInput = this.getDefaultEndDate(this.todayDateInput);
   readonly userProfile = loadUserProfile();
   configuraciones: ConfiguracionNotificacionPago[] = [];
   periodicidadOptions: PeriodicidadCatalogo[] = [];
@@ -109,8 +177,8 @@ export class ResumenNotificacionesPage implements OnInit {
   readonly notificacionForm = this.fb.group({
     descripcion: this.fb.control('', [Validators.required, Validators.maxLength(160)]),
     prioridad: this.fb.control<PrioridadNotificacion>('media', [Validators.required]),
-    fecha_inicio: this.fb.control(this.todayDateInput, [Validators.required]),
-    fecha_fin: this.fb.control(this.todayDateInput, [Validators.required]),
+    fecha_inicio: this.fb.control(this.todayDateInput, [Validators.required, dateInputValidator]),
+    fecha_fin: this.fb.control(this.defaultEndDateInput, [Validators.required, dateInputValidator]),
     dia_pago_programado: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(1),
@@ -172,6 +240,50 @@ export class ResumenNotificacionesPage implements OnInit {
     this.notificacionForm.controls.id_periodicidad.valueChanges.subscribe(() => {
       this.applyPeriodicidadRules();
     });
+
+    this.notificacionForm.controls.descripcion.valueChanges.subscribe((descripcion) => {
+      const descripcionControl = this.notificacionForm.controls.descripcion;
+      const descripcionNormalizada = this.normalizeDescripcion(descripcion);
+
+      if (descripcionNormalizada === descripcion) {
+        return;
+      }
+
+      descripcionControl.setValue(descripcionNormalizada, { emitEvent: false });
+    });
+
+    this.notificacionForm.controls.fecha_inicio.valueChanges.subscribe((fechaInicio) => {
+      const fechaInicioControl = this.notificacionForm.controls.fecha_inicio;
+      const fechaInicioNormalizada = this.normalizeDateInput(fechaInicio);
+
+      if (fechaInicioNormalizada !== fechaInicio) {
+        fechaInicioControl.setValue(fechaInicioNormalizada, { emitEvent: false });
+      }
+
+      if (this.isEditing) {
+        return;
+      }
+
+      const fechaFinControl = this.notificacionForm.controls.fecha_fin;
+      const shouldSyncFechaFin = fechaFinControl.pristine || !fechaFinControl.value;
+
+      if (!shouldSyncFechaFin || !this.isCompleteDateInput(fechaInicioNormalizada)) {
+        return;
+      }
+
+      fechaFinControl.setValue(this.getDefaultEndDate(fechaInicioNormalizada), { emitEvent: false });
+    });
+
+    this.notificacionForm.controls.fecha_fin.valueChanges.subscribe((fechaFin) => {
+      const fechaFinControl = this.notificacionForm.controls.fecha_fin;
+      const fechaFinNormalizada = this.normalizeDateInput(fechaFin);
+
+      if (fechaFinNormalizada === fechaFin) {
+        return;
+      }
+
+      fechaFinControl.setValue(fechaFinNormalizada, { emitEvent: false });
+    });
   }
 
   toggleMaintenanceMenu(): void {
@@ -205,7 +317,7 @@ export class ResumenNotificacionesPage implements OnInit {
 
       if (this.periodicidadOptions.length > 0) {
         this.notificacionForm.controls.id_periodicidad.setValue(
-          this.periodicidadOptions[0].id_periodicidad,
+          this.getDefaultPeriodicidadId(),
         );
       } else {
         this.errorMessage =
@@ -236,7 +348,7 @@ export class ResumenNotificacionesPage implements OnInit {
       this.notificacionForm.markAllAsTouched();
       await this.alerts.warning(
         'Formulario incompleto',
-        'Completa descripcion, prioridad, fechas de inicio y fin, dia de pago entre 1 y 31 y periodicidad.',
+        'Completa nombre de la notificacion, prioridad, fechas de inicio y fin, dia de pago entre 1 y 31 y periodicidad.',
       );
       return;
     }
@@ -260,10 +372,10 @@ export class ResumenNotificacionesPage implements OnInit {
     try {
       await this.notificacionesService.saveConfiguracionPago({
         id_notificacion_programada: this.editingId,
-        descripcion: this.notificacionForm.value.descripcion?.trim() ?? '',
+        descripcion: this.normalizeDescripcion(this.notificacionForm.value.descripcion).trim(),
         prioridad: this.notificacionForm.value.prioridad ?? 'media',
-        fecha_inicio: this.notificacionForm.value.fecha_inicio ?? '',
-        fecha_fin: this.notificacionForm.value.fecha_fin ?? '',
+        fecha_inicio: this.toApiDateValue(this.notificacionForm.value.fecha_inicio),
+        fecha_fin: this.toApiDateValue(this.notificacionForm.value.fecha_fin),
         dia_pago_programado: this.resolveDiaPagoProgramado(periodicidadSeleccionada),
         id_periodicidad: periodicidadSeleccionada.id_periodicidad,
       });
@@ -293,10 +405,10 @@ export class ResumenNotificacionesPage implements OnInit {
     this.ensurePeriodicidadOption(configuracion.periodicidad);
     this.editingId = configuracion.id_notificacion_programada;
     this.notificacionForm.patchValue({
-      descripcion: configuracion.descripcion,
+      descripcion: this.normalizeDescripcion(configuracion.descripcion),
       prioridad: configuracion.prioridad,
-      fecha_inicio: configuracion.fecha_inicio,
-      fecha_fin: configuracion.fecha_fin,
+      fecha_inicio: this.toDisplayDateValue(configuracion.fecha_inicio),
+      fecha_fin: this.toDisplayDateValue(configuracion.fecha_fin),
       dia_pago_programado: configuracion.dia_pago_programado,
       id_periodicidad: configuracion.id_periodicidad > 0 ? configuracion.id_periodicidad : null,
     });
@@ -343,42 +455,46 @@ export class ResumenNotificacionesPage implements OnInit {
     await this.alerts.detail(
       'Detalle de notificacion',
       [
-        { label: 'id_notificacion_programada', value: configuracion.id_notificacion_programada },
-        { label: 'id_usuario', value: configuracion.id_usuario },
-        { label: 'descripcion', value: configuracion.descripcion },
-        { label: 'prioridad', value: configuracion.prioridad },
-        { label: 'fecha_inicio', value: configuracion.fecha_inicio },
-        { label: 'fecha_fin', value: configuracion.fecha_fin },
+        { label: 'Id notificacion programada', value: configuracion.id_notificacion_programada },
+        { label: 'Id usuario', value: configuracion.id_usuario },
+        { label: 'Nombre de la notificacion', value: configuracion.descripcion },
+        { label: 'Prioridad', value: this.getPrioridadLabel(configuracion.prioridad) },
+        { label: 'Fecha inicio', value: this.formatDateLabel(configuracion.fecha_inicio) },
+        { label: 'Fecha fin', value: this.formatDateLabel(configuracion.fecha_fin) },
         {
-          label: 'dia_pago_programado',
+          label: 'Dia pago programado',
           value: configuracion.dia_pago_programado,
         },
         {
-          label: 'id_periodicidad',
+          label: 'Quincena',
+          value: this.getQuincenaLabel(configuracion),
+        },
+        {
+          label: 'Id periodicidad',
           value: configuracion.id_periodicidad,
         },
         {
-          label: 'nombre_periodicidad',
+          label: 'Nombre periodicidad',
           value: this.getPeriodicidadLabel(configuracion),
         },
         {
-          label: 'codigo',
+          label: 'Codigo',
           value: configuracion.periodicidad?.codigo || 'Sin codigo',
         },
         {
-          label: 'descripcion_periodicidad',
+          label: 'Descripcion periodicidad',
           value: configuracion.periodicidad?.descripcion || 'Sin descripcion',
         },
         {
-          label: 'estado',
+          label: 'Estado',
           value: this.getEstadoLabel(configuracion.estado),
         },
         {
-          label: 'fecha_creacion',
+          label: 'Fecha creacion',
           value: this.formatTimestampLabel(configuracion.fecha_creacion),
         },
         {
-          label: 'fecha_actualizacion',
+          label: 'Fecha actualizacion',
           value: this.formatTimestampLabel(configuracion.fecha_actualizacion),
         },
       ],
@@ -421,6 +537,19 @@ export class ResumenNotificacionesPage implements OnInit {
     }
 
     return `Dia ${configuracion.dia_pago_programado}`;
+  }
+
+  getQuincenaLabel(configuracion: ConfiguracionNotificacionPago): string {
+    if (this.isQuincenalPeriodicidad(configuracion.periodicidad, configuracion.id_periodicidad)) {
+      return 'Primera y segunda quincena';
+    }
+
+    const day = Number(configuracion.dia_pago_programado);
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+      return 'Sin quincena definida';
+    }
+
+    return day >= 15 ? 'Primera quincena' : 'Segunda quincena';
   }
 
   getVigenciaLabel(configuracion: ConfiguracionNotificacionPago): string {
@@ -476,10 +605,46 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   private toDateInputValue(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return formatDisplayDate(date);
+  }
+
+  private normalizeDescripcion(value: string | null | undefined): string {
+    return (value ?? '').toUpperCase();
+  }
+
+  private normalizeDateInput(value: string | null | undefined): string {
+    const digits = (value ?? '').replace(/\D/g, '').slice(0, 8);
+
+    if (digits.length <= 2) {
+      return digits;
+    }
+
+    if (digits.length <= 4) {
+      return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  }
+
+  private isCompleteDateInput(value: string | null | undefined): boolean {
+    return DISPLAY_DATE_PATTERN.test((value ?? '').trim()) && !!parseSupportedDate(value);
+  }
+
+  private toDisplayDateValue(value: string | null | undefined): string {
+    const parsed = parseSupportedDate(value);
+    return parsed ? formatDisplayDate(parsed) : '';
+  }
+
+  private toApiDateValue(value: string | null | undefined): string {
+    const parsed = parseSupportedDate(value);
+    return parsed ? formatApiDate(parsed) : '';
+  }
+
+  private getDefaultEndDate(fechaInicio: string): string {
+    const fechaBase = this.parseDateOnly(fechaInicio) ?? this.today;
+    return this.toDateInputValue(
+      new Date(fechaBase.getFullYear() + 1, fechaBase.getMonth(), fechaBase.getDate()),
+    );
   }
 
   private resolveDiaPagoProgramado(periodicidad: PeriodicidadCatalogo): number {
@@ -543,24 +708,19 @@ export class ResumenNotificacionesPage implements OnInit {
     return codigo === 'quincenal' || fallbackId === 4 || periodicidad?.id_periodicidad === 4;
   }
 
+  private getDefaultPeriodicidadId(): number | null {
+    const mensual = this.periodicidadOptions.find((item) => {
+      const codigo = (item.codigo ?? '').trim().toLowerCase();
+      const nombre = (item.nombre_periodicidad ?? '').trim().toLowerCase();
+
+      return codigo === 'mes' || codigo === 'mensual' || nombre === 'mes' || nombre === 'mensual';
+    });
+
+    return mensual?.id_periodicidad ?? this.periodicidadOptions[0]?.id_periodicidad ?? null;
+  }
+
   private parseDateOnly(value: string | null | undefined): Date | null {
-    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return null;
-    }
-
-    const [year, month, day] = value.split('-').map((part) => Number(part));
-    const parsed = new Date(year, month - 1, day);
-
-    if (
-      Number.isNaN(parsed.getTime()) ||
-      parsed.getFullYear() !== year ||
-      parsed.getMonth() !== month - 1 ||
-      parsed.getDate() !== day
-    ) {
-      return null;
-    }
-
-    return parsed;
+    return parseSupportedDate(value);
   }
 
   private resetForm(): void {
@@ -569,9 +729,9 @@ export class ResumenNotificacionesPage implements OnInit {
       descripcion: '',
       prioridad: 'media',
       fecha_inicio: this.todayDateInput,
-      fecha_fin: this.todayDateInput,
+      fecha_fin: this.defaultEndDateInput,
       dia_pago_programado: null,
-      id_periodicidad: this.periodicidadOptions[0]?.id_periodicidad ?? null,
+      id_periodicidad: this.getDefaultPeriodicidadId(),
     });
     this.notificacionForm.markAsPristine();
     this.notificacionForm.markAsUntouched();

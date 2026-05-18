@@ -118,7 +118,7 @@
     </nav>
 
     <section class="sidebar-card">
-      <span class="sidebar-label">notificaciones_programadas</span>
+      <span class="sidebar-label">Notificaciones programadas</span>
       <strong>{{ totalConfiguraciones }} registros</strong>
       <p>
         {{ proximaConfiguracion ? ('Primer registro: ' + proximaConfiguracion.descripcion) : 'Sin registros configurados.' }}
@@ -129,36 +129,12 @@
   <main class="content">
     <app-session-strip></app-session-strip>
 
-    <section class="hero-banner panel">
-      <div class="hero-copy">
-        <span class="hero-kicker">Resumen</span>
-        <h2>Administra notificaciones_programadas.</h2>
-        <p>
-          El formulario y el listado muestran solo columnas existentes en
-          <strong>notificaciones_programadas</strong> y <strong>periodicidad</strong>.
-        </p>
-      </div>
-
-      <div class="hero-metrics">
-        <article class="metric-card">
-          <span>Total configurado</span>
-          <strong>{{ totalConfiguraciones }}</strong>
-          <small>{{ totalConfiguraciones === 1 ? 'registro en notificaciones_programadas' : 'registros en notificaciones_programadas' }}</small>
-        </article>
-        <article class="metric-card">
-          <span>Periodicidades</span>
-          <strong>{{ periodicidadOptions.length }}</strong>
-          <small>Catalogo cargado desde periodicidad</small>
-        </article>
-      </div>
-    </section>
-
     <header class="page-header summary-header">
       <div>
         <p class="eyebrow">Configuracion</p>
         <h2>Notificaciones de pago</h2>
         <p class="lead">
-          Esta vista usa solo los campos existentes de <strong>notificaciones_programadas</strong>
+          Esta vista usa solo los campos existentes de <strong>notificaciones programadas</strong>
           y <strong>periodicidad</strong>.
         </p>
       </div>
@@ -177,33 +153,32 @@
         <div class="panel-header">
           <div>
             <p class="panel-title">Formulario</p>
-            <h3>{{ isEditing ? 'Editar notificacion_programada' : 'Registrar notificacion_programada' }}</h3>
+            <h3>{{ isEditing ? 'Editar notificacion programada' : 'Registrar notificacion programada' }}</h3>
           </div>
           <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
         </div>
 
         <form [formGroup]="notificacionForm" (ngSubmit)="onSubmit()" class="notification-form" novalidate>
-          <p class="form-context">
-            Usuario actual: <strong>#{{ userProfile.id_usuario || 'Sin sesion' }}</strong>
-            <span *ngIf="isEditing">| Editando registro <strong>#{{ editingConfiguracion?.id_notificacion_programada }}</strong></span>
+          <p *ngIf="isEditing" class="form-context">
+            Editando registro <strong>#{{ editingConfiguracion?.id_notificacion_programada }}</strong>
           </p>
 
           <div class="field">
-            <label for="descripcion">descripcion</label>
-            <textarea
+            <label for="descripcion">Nombre de la notificacion</label>
+            <input
               id="descripcion"
-              rows="4"
+              type="text"
               formControlName="descripcion"
               maxlength="160"
               placeholder="Ejemplo: Pago de tarjeta, membresia, seguro o colegiatura"
-            ></textarea>
+            />
             <small
               *ngIf="
                 notificacionForm.controls.descripcion.touched &&
                 notificacionForm.controls.descripcion.errors?.['required']
               "
             >
-              La descripcion es obligatoria.
+              El nombre de la notificacion es obligatorio.
             </small>
             <small
               *ngIf="
@@ -211,12 +186,12 @@
                 notificacionForm.controls.descripcion.errors?.['maxlength']
               "
             >
-              La descripcion no puede exceder 160 caracteres.
+              El nombre de la notificacion no puede exceder 160 caracteres.
             </small>
           </div>
 
           <div class="field">
-            <label for="prioridad">prioridad</label>
+            <label for="prioridad">Prioridad</label>
             <select id="prioridad" formControlName="prioridad">
               <option *ngFor="let option of prioridadOptions" [ngValue]="option.value">
                 {{ option.label }}
@@ -226,11 +201,14 @@
 
           <div class="field-grid">
             <div class="field">
-              <label for="fecha_inicio">fecha_inicio</label>
+              <label for="fecha_inicio">Fecha inicio</label>
               <input
                 id="fecha_inicio"
-                type="date"
+                type="text"
                 formControlName="fecha_inicio"
+                inputmode="numeric"
+                maxlength="10"
+                placeholder="DD/MM/AAAA"
               />
               <small
                 *ngIf="
@@ -240,15 +218,25 @@
               >
                 La fecha de inicio es obligatoria.
               </small>
+              <small
+                *ngIf="
+                  notificacionForm.controls.fecha_inicio.touched &&
+                  notificacionForm.controls.fecha_inicio.errors?.['invalidDate']
+                "
+              >
+                La fecha de inicio debe estar en formato DD/MM/AAAA.
+              </small>
             </div>
 
             <div class="field">
-              <label for="fecha_fin">fecha_fin</label>
+              <label for="fecha_fin">Fecha fin</label>
               <input
                 id="fecha_fin"
-                type="date"
+                type="text"
                 formControlName="fecha_fin"
-                [min]="notificacionForm.controls.fecha_inicio.value || null"
+                inputmode="numeric"
+                maxlength="10"
+                placeholder="DD/MM/AAAA"
               />
               <small
                 *ngIf="
@@ -257,6 +245,14 @@
                 "
               >
                 La fecha de fin es obligatoria.
+              </small>
+              <small
+                *ngIf="
+                  notificacionForm.controls.fecha_fin.touched &&
+                  notificacionForm.controls.fecha_fin.errors?.['invalidDate']
+                "
+              >
+                La fecha de fin debe estar en formato DD/MM/AAAA.
               </small>
               <small
                 *ngIf="
@@ -271,7 +267,7 @@
 
           <div class="field-grid">
             <div class="field">
-              <label for="dia_pago_programado">dia_pago_programado</label>
+              <label for="dia_pago_programado">Dia pago programado</label>
               <input
                 id="dia_pago_programado"
                 type="number"
@@ -307,7 +303,7 @@
             </div>
 
             <div class="field">
-              <label for="periodicidad">id_periodicidad</label>
+              <label for="periodicidad">Periodicidad</label>
               <select id="periodicidad" formControlName="id_periodicidad">
                 <option [ngValue]="null">Selecciona una periodicidad</option>
                 <option
@@ -328,23 +324,13 @@
             </div>
           </div>
 
-          <div *ngIf="selectedPeriodicidad" class="catalog-card">
-            <div class="catalog-card-header">
-              <strong>{{ selectedPeriodicidad.nombre_periodicidad }}</strong>
-              <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(selectedPeriodicidad.estado)">
-                {{ getCatalogStateLabel(selectedPeriodicidad.estado) }}
-              </span>
-            </div>
-            <small>{{ getPeriodicidadDescription(selectedPeriodicidad) }}</small>
-          </div>
-
           <section *ngIf="editingConfiguracion" class="table-shape-grid">
             <div class="shape-card">
-              <span class="shape-label">fecha_creacion</span>
+              <span class="shape-label">Fecha creacion</span>
               <strong>{{ formatTimestampLabel(editingConfiguracion.fecha_creacion) }}</strong>
             </div>
             <div class="shape-card">
-              <span class="shape-label">fecha_actualizacion</span>
+              <span class="shape-label">Fecha actualizacion</span>
               <strong>{{ formatTimestampLabel(editingConfiguracion.fecha_actualizacion) }}</strong>
             </div>
           </section>
@@ -368,10 +354,6 @@
 
       <article class="panel table-panel">
         <div class="panel-header">
-          <div>
-            <p class="panel-title">Tabla</p>
-            <h3>notificaciones_programadas</h3>
-          </div>
           <button type="button" class="secondary-button" (click)="loadConfiguraciones()">
             Recargar
           </button>
@@ -385,10 +367,10 @@
           <table class="notifications-table">
             <thead>
               <tr>
-                <th>Descripcion</th>
+                <th>Notificacion</th>
                 <th>Periodicidad</th>
                 <th>Dia programado</th>
-                <th>Vigencia</th>
+                <th>Quincena</th>
                 <th>Prioridad</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -403,18 +385,10 @@
                   </div>
                 </td>
                 <td>
-                  <div class="cell-main">
-                    <strong>{{ getPeriodicidadLabel(configuracion) }}</strong>
-                    <small>{{ getPeriodicidadDescription(configuracion.periodicidad) }}</small>
-                  </div>
+                  {{ getPeriodicidadLabel(configuracion) }}
                 </td>
                 <td>{{ getFrecuenciaLabel(configuracion) }}</td>
-                <td>
-                  <div class="cell-main">
-                    <span>{{ getVigenciaLabel(configuracion) }}</span>
-                    <small>Actualizado {{ formatTimestampLabel(configuracion.fecha_actualizacion) }}</small>
-                  </div>
-                </td>
+                <td>{{ getQuincenaLabel(configuracion) }}</td>
                 <td>
                   <span class="priority-badge" [ngClass]="'tone-' + getPrioridadTone(configuracion.prioridad)">
                     {{ getPrioridadLabel(configuracion.prioridad) }}

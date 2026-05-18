@@ -126,10 +126,23 @@
             </div>
 
             <div class="field" style="display:flex;align-items:flex-end;">
-              <label class="checkbox-row" for="prioritariosDetalle" style="margin:0;">
-                <input id="prioritariosDetalle" type="checkbox" formControlName="prioritarios" />
-                <span>Proximos a vencer</span>
+              <label class="checkbox-row" for="enviadasDetalle" style="margin:0;">
+                <input id="enviadasDetalle" type="checkbox" formControlName="enviadas" />
+                <span>Enviados</span>
               </label>
+            </div>
+
+            <div class="field">
+              <label for="diasPrioridadDetalle">Dias por vencer</label>
+              <input
+                id="diasPrioridadDetalle"
+                type="number"
+                min="1"
+                max="30"
+                inputmode="numeric"
+                formControlName="diasPrioridad"
+                style="max-width:5.5rem;"
+              />
             </div>
           </div>
 
