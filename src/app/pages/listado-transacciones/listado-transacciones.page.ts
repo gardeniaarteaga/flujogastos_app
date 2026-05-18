@@ -279,13 +279,24 @@ export class ListadoTransaccionesPage implements OnInit {
   readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
 
   readonly filtrosForm = this.fb.group({
-    soloHoy: [true],
-    mesActual: [false],
+    soloHoy: [this.viewMode === 'detalle'],
+    mesActual: [this.viewMode !== 'detalle'],
     prioritarios: [this.viewMode === 'detalle'],
     pendientePago: [false],
+    enviadas: [false],
     pendienteRegistro: [false],
-    fechaDesde: [this.formatDateDisplayFromApi(this.todayFilterValue), [this.dateDisplayValidator()]],
-    fechaHasta: [this.formatDateDisplayFromApi(this.todayFilterValue), [this.dateDisplayValidator()]],
+    fechaDesde: [
+      this.viewMode === 'detalle'
+        ? this.formatDateDisplayFromApi(this.todayFilterValue)
+        : this.formatDateDisplayFromApi(this.currentMonthStartValue),
+      [this.dateDisplayValidator()],
+    ],
+    fechaHasta: [
+      this.viewMode === 'detalle'
+        ? this.formatDateDisplayFromApi(this.todayFilterValue)
+        : this.formatDateDisplayFromApi(this.currentMonthEndValue),
+      [this.dateDisplayValidator()],
+    ],
     estado: [null as string | null],
     idMetodoPago: [null as number | null],
     idParticipante: [null as number | null],
@@ -469,6 +480,10 @@ export class ListadoTransaccionesPage implements OnInit {
         filtros.pendientePago &&
         !['pendiente', 'pago parcial'].includes(estadoTransaccion)
       ) {
+        return false;
+      }
+
+      if (filtros.enviadas && transaccion.es_propietario) {
         return false;
       }
 
@@ -5031,18 +5046,24 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private resetDefaultFilters(): void {
     const useTodayDefaults = this.viewMode === 'detalle';
+    const useCurrentMonthDefaults = this.viewMode !== 'detalle';
     this.filtrosForm.reset({
       soloHoy: useTodayDefaults,
-      mesActual: false,
+      mesActual: useCurrentMonthDefaults,
       prioritarios: this.viewMode === 'detalle',
       pendientePago: false,
+      enviadas: false,
       pendienteRegistro: false,
       fechaDesde: useTodayDefaults
         ? this.formatDateDisplayFromApi(this.todayFilterValue)
-        : '',
+        : useCurrentMonthDefaults
+          ? this.formatDateDisplayFromApi(this.currentMonthStartValue)
+          : '',
       fechaHasta: useTodayDefaults
         ? this.formatDateDisplayFromApi(this.todayFilterValue)
-        : '',
+        : useCurrentMonthDefaults
+          ? this.formatDateDisplayFromApi(this.currentMonthEndValue)
+          : '',
       estado: null,
       idMetodoPago: null,
       idParticipante: null,
