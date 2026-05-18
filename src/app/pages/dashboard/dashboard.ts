@@ -24,8 +24,8 @@ interface ScheduledNotificationView {
   descripcion: string;
   prioridad: string;
   vigenciaLabel: string;
-  dia_pago_programado: number;
-  periodicidad_nombre: string;
+  frecuenciaLabel: string;
+  periodicidadNombre: string;
   nextDateLabel: string;
   relativeLabel: string;
   statusLabel: string;
@@ -1187,43 +1187,38 @@ export class Dashboard implements OnInit {
     return configuraciones
       .flatMap((configuracion) => {
         const nextDate = this.resolveScheduledNotificationDate(configuracion);
+        const status = this.resolveScheduledStatus(configuracion, nextDate);
 
-        if (!nextDate) {
+        if (!nextDate && status.tone === 'neutral' && status.label !== 'Pendiente de inicio') {
           return [];
         }
 
-        const diffInDays = this.calculateScheduledDiffInDays(nextDate, this.getToday());
-        const tone: DashboardTone =
-          diffInDays === 0 ? 'danger' : diffInDays <= 3 ? 'warning' : 'info';
-        const statusLabel =
-          diffInDays === 0
-            ? 'Vence hoy'
-            : diffInDays === 1
-              ? 'Vence manana'
-              : diffInDays < 0
-                ? 'Pendiente'
-                : 'Proximo recordatorio';
+        const diffInDays = nextDate
+          ? this.calculateScheduledDiffInDays(nextDate, this.getToday())
+          : null;
 
-          return [
-            {
-              id_notificacion_programada: configuracion.id_notificacion_programada,
-              descripcion: configuracion.descripcion,
-              prioridad: this.getNotificationPriorityLabel(configuracion.prioridad),
-              vigenciaLabel: `${this.formatFullDate(configuracion.fecha_inicio)} al ${this.formatFullDate(configuracion.fecha_fin)}`,
-              dia_pago_programado: configuracion.dia_pago_programado,
-              periodicidad_nombre: configuracion.periodicidad_nombre,
-              nextDateLabel: this.fullDateFormatter.format(nextDate),
-            relativeLabel: this.relativeDayFormatter.format(diffInDays, 'day'),
-            statusLabel,
-            tone,
-          },
-        ];
+        return [{
+          id_notificacion_programada: configuracion.id_notificacion_programada,
+          descripcion: configuracion.descripcion,
+          prioridad: this.getNotificationPriorityLabel(configuracion.prioridad),
+          vigenciaLabel: `${this.formatFullDate(configuracion.fecha_inicio)} al ${this.formatFullDate(configuracion.fecha_fin)}`,
+          frecuenciaLabel: this.getScheduledFrequencyLabel(configuracion),
+          periodicidadNombre:
+            configuracion.periodicidad?.nombre_periodicidad || 'Sin periodicidad',
+          nextDateLabel: nextDate ? this.fullDateFormatter.format(nextDate) : 'Sin proxima fecha',
+          relativeLabel:
+            diffInDays === null
+              ? status.label
+              : this.relativeDayFormatter.format(diffInDays, 'day'),
+          statusLabel: status.label,
+          tone: status.tone,
+        }];
       })
       .sort((a, b) => {
         const toneRank = { danger: 0, warning: 1, info: 2, good: 3, neutral: 4 };
         return (
           (toneRank[a.tone] ?? 5) - (toneRank[b.tone] ?? 5) ||
-          a.dia_pago_programado - b.dia_pago_programado
+          a.nextDateLabel.localeCompare(b.nextDateLabel)
         );
       })
       .slice(0, 4);
@@ -1316,9 +1311,58 @@ export class Dashboard implements OnInit {
     return latestDate ? this.fullDateFormatter.format(latestDate) : 'Sin fecha definida';
   }
 
+  private resolveScheduledStatus(
+    configuracion: ConfiguracionNotificacionPago,
+    nextDate: Date | null,
+  ): { label: string; tone: DashboardTone } {
+    if (!configuracion.estado) {
+      return { label: 'Inactiva', tone: 'neutral' };
+    }
+
+    const startDate = this.parseDateOnly(configuracion.fecha_inicio);
+    const endDate = this.parseDateOnly(configuracion.fecha_fin);
+
+    if (!startDate || !endDate || endDate.getTime() < startDate.getTime()) {
+      return { label: 'Fechas invalidas', tone: 'danger' };
+    }
+
+    const today = this.getToday();
+
+    if (today.getTime() < startDate.getTime()) {
+      return { label: 'Pendiente de inicio', tone: 'info' };
+    }
+
+    if (!nextDate || today.getTime() > endDate.getTime()) {
+      return { label: 'Fuera de vigencia', tone: 'neutral' };
+    }
+
+    const diffInDays = this.calculateScheduledDiffInDays(nextDate, today);
+
+    if (diffInDays === 0) {
+      return { label: 'Vence hoy', tone: 'danger' };
+    }
+
+    if (diffInDays === 1) {
+      return { label: 'Vence manana', tone: 'warning' };
+    }
+
+    if (diffInDays <= 7) {
+      return { label: 'Proximo recordatorio', tone: 'warning' };
+    }
+
+    return {
+      label: 'Vigente',
+      tone: configuracion.prioridad === 'alta' ? 'warning' : 'good',
+    };
+  }
+
   private resolveScheduledNotificationDate(
     configuracion: ConfiguracionNotificacionPago,
   ): Date | null {
+    if (!configuracion.estado) {
+      return null;
+    }
+
     const startDate = this.parseDateOnly(configuracion.fecha_inicio);
     const endDate = this.parseDateOnly(configuracion.fecha_fin);
 
@@ -1338,34 +1382,104 @@ export class Dashboard implements OnInit {
       return null;
     }
 
-    if (configuracion.periodicidad_codigo === 'fecha-especifica') {
-      return startDate;
+    const periodicidadCode = this.resolvePeriodicidadCode(configuracion);
+
+    let nextDate: Date | null;
+    switch (periodicidadCode) {
+      case 'fecha-especifica':
+        nextDate = startDate.getTime() >= referenceDate.getTime() ? startDate : null;
+        break;
+      case 'quincenal':
+        nextDate = this.buildQuincenalOccurrence(referenceDate);
+        break;
+      case 'anual':
+        nextDate = this.buildNextYearlyOccurrence(referenceDate, startDate.getMonth(), day);
+        break;
+      default:
+        nextDate = this.buildNextMonthlyOccurrence(referenceDate, day);
+        break;
     }
 
-    if (configuracion.periodicidad_codigo === 'mensual') {
-      const currentMonthDate = this.buildMonthlyOccurrence(referenceDate, day);
-      const nextDate = currentMonthDate.getTime() >= referenceDate.getTime()
-        ? currentMonthDate
-        : this.buildMonthlyOccurrence(
-            new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1),
-            day,
-          );
+    return nextDate && nextDate.getTime() <= endDate.getTime() ? nextDate : null;
+  }
 
-      return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
+  private getScheduledFrequencyLabel(configuracion: ConfiguracionNotificacionPago): string {
+    return this.resolvePeriodicidadCode(configuracion) === 'quincenal'
+      ? '15 y fin de mes'
+      : `Dia ${configuracion.dia_pago_programado}`;
+  }
+
+  private resolvePeriodicidadCode(configuracion: ConfiguracionNotificacionPago): string {
+    const code = this.normalizeText(configuracion.periodicidad?.codigo || '');
+
+    if (code) {
+      return code;
     }
 
-    const anchorMonth = startDate.getMonth();
-    const currentYearDate = this.buildYearlyOccurrence(
+    return configuracion.id_periodicidad === 4 ? 'quincenal' : '';
+  }
+
+  private buildNextMonthlyOccurrence(referenceDate: Date, day: number): Date {
+    const currentMonthDate = this.createDateWithPreferredDay(
       referenceDate.getFullYear(),
-      anchorMonth,
+      referenceDate.getMonth(),
       day,
     );
-    const nextDate =
-      currentYearDate.getTime() >= referenceDate.getTime()
-        ? currentYearDate
-        : this.buildYearlyOccurrence(referenceDate.getFullYear() + 1, anchorMonth, day);
 
-    return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
+    if (currentMonthDate.getTime() >= referenceDate.getTime()) {
+      return currentMonthDate;
+    }
+
+    return this.createDateWithPreferredDay(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth() + 1,
+      day,
+    );
+  }
+
+  private buildNextYearlyOccurrence(referenceDate: Date, month: number, day: number): Date {
+    const currentYearDate = this.createDateWithPreferredDay(
+      referenceDate.getFullYear(),
+      month,
+      day,
+    );
+
+    if (currentYearDate.getTime() >= referenceDate.getTime()) {
+      return currentYearDate;
+    }
+
+    return this.createDateWithPreferredDay(referenceDate.getFullYear() + 1, month, day);
+  }
+
+  private buildQuincenalOccurrence(referenceDate: Date): Date {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const firstCut = new Date(year, month, 15);
+    const secondCut = this.getEndOfMonthDate(year, month);
+
+    if (firstCut.getTime() >= referenceDate.getTime()) {
+      return firstCut;
+    }
+
+    if (secondCut.getTime() >= referenceDate.getTime()) {
+      return secondCut;
+    }
+
+    return new Date(year, month + 1, 15);
+  }
+
+  private createDateWithPreferredDay(year: number, month: number, day: number): Date {
+    const lastDay = this.getEndOfMonthDate(year, month).getDate();
+    return new Date(year, month, Math.min(day, lastDay));
+  }
+
+  private getEndOfMonthDate(year: number, month: number): Date {
+    return new Date(year, month + 1, 0);
+  }
+
+  private calculateScheduledDiffInDays(left: Date, right: Date): number {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.round((left.getTime() - right.getTime()) / msPerDay);
   }
 
   private getNotificationPriorityLabel(value: string | null | undefined): string {
@@ -1496,25 +1610,6 @@ export class Dashboard implements OnInit {
 
   private getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  private buildMonthlyOccurrence(referenceDate: Date, day: number): Date {
-    const year = referenceDate.getFullYear();
-    const month = referenceDate.getMonth();
-    const maxDay = new Date(year, month + 1, 0).getDate();
-
-    return new Date(year, month, Math.min(day, maxDay));
-  }
-
-  private buildYearlyOccurrence(year: number, month: number, day: number): Date {
-    const maxDay = new Date(year, month + 1, 0).getDate();
-
-    return new Date(year, month, Math.min(day, maxDay));
-  }
-
-  private calculateScheduledDiffInDays(left: Date, right: Date): number {
-    const msPerDay = 24 * 60 * 60 * 1000;
-    return Math.round((left.getTime() - right.getTime()) / msPerDay);
   }
 
   private parseDateOnly(value: string | null | undefined): Date | null {

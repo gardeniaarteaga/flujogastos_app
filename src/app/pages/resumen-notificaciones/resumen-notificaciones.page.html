@@ -183,16 +183,10 @@
         </div>
 
         <form [formGroup]="notificacionForm" (ngSubmit)="onSubmit()" class="notification-form" novalidate>
-          <section class="table-shape-grid">
-            <div class="shape-card">
-              <span class="shape-label">id_usuario</span>
-              <strong>{{ userProfile.id_usuario || 'Pendiente de sesion' }}</strong>
-            </div>
-            <div class="shape-card">
-              <span class="shape-label">id_notificacion_programada</span>
-              <strong>{{ editingConfiguracion?.id_notificacion_programada || 'Se asigna al guardar' }}</strong>
-            </div>
-          </section>
+          <p class="form-context">
+            Usuario actual: <strong>#{{ userProfile.id_usuario || 'Sin sesion' }}</strong>
+            <span *ngIf="isEditing">| Editando registro <strong>#{{ editingConfiguracion?.id_notificacion_programada }}</strong></span>
+          </p>
 
           <div class="field">
             <label for="descripcion">descripcion</label>
@@ -286,6 +280,7 @@
                 step="1"
                 formControlName="dia_pago_programado"
                 placeholder="1"
+                [readonly]="isSelectedPeriodicidadQuincenal"
               />
               <small
                 *ngIf="
@@ -306,6 +301,9 @@
               >
                 El dia de pago debe estar entre 1 y 31.
               </small>
+              <small *ngIf="isSelectedPeriodicidadQuincenal">
+                Para quincenal se usa automaticamente el dia 15 y el ultimo dia del mes.
+              </small>
             </div>
 
             <div class="field">
@@ -316,7 +314,7 @@
                   *ngFor="let option of periodicidadOptions"
                   [ngValue]="option.id_periodicidad"
                 >
-                  {{ option.nombre }}
+                  {{ option.nombre_periodicidad }}
                 </option>
               </select>
               <small
@@ -332,18 +330,12 @@
 
           <div *ngIf="selectedPeriodicidad" class="catalog-card">
             <div class="catalog-card-header">
-              <strong>{{ selectedPeriodicidad.nombre }}</strong>
+              <strong>{{ selectedPeriodicidad.nombre_periodicidad }}</strong>
               <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(selectedPeriodicidad.estado)">
                 {{ getCatalogStateLabel(selectedPeriodicidad.estado) }}
               </span>
             </div>
-            <p>
-              id_periodicidad {{ selectedPeriodicidad.id_periodicidad }} | codigo {{ selectedPeriodicidad.codigo }}
-            </p>
-            <small>
-              nombre_periodicidad {{ selectedPeriodicidad.nombre }} |
-              descripcion {{ selectedPeriodicidad.descripcion || 'Sin descripcion' }}
-            </small>
+            <small>{{ getPeriodicidadDescription(selectedPeriodicidad) }}</small>
           </div>
 
           <section *ngIf="editingConfiguracion" class="table-shape-grid">
@@ -389,71 +381,66 @@
           Todavia no hay configuraciones de notificaciones registradas.
         </div>
 
-        <div *ngIf="configuraciones.length > 0" class="notification-list">
-          <article
-            *ngFor="let configuracion of configuraciones; trackBy: trackConfiguracion"
-            class="notification-row"
-          >
-            <div class="notification-main">
-              <div class="notification-copy">
-                <strong>{{ configuracion.descripcion }}</strong>
-                <p>
-                  id_notificacion_programada {{ configuracion.id_notificacion_programada }} |
-                  id_usuario {{ configuracion.id_usuario }} |
-                  estado {{ getEstadoLabel(configuracion.estado) }}
-                </p>
-                <p>
-                  prioridad {{ configuracion.prioridad }} |
-                  fecha_inicio {{ configuracion.fecha_inicio }} |
-                  fecha_fin {{ configuracion.fecha_fin }}
-                </p>
-                <p>
-                  dia_pago_programado {{ configuracion.dia_pago_programado }} |
-                  id_periodicidad {{ configuracion.id_periodicidad }} |
-                  nombre_periodicidad {{ getPeriodicidadLabel(configuracion) }} |
-                  codigo {{ configuracion.periodicidad_codigo }}
-                </p>
-                <p>
-                  fecha_creacion {{ formatTimestampLabel(configuracion.fecha_creacion) }} |
-                  fecha_actualizacion {{ formatTimestampLabel(configuracion.fecha_actualizacion) }}
-                </p>
-              </div>
-
-              <div class="notification-meta">
-                <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(configuracion.estado)">
-                  {{ getEstadoLabel(configuracion.estado) }}
-                </span>
-                <span class="priority-badge" [ngClass]="'tone-' + getPrioridadTone(configuracion.prioridad)">
-                  {{ configuracion.prioridad }}
-                </span>
-              </div>
-            </div>
-
-            <div class="notification-actions">
-              <button
-                type="button"
-                class="secondary-button table-button"
-                (click)="showConfiguracionDetail(configuracion)"
-              >
-                Ver detalle
-              </button>
-              <button
-                type="button"
-                class="secondary-button table-button"
-                (click)="editConfiguracion(configuracion)"
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                class="table-button danger"
-                [disabled]="deletingId === configuracion.id_notificacion_programada"
-                (click)="removeConfiguracion(configuracion)"
-              >
-                {{ deletingId === configuracion.id_notificacion_programada ? 'Eliminando...' : 'Eliminar' }}
-              </button>
-            </div>
-          </article>
+        <div *ngIf="configuraciones.length > 0" class="table-wrap notifications-table-wrap">
+          <table class="notifications-table">
+            <thead>
+              <tr>
+                <th>Descripcion</th>
+                <th>Periodicidad</th>
+                <th>Dia programado</th>
+                <th>Vigencia</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let configuracion of configuraciones; trackBy: trackConfiguracion">
+                <td>
+                  <div class="cell-main">
+                    <strong>{{ configuracion.descripcion }}</strong>
+                    <small>Registro #{{ configuracion.id_notificacion_programada }}</small>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-main">
+                    <strong>{{ getPeriodicidadLabel(configuracion) }}</strong>
+                    <small>{{ getPeriodicidadDescription(configuracion.periodicidad) }}</small>
+                  </div>
+                </td>
+                <td>{{ getFrecuenciaLabel(configuracion) }}</td>
+                <td>
+                  <div class="cell-main">
+                    <span>{{ getVigenciaLabel(configuracion) }}</span>
+                    <small>Actualizado {{ formatTimestampLabel(configuracion.fecha_actualizacion) }}</small>
+                  </div>
+                </td>
+                <td>
+                  <span class="priority-badge" [ngClass]="'tone-' + getPrioridadTone(configuracion.prioridad)">
+                    {{ getPrioridadLabel(configuracion.prioridad) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(configuracion.estado)">
+                    {{ getEstadoLabel(configuracion.estado) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions-cell">
+                    <app-maintenance-actions
+                      [deleteDisabled]="deletingId === configuracion.id_notificacion_programada"
+                      detailTitle="Ver detalle"
+                      editTitle="Editar"
+                      deleteTitle="Eliminar"
+                      (detail)="showConfiguracionDetail(configuracion)"
+                      (edit)="editConfiguracion(configuracion)"
+                      (remove)="removeConfiguracion(configuracion)"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </article>
     </section>

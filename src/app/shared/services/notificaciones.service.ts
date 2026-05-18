@@ -29,14 +29,11 @@ export interface MarcarTodasLeidasResponse {
   fecha_leida: string | null;
 }
 
-export type PeriodicidadNotificacionPagoCodigo = 'mensual' | 'fecha-especifica' | 'anual';
 export type PrioridadNotificacion = 'alta' | 'media' | 'baja';
 
 interface PeriodicidadApiItem {
   id_periodicidad?: number | string | null;
   nombre_periodicidad?: string | null;
-  periodicidad?: string | null;
-  nombre?: string | null;
   descripcion?: string | null;
   codigo?: string | null;
   estado?: boolean | null;
@@ -44,10 +41,27 @@ interface PeriodicidadApiItem {
 
 export interface PeriodicidadCatalogo {
   id_periodicidad: number;
-  nombre: string;
+  nombre_periodicidad: string;
   descripcion: string | null;
-  codigo: PeriodicidadNotificacionPagoCodigo;
+  codigo: string;
   estado: boolean;
+}
+
+interface ConfiguracionNotificacionPagoApiItem {
+  id_notificacion_programada?: number | string | null;
+  id_usuario?: number | string | null;
+  descripcion?: string | null;
+  prioridad?: PrioridadNotificacion | string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  dia_pago_programado?: number | string | null;
+  id_periodicidad?: number | string | null;
+  periodicidad_nombre?: string | null;
+  periodicidad_codigo?: string | null;
+  periodicidad?: PeriodicidadApiItem | null;
+  estado?: boolean | null;
+  fecha_creacion?: string | null;
+  fecha_actualizacion?: string | null;
 }
 
 export interface ConfiguracionNotificacionPago {
@@ -59,8 +73,7 @@ export interface ConfiguracionNotificacionPago {
   fecha_fin: string;
   dia_pago_programado: number;
   id_periodicidad: number;
-  periodicidad_nombre: string;
-  periodicidad_codigo: PeriodicidadNotificacionPagoCodigo;
+  periodicidad: PeriodicidadCatalogo | null;
   estado: boolean;
   fecha_creacion: string;
   fecha_actualizacion: string;
@@ -73,7 +86,7 @@ export interface ConfiguracionNotificacionPagoPayload {
   fecha_inicio: string;
   fecha_fin: string;
   dia_pago_programado: number;
-  periodicidad: PeriodicidadCatalogo;
+  id_periodicidad: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -145,18 +158,34 @@ export class NotificacionesService {
     return normalized.sort((a, b) => a.id_periodicidad - b.id_periodicidad);
   }
 
-  async loadConfiguracionesPago(): Promise<ConfiguracionNotificacionPago[]> {
+  async loadConfiguracionesPago(
+    periodicidades?: PeriodicidadCatalogo[],
+  ): Promise<ConfiguracionNotificacionPago[]> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
-    const response = await firstValueFrom(
-      this.http
-        .get<ConfiguracionNotificacionPago[]>(`${this.baseUrl}/programadas`, {
-          params: { id_usuario: idUsuario },
-        })
-        .pipe(timeout(this.timeoutMs)),
+    const [response, resolvedPeriodicidades] = await Promise.all([
+      firstValueFrom(
+        this.http
+          .get<ConfiguracionNotificacionPagoApiItem[]>(`${this.baseUrl}/programadas`, {
+            params: { id_usuario: idUsuario },
+          })
+          .pipe(timeout(this.timeoutMs)),
+      ),
+      periodicidades === undefined ? this.loadPeriodicidades() : Promise.resolve(periodicidades),
+    ]);
+    const periodicidadMap = new Map(
+      resolvedPeriodicidades.map((periodicidad) => [periodicidad.id_periodicidad, periodicidad]),
     );
-    const configuraciones = Array.isArray(response) ? response : [];
+    const configuraciones = Array.isArray(response)
+      ? response
+          .map((item) => this.normalizeConfiguracion(item, periodicidadMap))
+          .filter((item): item is ConfiguracionNotificacionPago => item !== null)
+      : [];
 
     return configuraciones.sort((a, b) => {
+      if (a.estado !== b.estado) {
+        return Number(b.estado) - Number(a.estado);
+      }
+
       const prioridadDiff =
         this.resolvePrioridadRank(a.prioridad) - this.resolvePrioridadRank(b.prioridad);
 
@@ -164,11 +193,13 @@ export class NotificacionesService {
         return prioridadDiff;
       }
 
-      const nextA = this.resolveSortDate(a);
-      const nextB = this.resolveSortDate(b);
+      const fechaInicioDiff = a.fecha_inicio.localeCompare(b.fecha_inicio);
+      if (fechaInicioDiff !== 0) {
+        return fechaInicioDiff;
+      }
 
-      if (nextA !== nextB) {
-        return nextA - nextB;
+      if (a.dia_pago_programado !== b.dia_pago_programado) {
+        return a.dia_pago_programado - b.dia_pago_programado;
       }
 
       return b.id_notificacion_programada - a.id_notificacion_programada;
@@ -184,9 +215,10 @@ export class NotificacionesService {
     const fechaInicio = this.normalizeDateOnly(payload.fecha_inicio);
     const fechaFin = this.normalizeDateOnly(payload.fecha_fin);
     const diaPagoProgramado = Number(payload.dia_pago_programado);
+    const idPeriodicidad = Number(payload.id_periodicidad);
 
-    if (!descripcion || !Number.isInteger(diaPagoProgramado)) {
-      throw new Error('La descripcion y el dia programado son obligatorios.');
+    if (!descripcion || !Number.isInteger(diaPagoProgramado) || !Number.isInteger(idPeriodicidad)) {
+      throw new Error('La descripcion, el dia programado y la periodicidad son obligatorios.');
     }
 
     if (diaPagoProgramado < 1 || diaPagoProgramado > 31) {
@@ -203,34 +235,43 @@ export class NotificacionesService {
       fecha_inicio: fechaInicio,
       fecha_fin: fechaFin,
       dia_pago_programado: diaPagoProgramado,
-      id_periodicidad: payload.periodicidad.id_periodicidad,
+      id_periodicidad: idPeriodicidad,
     };
 
-    if (payload.id_notificacion_programada) {
-      return firstValueFrom(
-        this.http
-          .patch<ConfiguracionNotificacionPago>(
-            `${this.baseUrl}/programadas/${payload.id_notificacion_programada}`,
-            requestPayload,
-            {
-              params: { id_usuario: idUsuario },
-            },
-          )
-          .pipe(timeout(this.timeoutMs)),
-      );
+    const response = payload.id_notificacion_programada
+      ? await firstValueFrom(
+          this.http
+            .patch<ConfiguracionNotificacionPagoApiItem>(
+              `${this.baseUrl}/programadas/${payload.id_notificacion_programada}`,
+              requestPayload,
+              {
+                params: { id_usuario: idUsuario },
+              },
+            )
+            .pipe(timeout(this.timeoutMs)),
+        )
+      : await firstValueFrom(
+          this.http
+            .post<ConfiguracionNotificacionPagoApiItem>(
+              `${this.baseUrl}/programadas`,
+              requestPayload,
+              {
+                params: { id_usuario: idUsuario },
+              },
+        )
+            .pipe(timeout(this.timeoutMs)),
+        );
+    const periodicidades = await this.loadPeriodicidades();
+    const configuracion = this.normalizeConfiguracion(
+      response,
+      new Map(periodicidades.map((periodicidad) => [periodicidad.id_periodicidad, periodicidad])),
+    );
+
+    if (!configuracion) {
+      throw new Error('La respuesta del backend no contiene una configuracion valida.');
     }
 
-    return firstValueFrom(
-      this.http
-        .post<ConfiguracionNotificacionPago>(
-          `${this.baseUrl}/programadas`,
-          requestPayload,
-          {
-            params: { id_usuario: idUsuario },
-          },
-        )
-        .pipe(timeout(this.timeoutMs)),
-    );
+    return configuracion;
   }
 
   async deleteConfiguracionPago(idNotificacionProgramada: number): Promise<void> {
@@ -245,74 +286,10 @@ export class NotificacionesService {
     );
   }
 
-  private resolveSortDate(configuracion: ConfiguracionNotificacionPago): number {
-    const fechaInicio = this.parseDateOnly(configuracion.fecha_inicio);
-    const fechaFin = this.parseDateOnly(configuracion.fecha_fin);
-
-    if (!fechaInicio || !fechaFin) {
-      return Number.MAX_SAFE_INTEGER;
-    }
-
-    const today = this.getToday();
-    const referenceDate = today.getTime() < fechaInicio.getTime() ? fechaInicio : today;
-    let nextDate: Date;
-    const day = configuracion.dia_pago_programado;
-
-    if (configuracion.periodicidad_codigo === 'fecha-especifica') {
-      nextDate = fechaInicio;
-    } else if (configuracion.periodicidad_codigo === 'mensual') {
-      nextDate = this.buildMonthlyOccurrence(referenceDate, day);
-
-      if (nextDate.getTime() < referenceDate.getTime()) {
-        nextDate = this.buildMonthlyOccurrence(
-          new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1),
-          day,
-        );
-      }
-    } else {
-      nextDate = this.buildYearlyOccurrence(referenceDate, fechaInicio.getMonth(), day);
-
-      if (nextDate.getTime() < referenceDate.getTime()) {
-        nextDate = this.buildYearlyOccurrence(
-          new Date(referenceDate.getFullYear() + 1, 0, 1),
-          fechaInicio.getMonth(),
-          day,
-        );
-      }
-    }
-
-    if (nextDate.getTime() > fechaFin.getTime()) {
-      return Number.MAX_SAFE_INTEGER;
-    }
-
-    return nextDate.getTime();
-  }
-
-  private buildMonthlyOccurrence(referenceDate: Date, day: number): Date {
-    const year = referenceDate.getFullYear();
-    const month = referenceDate.getMonth();
-    const maxDay = new Date(year, month + 1, 0).getDate();
-
-    return new Date(year, month, Math.min(day, maxDay));
-  }
-
-  private buildYearlyOccurrence(referenceDate: Date, month: number, day: number): Date {
-    const year = referenceDate.getFullYear();
-    const maxDay = new Date(year, month + 1, 0).getDate();
-
-    return new Date(year, month, Math.min(day, maxDay));
-  }
-
   private normalizePeriodicidad(item: PeriodicidadApiItem): PeriodicidadCatalogo | null {
     const id = Number(item.id_periodicidad);
-    const nombre =
-      item.nombre_periodicidad?.trim() ||
-      item.periodicidad?.trim() ||
-      item.nombre?.trim() ||
-      '';
-    const codigo = this.resolvePeriodicidadCodigo(
-      item.codigo?.trim() || nombre || item.descripcion?.trim() || '',
-    );
+    const nombre = item.nombre_periodicidad?.trim() || '';
+    const codigo = item.codigo?.trim() || '';
 
     if (!Number.isInteger(id) || id < 1 || !nombre || !codigo) {
       return null;
@@ -320,48 +297,11 @@ export class NotificacionesService {
 
     return {
       id_periodicidad: id,
-      nombre,
+      nombre_periodicidad: nombre,
       descripcion: item.descripcion?.trim() || null,
       codigo,
       estado: item.estado !== false,
     };
-  }
-
-  private resolvePeriodicidadCodigo(
-    value: string | null | undefined,
-  ): PeriodicidadNotificacionPagoCodigo | null {
-    const normalized = (value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
-    if (normalized.includes('mensual') || normalized.includes('cada mes')) {
-      return 'mensual';
-    }
-
-    if (
-      normalized.includes('anual') ||
-      normalized.includes('cada ano') ||
-      normalized.includes('cada a')
-    ) {
-      return 'anual';
-    }
-
-    if (
-      normalized.includes('especific') ||
-      normalized.includes('unica') ||
-      normalized.includes('dia')
-    ) {
-      return 'fecha-especifica';
-    }
-
-    return null;
-  }
-
-  private getToday(): Date {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
   }
 
   private resolvePrioridadRank(prioridad: PrioridadNotificacion | null | undefined): number {
@@ -397,23 +337,60 @@ export class NotificacionesService {
     return normalized;
   }
 
-  private parseDateOnly(value: string | null | undefined): Date | null {
-    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  private normalizeConfiguracion(
+    item: ConfiguracionNotificacionPagoApiItem,
+    periodicidadMap: Map<number, PeriodicidadCatalogo>,
+  ): ConfiguracionNotificacionPago | null {
+    try {
+      const idNotificacionProgramada = Number(item.id_notificacion_programada);
+      const idUsuario = Number(item.id_usuario);
+      const diaPagoProgramado = Number(item.dia_pago_programado);
+      const idPeriodicidad = Number(item.id_periodicidad);
+      const descripcion = item.descripcion?.trim() || '';
+      const prioridad = item.prioridad ? this.normalizePrioridad(item.prioridad) : null;
+      const fechaInicio = item.fecha_inicio?.trim() || '';
+      const fechaFin = item.fecha_fin?.trim() || '';
+
+      if (
+        !Number.isInteger(idNotificacionProgramada) ||
+        idNotificacionProgramada < 1 ||
+        !Number.isInteger(idUsuario) ||
+        idUsuario < 1 ||
+        !descripcion ||
+        !prioridad ||
+        !Number.isInteger(diaPagoProgramado) ||
+        !Number.isInteger(idPeriodicidad)
+      ) {
+        return null;
+      }
+
+      const periodicidad =
+        periodicidadMap.get(idPeriodicidad) ??
+        this.normalizePeriodicidad({
+          id_periodicidad: idPeriodicidad,
+          nombre_periodicidad:
+            item.periodicidad?.nombre_periodicidad ?? item.periodicidad_nombre ?? null,
+          descripcion: item.periodicidad?.descripcion ?? null,
+          codigo: item.periodicidad?.codigo ?? item.periodicidad_codigo ?? null,
+          estado: item.periodicidad?.estado ?? true,
+        });
+
+      return {
+        id_notificacion_programada: idNotificacionProgramada,
+        id_usuario: idUsuario,
+        descripcion,
+        prioridad,
+        fecha_inicio: this.normalizeDateOnly(fechaInicio),
+        fecha_fin: this.normalizeDateOnly(fechaFin),
+        dia_pago_programado: diaPagoProgramado,
+        id_periodicidad: idPeriodicidad,
+        periodicidad,
+        estado: item.estado !== false,
+        fecha_creacion: item.fecha_creacion?.trim() || '',
+        fecha_actualizacion: item.fecha_actualizacion?.trim() || '',
+      };
+    } catch {
       return null;
     }
-
-    const [year, month, day] = value.split('-').map((part) => Number(part));
-    const parsed = new Date(year, month - 1, day);
-
-    if (
-      Number.isNaN(parsed.getTime()) ||
-      parsed.getFullYear() !== year ||
-      parsed.getMonth() !== month - 1 ||
-      parsed.getDate() !== day
-    ) {
-      return null;
-    }
-
-    return parsed;
   }
 }

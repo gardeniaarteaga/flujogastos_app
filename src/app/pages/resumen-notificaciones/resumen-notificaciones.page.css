@@ -87,6 +87,16 @@
   gap: 1rem;
 }
 
+.form-context {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.form-context strong {
+  color: #172033;
+}
+
 .table-shape-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -133,44 +143,36 @@
   color: #64748b;
 }
 
-.notification-list {
+.notifications-table-wrap {
+  overflow-x: auto;
+}
+
+.notifications-table {
+  min-width: 920px;
+}
+
+.notifications-table td {
+  vertical-align: middle;
+}
+
+.cell-main {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.25rem;
 }
 
-.notification-row {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  border: 1px solid #e3e8ee;
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.84), transparent 28%),
-    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-}
-
-.notification-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.notification-copy strong {
-  display: block;
+.cell-main strong,
+.cell-main span {
   color: #172033;
 }
 
-.notification-copy p {
-  margin: 0.35rem 0 0;
+.cell-main small {
+  margin: 0;
   color: #64748b;
 }
 
-.notification-meta {
-  display: grid;
-  justify-items: end;
-  gap: 0.28rem;
-  text-align: right;
+.actions-cell {
+  display: flex;
+  justify-content: center;
 }
 
 .timeline-badge {
@@ -228,23 +230,6 @@
   color: #172033;
 }
 
-.notification-meta small {
-  color: #64748b;
-}
-
-.notification-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  justify-content: flex-end;
-}
-
-.table-button.danger {
-  background: linear-gradient(135deg, #ef476f, #d92550);
-  color: #ffffff;
-  border: none;
-}
-
 @media (max-width: 1220px) {
   .hero-banner,
   .notifications-workspace {
@@ -253,20 +238,7 @@
 }
 
 @media (max-width: 720px) {
-  .table-shape-grid,
-  .notification-main,
-  .notification-actions {
+  .table-shape-grid {
     grid-template-columns: 1fr;
-  }
-
-  .notification-main,
-  .notification-actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .notification-meta {
-    justify-items: start;
-    text-align: left;
   }
 }
