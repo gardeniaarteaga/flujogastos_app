@@ -118,10 +118,10 @@
     </nav>
 
     <section class="sidebar-card">
-      <span class="sidebar-label">Recordatorios</span>
-      <strong>{{ totalConfiguraciones }} configuraciones</strong>
+      <span class="sidebar-label">notificaciones_programadas</span>
+      <strong>{{ totalConfiguraciones }} registros</strong>
       <p>
-        {{ proximaConfiguracion ? ('Siguiente aviso: ' + getRelativeExecutionLabel(proximaConfiguracion)) : 'Aun no has programado recordatorios de pago.' }}
+        {{ proximaConfiguracion ? ('Primer registro: ' + proximaConfiguracion.descripcion) : 'Sin registros configurados.' }}
       </p>
     </section>
   </aside>
@@ -132,10 +132,10 @@
     <section class="hero-banner panel">
       <div class="hero-copy">
         <span class="hero-kicker">Resumen</span>
-        <h2>Configura alertas para tus pagos programados.</h2>
+        <h2>Administra notificaciones_programadas.</h2>
         <p>
-          Registra una descripcion, el dia de pago y la periodicidad para mantener visibles
-          tus compromisos mensuales, de fecha unica o anuales.
+          El formulario y el listado muestran solo columnas existentes en
+          <strong>notificaciones_programadas</strong> y <strong>periodicidad</strong>.
         </p>
       </div>
 
@@ -143,12 +143,12 @@
         <article class="metric-card">
           <span>Total configurado</span>
           <strong>{{ totalConfiguraciones }}</strong>
-          <small>{{ totalConfiguraciones === 1 ? 'recordatorio guardado' : 'recordatorios guardados' }}</small>
+          <small>{{ totalConfiguraciones === 1 ? 'registro en notificaciones_programadas' : 'registros en notificaciones_programadas' }}</small>
         </article>
         <article class="metric-card">
-          <span>Proxima notificacion</span>
-          <strong>{{ proximaConfiguracion ? getRelativeExecutionLabel(proximaConfiguracion) : 'Sin datos' }}</strong>
-          <small>{{ proximaConfiguracion ? getNextExecutionLabel(proximaConfiguracion) : 'Agrega tu primer aviso' }}</small>
+          <span>Periodicidades</span>
+          <strong>{{ periodicidadOptions.length }}</strong>
+          <small>Catalogo cargado desde periodicidad</small>
         </article>
       </div>
     </section>
@@ -158,8 +158,8 @@
         <p class="eyebrow">Configuracion</p>
         <h2>Notificaciones de pago</h2>
         <p class="lead">
-          Esta pantalla ya trabaja con dia de pago del 1 al 31. La periodicidad se carga desde
-          la tabla del backend cuando el endpoint correspondiente esta disponible.
+          Esta vista usa solo los campos existentes de <strong>notificaciones_programadas</strong>
+          y <strong>periodicidad</strong>.
         </p>
       </div>
       <div class="header-actions">
@@ -177,19 +177,30 @@
         <div class="panel-header">
           <div>
             <p class="panel-title">Formulario</p>
-            <h3>{{ isEditing ? 'Editar recordatorio' : 'Registrar recordatorio' }}</h3>
+            <h3>{{ isEditing ? 'Editar notificacion_programada' : 'Registrar notificacion_programada' }}</h3>
           </div>
           <span class="pill">{{ isEditing ? 'Edicion' : 'Nuevo' }}</span>
         </div>
 
         <form [formGroup]="notificacionForm" (ngSubmit)="onSubmit()" class="notification-form" novalidate>
+          <section class="table-shape-grid">
+            <div class="shape-card">
+              <span class="shape-label">id_usuario</span>
+              <strong>{{ userProfile.id_usuario || 'Pendiente de sesion' }}</strong>
+            </div>
+            <div class="shape-card">
+              <span class="shape-label">id_notificacion_programada</span>
+              <strong>{{ editingConfiguracion?.id_notificacion_programada || 'Se asigna al guardar' }}</strong>
+            </div>
+          </section>
+
           <div class="field">
-            <label for="descripcion">Descripcion</label>
+            <label for="descripcion">descripcion</label>
             <textarea
               id="descripcion"
               rows="4"
               formControlName="descripcion"
-              maxlength="120"
+              maxlength="160"
               placeholder="Ejemplo: Pago de tarjeta, membresia, seguro o colegiatura"
             ></textarea>
             <small
@@ -206,13 +217,67 @@
                 notificacionForm.controls.descripcion.errors?.['maxlength']
               "
             >
-              La descripcion no puede exceder 120 caracteres.
+              La descripcion no puede exceder 160 caracteres.
             </small>
+          </div>
+
+          <div class="field">
+            <label for="prioridad">prioridad</label>
+            <select id="prioridad" formControlName="prioridad">
+              <option *ngFor="let option of prioridadOptions" [ngValue]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
           </div>
 
           <div class="field-grid">
             <div class="field">
-              <label for="dia_pago_programado">Dia de pago programado</label>
+              <label for="fecha_inicio">fecha_inicio</label>
+              <input
+                id="fecha_inicio"
+                type="date"
+                formControlName="fecha_inicio"
+              />
+              <small
+                *ngIf="
+                  notificacionForm.controls.fecha_inicio.touched &&
+                  notificacionForm.controls.fecha_inicio.errors?.['required']
+                "
+              >
+                La fecha de inicio es obligatoria.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="fecha_fin">fecha_fin</label>
+              <input
+                id="fecha_fin"
+                type="date"
+                formControlName="fecha_fin"
+                [min]="notificacionForm.controls.fecha_inicio.value || null"
+              />
+              <small
+                *ngIf="
+                  notificacionForm.controls.fecha_fin.touched &&
+                  notificacionForm.controls.fecha_fin.errors?.['required']
+                "
+              >
+                La fecha de fin es obligatoria.
+              </small>
+              <small
+                *ngIf="
+                  notificacionForm.touched &&
+                  notificacionForm.errors?.['invalidDateRange']
+                "
+              >
+                La fecha fin no puede ser menor que la fecha inicio.
+              </small>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="dia_pago_programado">dia_pago_programado</label>
               <input
                 id="dia_pago_programado"
                 type="number"
@@ -244,7 +309,7 @@
             </div>
 
             <div class="field">
-              <label for="periodicidad">Periodicidad</label>
+              <label for="periodicidad">id_periodicidad</label>
               <select id="periodicidad" formControlName="id_periodicidad">
                 <option [ngValue]="null">Selecciona una periodicidad</option>
                 <option
@@ -265,16 +330,30 @@
             </div>
           </div>
 
-          <section class="periodicity-guide">
-            <div
-              *ngFor="let option of periodicidadOptions"
-              class="guide-card"
-              [ngClass]="{
-                selected: option.id_periodicidad === notificacionForm.controls.id_periodicidad.value
-              }"
-            >
-              <strong>{{ option.nombre }}</strong>
-              <p>{{ option.descripcion || 'Periodicidad disponible desde catalogo del sistema.' }}</p>
+          <div *ngIf="selectedPeriodicidad" class="catalog-card">
+            <div class="catalog-card-header">
+              <strong>{{ selectedPeriodicidad.nombre }}</strong>
+              <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(selectedPeriodicidad.estado)">
+                {{ getCatalogStateLabel(selectedPeriodicidad.estado) }}
+              </span>
+            </div>
+            <p>
+              id_periodicidad {{ selectedPeriodicidad.id_periodicidad }} | codigo {{ selectedPeriodicidad.codigo }}
+            </p>
+            <small>
+              nombre_periodicidad {{ selectedPeriodicidad.nombre }} |
+              descripcion {{ selectedPeriodicidad.descripcion || 'Sin descripcion' }}
+            </small>
+          </div>
+
+          <section *ngIf="editingConfiguracion" class="table-shape-grid">
+            <div class="shape-card">
+              <span class="shape-label">fecha_creacion</span>
+              <strong>{{ formatTimestampLabel(editingConfiguracion.fecha_creacion) }}</strong>
+            </div>
+            <div class="shape-card">
+              <span class="shape-label">fecha_actualizacion</span>
+              <strong>{{ formatTimestampLabel(editingConfiguracion.fecha_actualizacion) }}</strong>
             </div>
           </section>
 
@@ -298,8 +377,8 @@
       <article class="panel table-panel">
         <div class="panel-header">
           <div>
-            <p class="panel-title">Agenda configurada</p>
-            <h3>Recordatorios guardados</h3>
+            <p class="panel-title">Tabla</p>
+            <h3>notificaciones_programadas</h3>
           </div>
           <button type="button" class="secondary-button" (click)="loadConfiguraciones()">
             Recargar
@@ -319,17 +398,34 @@
               <div class="notification-copy">
                 <strong>{{ configuracion.descripcion }}</strong>
                 <p>
-                  {{ getPeriodicidadLabel(configuracion) }} |
-                  Dia {{ configuracion.dia_pago_programado }}
+                  id_notificacion_programada {{ configuracion.id_notificacion_programada }} |
+                  id_usuario {{ configuracion.id_usuario }} |
+                  estado {{ getEstadoLabel(configuracion.estado) }}
+                </p>
+                <p>
+                  prioridad {{ configuracion.prioridad }} |
+                  fecha_inicio {{ configuracion.fecha_inicio }} |
+                  fecha_fin {{ configuracion.fecha_fin }}
+                </p>
+                <p>
+                  dia_pago_programado {{ configuracion.dia_pago_programado }} |
+                  id_periodicidad {{ configuracion.id_periodicidad }} |
+                  nombre_periodicidad {{ getPeriodicidadLabel(configuracion) }} |
+                  codigo {{ configuracion.periodicidad_codigo }}
+                </p>
+                <p>
+                  fecha_creacion {{ formatTimestampLabel(configuracion.fecha_creacion) }} |
+                  fecha_actualizacion {{ formatTimestampLabel(configuracion.fecha_actualizacion) }}
                 </p>
               </div>
 
               <div class="notification-meta">
-                <span class="timeline-badge" [ngClass]="'tone-' + getTimelineTone(configuracion)">
-                  {{ getTimelineLabel(configuracion) }}
+                <span class="priority-badge" [ngClass]="'tone-' + getEstadoTone(configuracion.estado)">
+                  {{ getEstadoLabel(configuracion.estado) }}
                 </span>
-                <span class="next-date">{{ getNextExecutionLabel(configuracion) }}</span>
-                <small>{{ getRelativeExecutionLabel(configuracion) }}</small>
+                <span class="priority-badge" [ngClass]="'tone-' + getPrioridadTone(configuracion.prioridad)">
+                  {{ configuracion.prioridad }}
+                </span>
               </div>
             </div>
 

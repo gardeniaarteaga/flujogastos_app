@@ -1,6 +1,12 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
@@ -9,10 +15,28 @@ import {
   ConfiguracionNotificacionPago,
   NotificacionesService,
   PeriodicidadCatalogo,
+  PrioridadNotificacion,
 } from '../../shared/services/notificaciones.service';
 import { isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
 type TimelineTone = 'upcoming' | 'today' | 'expired';
+type PrioridadOption = {
+  value: PrioridadNotificacion;
+  label: string;
+};
+
+const dateRangeValidator = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const fechaInicio = control.get('fecha_inicio')?.value as string | null | undefined;
+  const fechaFin = control.get('fecha_fin')?.value as string | null | undefined;
+
+  if (!fechaInicio || !fechaFin) {
+    return null;
+  }
+
+  return fechaFin >= fechaInicio ? null : { invalidDateRange: true };
+};
 
 @Component({
   selector: 'app-resumen-notificaciones-page',
@@ -37,6 +61,13 @@ export class ResumenNotificacionesPage implements OnInit {
     month: 'short',
     year: 'numeric',
   });
+  private readonly dateTimeFormatter = new Intl.DateTimeFormat('es-SV', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   private readonly relativeDayFormatter = new Intl.RelativeTimeFormat('es', {
     numeric: 'auto',
   });
@@ -50,19 +81,37 @@ export class ResumenNotificacionesPage implements OnInit {
   loadingPeriodicidades = false;
   periodicidadesDisponibles = false;
   readonly today = new Date();
+  readonly todayDateInput = this.toDateInputValue(this.today);
   readonly userProfile = loadUserProfile();
   configuraciones: ConfiguracionNotificacionPago[] = [];
   periodicidadOptions: PeriodicidadCatalogo[] = [];
+  readonly prioridadOptions: PrioridadOption[] = [
+    {
+      value: 'alta',
+      label: 'Alta',
+    },
+    {
+      value: 'media',
+      label: 'Media',
+    },
+    {
+      value: 'baja',
+      label: 'Baja',
+    },
+  ];
 
   readonly notificacionForm = this.fb.group({
-    descripcion: this.fb.control('', [Validators.required, Validators.maxLength(120)]),
+    descripcion: this.fb.control('', [Validators.required, Validators.maxLength(160)]),
+    prioridad: this.fb.control<PrioridadNotificacion>('media', [Validators.required]),
+    fecha_inicio: this.fb.control(this.todayDateInput, [Validators.required]),
+    fecha_fin: this.fb.control(this.todayDateInput, [Validators.required]),
     dia_pago_programado: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(1),
       Validators.max(31),
     ]),
     id_periodicidad: this.fb.control<number | null>(null, [Validators.required]),
-  });
+  }, { validators: [dateRangeValidator] });
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -86,6 +135,23 @@ export class ResumenNotificacionesPage implements OnInit {
 
   get proximaConfiguracion(): ConfiguracionNotificacionPago | null {
     return this.configuraciones[0] ?? null;
+  }
+
+  get selectedPeriodicidad(): PeriodicidadCatalogo | null {
+    const id = this.notificacionForm.controls.id_periodicidad.value;
+    return this.periodicidadOptions.find((item) => item.id_periodicidad === id) ?? null;
+  }
+
+  get editingConfiguracion(): ConfiguracionNotificacionPago | null {
+    if (!this.isEditing) {
+      return null;
+    }
+
+    return (
+      this.configuraciones.find(
+        (item) => item.id_notificacion_programada === this.editingId,
+      ) ?? null
+    );
   }
 
   async ngOnInit(): Promise<void> {
@@ -152,7 +218,7 @@ export class ResumenNotificacionesPage implements OnInit {
       this.notificacionForm.markAllAsTouched();
       await this.alerts.warning(
         'Formulario incompleto',
-        'Completa descripcion, dia de pago entre 1 y 31 y periodicidad.',
+        'Completa descripcion, prioridad, fechas de inicio y fin, dia de pago entre 1 y 31 y periodicidad.',
       );
       return;
     }
@@ -177,6 +243,9 @@ export class ResumenNotificacionesPage implements OnInit {
       await this.notificacionesService.saveConfiguracionPago({
         id_notificacion_programada: this.editingId,
         descripcion: this.notificacionForm.value.descripcion?.trim() ?? '',
+        prioridad: this.notificacionForm.value.prioridad ?? 'media',
+        fecha_inicio: this.notificacionForm.value.fecha_inicio ?? '',
+        fecha_fin: this.notificacionForm.value.fecha_fin ?? '',
         dia_pago_programado: Number(this.notificacionForm.value.dia_pago_programado ?? 0),
         periodicidad: periodicidadSeleccionada,
       });
@@ -206,6 +275,9 @@ export class ResumenNotificacionesPage implements OnInit {
     this.editingId = configuracion.id_notificacion_programada;
     this.notificacionForm.patchValue({
       descripcion: configuracion.descripcion,
+      prioridad: configuracion.prioridad,
+      fecha_inicio: configuracion.fecha_inicio,
+      fecha_fin: configuracion.fecha_fin,
       dia_pago_programado: configuracion.dia_pago_programado,
       id_periodicidad: configuracion.id_periodicidad > 0 ? configuracion.id_periodicidad : null,
     });
@@ -251,17 +323,40 @@ export class ResumenNotificacionesPage implements OnInit {
     await this.alerts.detail(
       'Detalle de notificacion',
       [
-        { label: 'Descripcion', value: configuracion.descripcion },
+        { label: 'id_notificacion_programada', value: configuracion.id_notificacion_programada },
+        { label: 'id_usuario', value: configuracion.id_usuario },
+        { label: 'descripcion', value: configuracion.descripcion },
+        { label: 'prioridad', value: configuracion.prioridad },
+        { label: 'fecha_inicio', value: configuracion.fecha_inicio },
+        { label: 'fecha_fin', value: configuracion.fecha_fin },
         {
-          label: 'Dia de pago programado',
+          label: 'dia_pago_programado',
           value: configuracion.dia_pago_programado,
         },
         {
-          label: 'Periodicidad',
+          label: 'id_periodicidad',
+          value: configuracion.id_periodicidad,
+        },
+        {
+          label: 'nombre_periodicidad',
           value: this.getPeriodicidadLabel(configuracion),
         },
-        { label: 'Proxima ejecucion', value: this.getNextExecutionLabel(configuracion) },
-        { label: 'Estado', value: this.getTimelineLabel(configuracion) },
+        {
+          label: 'codigo',
+          value: configuracion.periodicidad_codigo,
+        },
+        {
+          label: 'estado',
+          value: this.getEstadoLabel(configuracion.estado),
+        },
+        {
+          label: 'fecha_creacion',
+          value: this.formatTimestampLabel(configuracion.fecha_creacion),
+        },
+        {
+          label: 'fecha_actualizacion',
+          value: this.formatTimestampLabel(configuracion.fecha_actualizacion),
+        },
       ],
       {
         subtitle: `Configuracion #${configuracion.id_notificacion_programada}`,
@@ -282,6 +377,46 @@ export class ResumenNotificacionesPage implements OnInit {
 
   getPeriodicidadLabel(configuracion: ConfiguracionNotificacionPago): string {
     return configuracion.periodicidad_nombre || 'No definida';
+  }
+
+  getPrioridadLabel(prioridad: PrioridadNotificacion): string {
+    switch (prioridad) {
+      case 'alta':
+        return 'Alta';
+      case 'media':
+        return 'Media';
+      default:
+        return 'Baja';
+    }
+  }
+
+  getPrioridadTone(prioridad: PrioridadNotificacion): 'high' | 'medium' | 'low' {
+    switch (prioridad) {
+      case 'alta':
+        return 'high';
+      case 'media':
+        return 'medium';
+      default:
+        return 'low';
+    }
+  }
+
+  formatDateLabel(value: string | null | undefined): string {
+    const parsed = this.parseDateOnly(value);
+    return parsed ? this.formatDateObject(parsed) : 'Sin fecha valida';
+  }
+
+  formatTimestampLabel(value: string | Date | null | undefined): string {
+    if (!value) {
+      return 'Sin fecha disponible';
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 'Sin fecha disponible' : this.dateTimeFormatter.format(parsed);
+  }
+
+  getVigenciaLabel(configuracion: ConfiguracionNotificacionPago): string {
+    return `${this.formatDateLabel(configuracion.fecha_inicio)} al ${this.formatDateLabel(configuracion.fecha_fin)}`;
   }
 
   getNextExecutionLabel(configuracion: ConfiguracionNotificacionPago): string {
@@ -305,6 +440,10 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   getTimelineTone(configuracion: ConfiguracionNotificacionPago): TimelineTone {
+    if (!configuracion.estado) {
+      return 'expired';
+    }
+
     const nextDate = this.resolveNextExecution(configuracion);
 
     if (!nextDate) {
@@ -325,6 +464,10 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   getTimelineLabel(configuracion: ConfiguracionNotificacionPago): string {
+    if (!configuracion.estado) {
+      return 'Configuracion inactiva';
+    }
+
     const tone = this.getTimelineTone(configuracion);
 
     if (tone === 'today') {
@@ -340,10 +483,25 @@ export class ResumenNotificacionesPage implements OnInit {
     return 'Proxima notificacion pendiente';
   }
 
+  getEstadoLabel(estado: boolean): string {
+    return estado ? 'Activo' : 'Inactivo';
+  }
+
+  getEstadoTone(estado: boolean): 'high' | 'low' {
+    return estado ? 'low' : 'high';
+  }
+
+  getCatalogStateLabel(estado: boolean): string {
+    return estado ? 'Activa' : 'Inactiva';
+  }
+
   private resetForm(): void {
     this.editingId = null;
     this.notificacionForm.reset({
       descripcion: '',
+      prioridad: 'media',
+      fecha_inicio: this.todayDateInput,
+      fecha_fin: this.todayDateInput,
       dia_pago_programado: null,
       id_periodicidad: this.periodicidadOptions[0]?.id_periodicidad ?? null,
     });
@@ -352,25 +510,49 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   private resolveNextExecution(configuracion: ConfiguracionNotificacionPago): Date | null {
+    const startDate = this.parseDateOnly(configuracion.fecha_inicio);
+    const endDate = this.parseDateOnly(configuracion.fecha_fin);
+
+    if (!startDate || !endDate || endDate.getTime() < startDate.getTime()) {
+      return null;
+    }
+
     const today = this.getToday();
+    if (today.getTime() > endDate.getTime()) {
+      return null;
+    }
+
+    const referenceDate = today.getTime() < startDate.getTime() ? startDate : today;
     const day = configuracion.dia_pago_programado;
 
     if (configuracion.periodicidad_codigo === 'fecha-especifica') {
-      return this.buildMonthlyOccurrence(today, day);
+      return startDate;
     }
 
     if (configuracion.periodicidad_codigo === 'mensual') {
-      const currentMonthDate = this.buildMonthlyOccurrence(today, day);
-      return currentMonthDate.getTime() >= today.getTime()
+      const currentMonthDate = this.buildMonthlyOccurrence(referenceDate, day);
+      const nextDate = currentMonthDate.getTime() >= referenceDate.getTime()
         ? currentMonthDate
-        : this.buildMonthlyOccurrence(new Date(today.getFullYear(), today.getMonth() + 1, 1), day);
+        : this.buildMonthlyOccurrence(
+            new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1),
+            day,
+          );
+
+      return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
     }
 
-    const currentYearDate = this.buildYearlyOccurrence(today.getFullYear(), today.getMonth(), day);
+    const anchorMonth = startDate.getMonth();
+    const currentYearDate = this.buildYearlyOccurrence(
+      referenceDate.getFullYear(),
+      anchorMonth,
+      day,
+    );
+    const nextDate =
+      currentYearDate.getTime() >= referenceDate.getTime()
+        ? currentYearDate
+        : this.buildYearlyOccurrence(referenceDate.getFullYear() + 1, anchorMonth, day);
 
-    return currentYearDate.getTime() >= today.getTime()
-      ? currentYearDate
-      : this.buildYearlyOccurrence(today.getFullYear() + 1, today.getMonth(), day);
+    return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
   }
 
   private buildMonthlyOccurrence(referenceDate: Date, day: number): Date {
@@ -399,5 +581,32 @@ export class ResumenNotificacionesPage implements OnInit {
 
   private formatDateObject(date: Date): string {
     return this.dateFormatter.format(date);
+  }
+
+  private parseDateOnly(value: string | null | undefined): Date | null {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map((part) => Number(part));
+    const parsed = new Date(year, month - 1, day);
+
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

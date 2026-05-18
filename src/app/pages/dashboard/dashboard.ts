@@ -22,6 +22,8 @@ type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
 interface ScheduledNotificationView {
   id_notificacion_programada: number;
   descripcion: string;
+  prioridad: string;
+  vigenciaLabel: string;
   dia_pago_programado: number;
   periodicidad_nombre: string;
   nextDateLabel: string;
@@ -1202,13 +1204,15 @@ export class Dashboard implements OnInit {
                 ? 'Pendiente'
                 : 'Proximo recordatorio';
 
-        return [
-          {
-            id_notificacion_programada: configuracion.id_notificacion_programada,
-            descripcion: configuracion.descripcion,
-            dia_pago_programado: configuracion.dia_pago_programado,
-            periodicidad_nombre: configuracion.periodicidad_nombre,
-            nextDateLabel: this.fullDateFormatter.format(nextDate),
+          return [
+            {
+              id_notificacion_programada: configuracion.id_notificacion_programada,
+              descripcion: configuracion.descripcion,
+              prioridad: this.getNotificationPriorityLabel(configuracion.prioridad),
+              vigenciaLabel: `${this.formatFullDate(configuracion.fecha_inicio)} al ${this.formatFullDate(configuracion.fecha_fin)}`,
+              dia_pago_programado: configuracion.dia_pago_programado,
+              periodicidad_nombre: configuracion.periodicidad_nombre,
+              nextDateLabel: this.fullDateFormatter.format(nextDate),
             relativeLabel: this.relativeDayFormatter.format(diffInDays, 'day'),
             statusLabel,
             tone,
@@ -1315,7 +1319,19 @@ export class Dashboard implements OnInit {
   private resolveScheduledNotificationDate(
     configuracion: ConfiguracionNotificacionPago,
   ): Date | null {
+    const startDate = this.parseDateOnly(configuracion.fecha_inicio);
+    const endDate = this.parseDateOnly(configuracion.fecha_fin);
+
+    if (!startDate || !endDate || endDate.getTime() < startDate.getTime()) {
+      return null;
+    }
+
     const today = this.getToday();
+    if (today.getTime() > endDate.getTime()) {
+      return null;
+    }
+
+    const referenceDate = today.getTime() < startDate.getTime() ? startDate : today;
     const day = configuracion.dia_pago_programado;
 
     if (!Number.isInteger(day) || day < 1 || day > 31) {
@@ -1323,20 +1339,46 @@ export class Dashboard implements OnInit {
     }
 
     if (configuracion.periodicidad_codigo === 'fecha-especifica') {
-      return this.buildMonthlyOccurrence(today, day);
+      return startDate;
     }
 
     if (configuracion.periodicidad_codigo === 'mensual') {
-      const currentMonthDate = this.buildMonthlyOccurrence(today, day);
-      return currentMonthDate.getTime() >= today.getTime()
+      const currentMonthDate = this.buildMonthlyOccurrence(referenceDate, day);
+      const nextDate = currentMonthDate.getTime() >= referenceDate.getTime()
         ? currentMonthDate
-        : this.buildMonthlyOccurrence(new Date(today.getFullYear(), today.getMonth() + 1, 1), day);
+        : this.buildMonthlyOccurrence(
+            new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1),
+            day,
+          );
+
+      return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
     }
 
-    const currentYearDate = this.buildYearlyOccurrence(today.getFullYear(), today.getMonth(), day);
-    return currentYearDate.getTime() >= today.getTime()
-      ? currentYearDate
-      : this.buildYearlyOccurrence(today.getFullYear() + 1, today.getMonth(), day);
+    const anchorMonth = startDate.getMonth();
+    const currentYearDate = this.buildYearlyOccurrence(
+      referenceDate.getFullYear(),
+      anchorMonth,
+      day,
+    );
+    const nextDate =
+      currentYearDate.getTime() >= referenceDate.getTime()
+        ? currentYearDate
+        : this.buildYearlyOccurrence(referenceDate.getFullYear() + 1, anchorMonth, day);
+
+    return nextDate.getTime() <= endDate.getTime() ? nextDate : null;
+  }
+
+  private getNotificationPriorityLabel(value: string | null | undefined): string {
+    switch ((value ?? '').toLowerCase()) {
+      case 'alta':
+        return 'Alta';
+      case 'media':
+        return 'Media';
+      case 'baja':
+        return 'Baja';
+      default:
+        return 'Sin prioridad';
+    }
   }
 
   private buildDeltaLabel(current: number, previous: number): string {

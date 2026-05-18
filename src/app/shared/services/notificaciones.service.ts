@@ -30,6 +30,7 @@ export interface MarcarTodasLeidasResponse {
 }
 
 export type PeriodicidadNotificacionPagoCodigo = 'mensual' | 'fecha-especifica' | 'anual';
+export type PrioridadNotificacion = 'alta' | 'media' | 'baja';
 
 interface PeriodicidadApiItem {
   id_periodicidad?: number | string | null;
@@ -38,6 +39,7 @@ interface PeriodicidadApiItem {
   nombre?: string | null;
   descripcion?: string | null;
   codigo?: string | null;
+  estado?: boolean | null;
 }
 
 export interface PeriodicidadCatalogo {
@@ -45,16 +47,21 @@ export interface PeriodicidadCatalogo {
   nombre: string;
   descripcion: string | null;
   codigo: PeriodicidadNotificacionPagoCodigo;
+  estado: boolean;
 }
 
 export interface ConfiguracionNotificacionPago {
   id_notificacion_programada: number;
   id_usuario: number;
   descripcion: string;
+  prioridad: PrioridadNotificacion;
+  fecha_inicio: string;
+  fecha_fin: string;
   dia_pago_programado: number;
   id_periodicidad: number;
   periodicidad_nombre: string;
   periodicidad_codigo: PeriodicidadNotificacionPagoCodigo;
+  estado: boolean;
   fecha_creacion: string;
   fecha_actualizacion: string;
 }
@@ -62,6 +69,9 @@ export interface ConfiguracionNotificacionPago {
 export interface ConfiguracionNotificacionPagoPayload {
   id_notificacion_programada?: number | null;
   descripcion: string;
+  prioridad: PrioridadNotificacion;
+  fecha_inicio: string;
+  fecha_fin: string;
   dia_pago_programado: number;
   periodicidad: PeriodicidadCatalogo;
 }
@@ -147,6 +157,13 @@ export class NotificacionesService {
     const configuraciones = Array.isArray(response) ? response : [];
 
     return configuraciones.sort((a, b) => {
+      const prioridadDiff =
+        this.resolvePrioridadRank(a.prioridad) - this.resolvePrioridadRank(b.prioridad);
+
+      if (prioridadDiff !== 0) {
+        return prioridadDiff;
+      }
+
       const nextA = this.resolveSortDate(a);
       const nextB = this.resolveSortDate(b);
 
@@ -163,6 +180,9 @@ export class NotificacionesService {
   ): Promise<ConfiguracionNotificacionPago> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
     const descripcion = payload.descripcion.trim();
+    const prioridad = this.normalizePrioridad(payload.prioridad);
+    const fechaInicio = this.normalizeDateOnly(payload.fecha_inicio);
+    const fechaFin = this.normalizeDateOnly(payload.fecha_fin);
     const diaPagoProgramado = Number(payload.dia_pago_programado);
 
     if (!descripcion || !Number.isInteger(diaPagoProgramado)) {
@@ -173,8 +193,15 @@ export class NotificacionesService {
       throw new Error('El dia de pago programado debe estar entre 1 y 31.');
     }
 
+    if (fechaFin < fechaInicio) {
+      throw new Error('La fecha fin no puede ser menor que la fecha inicio.');
+    }
+
     const requestPayload = {
       descripcion,
+      prioridad,
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
       dia_pago_programado: diaPagoProgramado,
       id_periodicidad: payload.periodicidad.id_periodicidad,
     };
@@ -219,31 +246,43 @@ export class NotificacionesService {
   }
 
   private resolveSortDate(configuracion: ConfiguracionNotificacionPago): number {
+    const fechaInicio = this.parseDateOnly(configuracion.fecha_inicio);
+    const fechaFin = this.parseDateOnly(configuracion.fecha_fin);
+
+    if (!fechaInicio || !fechaFin) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
     const today = this.getToday();
+    const referenceDate = today.getTime() < fechaInicio.getTime() ? fechaInicio : today;
     let nextDate: Date;
     const day = configuracion.dia_pago_programado;
 
     if (configuracion.periodicidad_codigo === 'fecha-especifica') {
-      nextDate = this.buildMonthlyOccurrence(today, day);
+      nextDate = fechaInicio;
     } else if (configuracion.periodicidad_codigo === 'mensual') {
-      nextDate = this.buildMonthlyOccurrence(today, day);
+      nextDate = this.buildMonthlyOccurrence(referenceDate, day);
 
-      if (nextDate.getTime() < today.getTime()) {
+      if (nextDate.getTime() < referenceDate.getTime()) {
         nextDate = this.buildMonthlyOccurrence(
-          new Date(today.getFullYear(), today.getMonth() + 1, 1),
+          new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1),
           day,
         );
       }
     } else {
-      nextDate = this.buildYearlyOccurrence(today, today.getMonth(), day);
+      nextDate = this.buildYearlyOccurrence(referenceDate, fechaInicio.getMonth(), day);
 
-      if (nextDate.getTime() < today.getTime()) {
+      if (nextDate.getTime() < referenceDate.getTime()) {
         nextDate = this.buildYearlyOccurrence(
-          new Date(today.getFullYear() + 1, 0, 1),
-          today.getMonth(),
+          new Date(referenceDate.getFullYear() + 1, 0, 1),
+          fechaInicio.getMonth(),
           day,
         );
       }
+    }
+
+    if (nextDate.getTime() > fechaFin.getTime()) {
+      return Number.MAX_SAFE_INTEGER;
     }
 
     return nextDate.getTime();
@@ -284,6 +323,7 @@ export class NotificacionesService {
       nombre,
       descripcion: item.descripcion?.trim() || null,
       codigo,
+      estado: item.estado !== false,
     };
   }
 
@@ -322,5 +362,58 @@ export class NotificacionesService {
   private getToday(): Date {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  }
+
+  private resolvePrioridadRank(prioridad: PrioridadNotificacion | null | undefined): number {
+    switch (prioridad) {
+      case 'alta':
+        return 0;
+      case 'media':
+        return 1;
+      case 'baja':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  private normalizePrioridad(value: string | null | undefined): PrioridadNotificacion {
+    const normalized = (value ?? '').trim().toLowerCase();
+
+    if (normalized === 'alta' || normalized === 'media' || normalized === 'baja') {
+      return normalized;
+    }
+
+    throw new Error('La prioridad debe ser alta, media o baja.');
+  }
+
+  private normalizeDateOnly(value: string | null | undefined): string {
+    const normalized = (value ?? '').trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+      throw new Error('Las fechas deben estar en formato YYYY-MM-DD.');
+    }
+
+    return normalized;
+  }
+
+  private parseDateOnly(value: string | null | undefined): Date | null {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return null;
+    }
+
+    const [year, month, day] = value.split('-').map((part) => Number(part));
+    const parsed = new Date(year, month - 1, day);
+
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return parsed;
   }
 }

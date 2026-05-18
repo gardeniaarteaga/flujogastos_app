@@ -180,6 +180,7 @@
             <strong>{{ item.descripcion }}</strong>
             <span class="score-chip" [ngClass]="'tone-' + item.tone">{{ item.statusLabel }}</span>
           </div>
+          <p>Prioridad {{ item.prioridad }} | {{ item.vigenciaLabel }}</p>
           <p>{{ item.periodicidad_nombre }} | Dia {{ item.dia_pago_programado }}</p>
           <small>{{ formatScheduledDateLabel(item) }}</small>
         </article>
