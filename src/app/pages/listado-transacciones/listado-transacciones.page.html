@@ -146,11 +146,10 @@
           <div class="quick-pay-bulk-summary">
             <strong>Pagos masivos</strong>
             <span *ngIf="quickPayBulkSelectedCount === 0">
-              Marca varias cuotas . Solo se pueden combinar pagos con la misma forma de pago.
+              Marca varias cuotas del usuario logueado para pagar todo lo seleccionado.
             </span>
             <span *ngIf="quickPayBulkSelectedCount > 0">
-              {{ quickPayBulkSelectedCount }} pagos seleccionados por ${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}
-              con {{ quickPayBulkSelectedMetodoPago }}.
+              {{ quickPayBulkSelectedCount }} pagos seleccionados por ${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}.
             </span>
           </div>
 
@@ -165,12 +164,13 @@
               Limpiar seleccion
             </button>
             <button
+              *ngIf="quickPayBulkSelectedCount > 0"
               type="button"
               class="table-button complete compact-button"
               [disabled]="!canApplyQuickPayBulk"
               (click)="applyQuickPayBulkSelection()"
             >
-              {{ applyingBulkQuickPayments ? 'Procesando...' : 'Pagar seleccionados' }}
+              {{ applyingBulkQuickPayments ? 'Procesando...' : 'Pagar lo seleccionado' }}
             </button>
           </div>
         </div>

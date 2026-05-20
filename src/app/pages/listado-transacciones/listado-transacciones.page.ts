@@ -1483,17 +1483,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   isQuickPayDetalleSelectionDisabled(row: DetalleTransaccionListadoRow): boolean {
-    if (this.applyingBulkQuickPayments || !this.canSelectQuickPayDetalle(row)) {
-      return true;
-    }
-
-    const selectedMetodoPagoId = this.getQuickPaySelectedMetodoPagoId();
-
-    return (
-      selectedMetodoPagoId !== null &&
-      selectedMetodoPagoId !== this.getQuickPayMetodoPagoId(row) &&
-      !this.isQuickPayDetalleSelected(row)
-    );
+    return this.applyingBulkQuickPayments || !this.canSelectQuickPayDetalle(row);
   }
 
   getQuickPayDetalleSelectionHint(row: DetalleTransaccionListadoRow): string {
@@ -1503,16 +1493,6 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (!this.isDetalleDelUsuarioLogueado(row.detalle)) {
       return 'Solo puedes incluir pagos que pertenezcan al usuario logueado.';
-    }
-
-    const selectedMetodoPago = this.quickPayBulkSelectedMetodoPago;
-
-    if (
-      selectedMetodoPago &&
-      this.getQuickPaySelectedMetodoPagoId() !== this.getQuickPayMetodoPagoId(row) &&
-      !this.isQuickPayDetalleSelected(row)
-    ) {
-      return `Solo puedes combinar pagos con la forma de pago ${selectedMetodoPago}.`;
     }
 
     return 'Seleccionar para pago masivo.';
@@ -1559,27 +1539,13 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const metodoPagoId = this.getQuickPaySelectedMetodoPagoId();
-
-    if (
-      metodoPagoId === null ||
-      selectedRows.some((row) => this.getQuickPayMetodoPagoId(row) !== metodoPagoId)
-    ) {
-      await this.alerts.warning(
-        'Forma de pago requerida',
-        'Los pagos masivos solo se pueden realizar cuando todas las cuotas usan la misma forma de pago.',
-      );
-      return;
-    }
-
     const totalCancelado = this.roundMoneyValue(
       selectedRows.reduce((sum, row) => sum + Number(row.detalle.saldo_pendiente ?? 0), 0),
     );
-    const metodoPagoNombre = this.getQuickPayMetodoPagoNombre(selectedRows[0]);
     const confirmed = await this.alerts.confirm(
       'Confirmar pagos masivos',
-      `Se cancelaran ${selectedRows.length} pagos por un total de $${totalCancelado.toFixed(2)} con la forma de pago ${metodoPagoNombre}.`,
-      'Pagar seleccionados',
+      `Se marcaran ${selectedRows.length} cuotas como pagadas por un total de $${totalCancelado.toFixed(2)} con la fecha actual. Deseas continuar?`,
+      'Pagar lo seleccionado',
       {
         icon: 'warning',
         confirmButtonColor: '#1f7a46',
@@ -1590,79 +1556,37 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const pagosPorTransaccion = new Map<
-      number,
-      {
-        pagos: Array<{ id_detalle: number; monto: number }>;
-        total: number;
-        cantidad: number;
-      }
-    >();
-
-    selectedRows.forEach((row) => {
-      const transactionId = row.transaccion.id_transaccion;
-      const existing = pagosPorTransaccion.get(transactionId);
-      const monto = this.roundMoneyValue(Number(row.detalle.saldo_pendiente ?? 0));
-
-      if (existing) {
-        existing.pagos.push({ id_detalle: row.detalle.id, monto });
-        existing.total = this.roundMoneyValue(existing.total + monto);
-        existing.cantidad += 1;
-        return;
-      }
-
-      pagosPorTransaccion.set(transactionId, {
-        pagos: [{ id_detalle: row.detalle.id, monto }],
-        total: monto,
-        cantidad: 1,
-      });
-    });
-
     this.applyingBulkQuickPayments = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    let pagosAplicados = 0;
-    let montoAplicado = 0;
-
     try {
-      for (const [transactionId, payload] of pagosPorTransaccion.entries()) {
-        await firstValueFrom(
-          this.http
-            .patch(
-              `${this.apiUrl}/${transactionId}/aplicar-pagos`,
-              { pagos: payload.pagos },
-              {
-                params: { id_usuario: this.currentUserIdValue },
-              },
-            )
-            .pipe(timeout(10000)),
-        );
-
-        pagosAplicados += payload.cantidad;
-        montoAplicado = this.roundMoneyValue(montoAplicado + payload.total);
-      }
+      await firstValueFrom(
+        this.http
+          .patch(
+            `${this.apiUrl}/aplicar-pagos-masivos`,
+            {
+              ids_detalle: selectedRows.map((row) => row.detalle.id),
+            },
+            {
+              params: { id_usuario: this.currentUserIdValue },
+            },
+          )
+          .pipe(timeout(10000)),
+      );
 
       this.clearQuickPayBulkSelection();
       await this.loadTransacciones();
-      this.successMessage = `Se cancelaron ${pagosAplicados} pagos por $${montoAplicado.toFixed(2)}. El estado de la tabla detalle se actualizo correctamente.`;
+      this.successMessage = `Se marcaron ${selectedRows.length} cuotas como pagadas por $${totalCancelado.toFixed(2)}. El detalle se actualizo correctamente.`;
       await this.alerts.success('Pagos aplicados', this.successMessage);
     } catch (error) {
       this.clearQuickPayBulkSelection();
       await this.loadTransacciones();
-
-      const baseErrorMessage = this.getErrorMessage(
+      this.errorMessage = this.getErrorMessage(
         error,
         'No se pudieron aplicar los pagos seleccionados.',
       );
-
-      if (pagosAplicados > 0) {
-        this.errorMessage = `${baseErrorMessage} Ya se cancelaron ${pagosAplicados} pagos por $${montoAplicado.toFixed(2)} antes del error.`;
-        await this.alerts.warning('Pago parcial aplicado', this.errorMessage);
-      } else {
-        this.errorMessage = baseErrorMessage;
-        await this.alerts.error('No se pudieron aplicar los pagos', this.errorMessage);
-      }
+      await this.alerts.error('No se pudieron aplicar los pagos', this.errorMessage);
     } finally {
       this.applyingBulkQuickPayments = false;
     }
@@ -3520,7 +3444,9 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     const visibleDetalleIds = new Set(
-      this.filteredDetalleTransacciones.map((row) => row.detalle.id),
+      this.filteredDetalleTransacciones
+        .filter((row) => this.canSelectQuickPayDetalle(row))
+        .map((row) => row.detalle.id),
     );
 
     this.selectedQuickPayDetalleIds = new Set(
@@ -3529,22 +3455,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private isDetalleDelUsuarioLogueado(detalle: ParticipanteDetalleListado): boolean {
-    if (detalle.es_titular) {
-      return true;
-    }
-
-    if (detalle.id_usuario_relacionado === this.currentUserIdValue) {
-      return true;
-    }
-
-    const participante =
-      this.participantes.find((item) => item.id_participante === detalle.id_participante) ?? null;
-
-    return Boolean(
-      participante &&
-        (participante.id_usuario_relacionado === this.currentUserIdValue ||
-          participante.id_usuario_titular === this.currentUserIdValue),
-    );
+    return detalle.es_titular || detalle.id_usuario_relacionado === this.currentUserIdValue;
   }
 
   private buildDetalleTransaccionRows(): DetalleTransaccionListadoRow[] {
