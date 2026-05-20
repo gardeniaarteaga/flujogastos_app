@@ -54,6 +54,7 @@ export class TipoProductoPage {
 
   tiposProducto: TipoProducto[] = [];
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

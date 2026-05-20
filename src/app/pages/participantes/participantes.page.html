@@ -1,8 +1,21 @@
-<div class="module-page">
+<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
-      <p class="eyebrow">Flujo de Gastos</p>
-      <h1>Panel</h1>
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
     </div>
 
     <nav class="nav">
@@ -17,10 +30,14 @@
           <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Configurar notificaciones
           </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
+          </a>
         </div>
       </div>
       <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
-      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Cuotas/Compartidos</a>
       <div class="nav-group" [class.open]="maintenanceOpen">
         <button type="button" class="nav-item nav-item-group active" (click)="toggleMaintenanceMenu()">
           <span>Mantenimiento</span>

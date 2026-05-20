@@ -73,6 +73,7 @@ export class PerfilPage {
     { name: 'Venezuela', areaCode: '+58' },
   ];
 
+  sidebarCollapsed = false;
   maintenanceOpen = false;
   saving = false;
   changingPassword = false;

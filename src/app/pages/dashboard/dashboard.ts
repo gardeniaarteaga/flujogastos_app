@@ -79,6 +79,7 @@ interface EnrichedTransaction {
   categoryName: string;
   subcategoryName: string;
   description: string;
+  paymentMethodName: string;
   personalAmount: number;
   personalDebt: number;
   pendingInterest: number;
@@ -194,6 +195,20 @@ interface DebtSummaryModel {
   highestInterestEntity: string;
 }
 
+interface ScheduledTransactionDetail {
+  scheduledDate: string;
+  description: string;
+  categoryName: string;
+  subcategoryName: string;
+  paymentMethodName: string;
+  entityName: string;
+  amount: number;
+  amountPaid: number;
+  pending: number;
+  statusLabel: string;
+  tone: DashboardTone;
+}
+
 interface DashboardAnalytics {
   hasData: boolean;
   currentMonthLabel: string;
@@ -213,6 +228,7 @@ interface DashboardAnalytics {
   debtEntities: DebtEntitySummary[];
   recommendations: Recommendation[];
   trendTable: TrendMonth[];
+  scheduledDetails: ScheduledTransactionDetail[];
 }
 
 @Component({
@@ -258,6 +274,7 @@ export class Dashboard implements OnInit {
   loading = false;
   errorMessage = '';
   scheduledNotificationsError = '';
+  sidebarCollapsed = false;
   transactionsOpen = true;
   maintenanceOpen = false;
   readonly userProfile = loadUserProfile();
@@ -517,6 +534,10 @@ export class Dashboard implements OnInit {
       },
       currentMonthExpense,
     );
+    const scheduledDetails = this.buildScheduledTransactionDetails(
+      enriched,
+      currentMonth.key,
+    );
 
     return {
       hasData: true,
@@ -613,6 +634,7 @@ export class Dashboard implements OnInit {
       debtEntities,
       recommendations,
       trendTable: trendMonths,
+      scheduledDetails,
     };
   }
 
@@ -669,6 +691,7 @@ export class Dashboard implements OnInit {
       categoryName: transaction.nombre_categoria?.trim() || 'Sin categoria',
       subcategoryName: transaction.nombre_subcategoria?.trim() || 'Sin subcategoria',
       description: transaction.descripcion?.trim() || 'Sin detalle',
+      paymentMethodName: form?.nombre_forma?.trim() || 'Sin forma de pago',
       personalAmount,
       personalDebt,
       pendingInterest,
@@ -954,6 +977,59 @@ export class Dashboard implements OnInit {
       }))
       .sort((a, b) => b.debt - a.debt)
       .slice(0, 5);
+  }
+
+  private buildScheduledTransactionDetails(
+    transactions: EnrichedTransaction[],
+    monthKey: string,
+  ): ScheduledTransactionDetail[] {
+    return transactions
+      .filter((item) => item.type === 'expense')
+      .flatMap((item) =>
+        item.details
+          .filter((detail) => detail.dueDate && this.getMonthKey(detail.dueDate) === monthKey)
+          .map((detail) => {
+            const amountPaid = this.roundMoney(detail.amountPaid);
+            const pending = this.roundMoney(detail.pending);
+            const amount = this.roundMoney(detail.scheduledTotal);
+            const statusLabel =
+              pending <= 0
+                ? 'Pagado'
+                : amountPaid > 0
+                  ? 'Pago parcial'
+                  : 'Pendiente';
+
+            return {
+              scheduledDate: this.formatIsoDate(detail.dueDate),
+              description: item.description,
+              categoryName: item.categoryName,
+              subcategoryName: item.subcategoryName,
+              paymentMethodName: item.paymentMethodName,
+              entityName: item.entityName,
+              amount,
+              amountPaid,
+              pending,
+              statusLabel,
+              tone:
+                pending <= 0
+                  ? ('good' as DashboardTone)
+                  : amountPaid > 0
+                    ? ('info' as DashboardTone)
+                    : ('warning' as DashboardTone),
+            };
+          }),
+      )
+      .sort((left, right) => {
+        if (left.scheduledDate !== right.scheduledDate) {
+          return left.scheduledDate.localeCompare(right.scheduledDate);
+        }
+
+        if (right.pending !== left.pending) {
+          return right.pending - left.pending;
+        }
+
+        return left.description.localeCompare(right.description);
+      });
   }
 
   private buildInsights(
@@ -1620,6 +1696,7 @@ export class Dashboard implements OnInit {
       debtEntities: [],
       recommendations: [],
       trendTable: [],
+      scheduledDetails: [],
     };
   }
 
@@ -1634,6 +1711,18 @@ export class Dashboard implements OnInit {
 
   private getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private formatIsoDate(date: Date | null): string {
+    if (!date) {
+      return '';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   }
 
   private parseDateOnly(value: string | null | undefined): Date | null {

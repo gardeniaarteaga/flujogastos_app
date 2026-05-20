@@ -67,6 +67,7 @@ export class ParticipantesPage {
 
   participantes: Participante[] = [];
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

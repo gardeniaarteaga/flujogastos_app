@@ -57,6 +57,7 @@ export class TipoEntidadPage {
 
   tiposEntidad: TipoEntidad[] = [];
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

@@ -106,6 +106,7 @@ export class UsuariosPage {
 
   usuarios: Usuario[] = [];
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = true;
   loading = false;

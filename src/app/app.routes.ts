@@ -24,9 +24,19 @@ export const routes: Routes = [
     data: { transactionFlow: 'income' },
   },
   {
-    path: 'transacciones/ingreso',
+    path: 'gastos/individual',
     component: IngresoTransaccionesPage,
-    data: { transactionFlow: 'expense' },
+    data: { transactionFlow: 'expense', expenseMode: 'individual' },
+  },
+  {
+    path: 'gastos/compartidos',
+    component: IngresoTransaccionesPage,
+    data: { transactionFlow: 'expense', expenseMode: 'shared' },
+  },
+  {
+    path: 'transacciones/ingreso',
+    redirectTo: 'gastos/individual',
+    pathMatch: 'full',
   },
   {
     path: 'transacciones/listado',

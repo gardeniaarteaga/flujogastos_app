@@ -84,6 +84,7 @@ export class SubcategoriasPage implements OnInit {
   categorias: CategoriaOption[] = [];
   expandedCategoriaIds = new Set<number>();
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

@@ -145,6 +145,7 @@ export class ResumenNotificacionesPage implements OnInit {
     minute: '2-digit',
   });
 
+  sidebarCollapsed = false;
   maintenanceOpen = false;
   saving = false;
   deletingId: number | null = null;

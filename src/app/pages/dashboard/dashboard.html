@@ -1,8 +1,21 @@
-<div class="dashboard-page">
+<div class="dashboard-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
-      <p class="eyebrow">Flujo de Gastos</p>
-      <h1>Panel</h1>
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
     </div>
 
     <nav class="nav">
@@ -44,12 +57,20 @@
         Ingresos
       </a>
       <a
-        class="nav-item"
-        routerLink="/transacciones/ingreso"
+        class="nav-item nav-item-expense-single"
+        routerLink="/gastos/individual"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
       >
         Gastos
+      </a>
+      <a
+        class="nav-item nav-item-expense-shared"
+        routerLink="/gastos/compartidos"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Cuotas/Compartidos
       </a>
       <div class="nav-group" [class.open]="maintenanceOpen">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
@@ -484,7 +505,7 @@
         <article class="panel trend-table-panel">
           <div class="panel-heading">
             <div>
-              <span class="panel-kicker">Detalle mensual</span>
+              <span class="panel-kicker">Analisis por mes</span>
               <h3>Comparativo de los ultimos meses</h3>
             </div>
           </div>
@@ -514,6 +535,56 @@
             </table>
           </div>
         </article>
+      </section>
+
+      <section class="panel scheduled-transactions-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">Detalle de transacciones</span>
+            <h3>Cuotas y movimientos con fecha programada</h3>
+          </div>
+          <span class="score-chip tone-info">{{ analytics.currentMonthLabel }}</span>
+        </div>
+
+        <div *ngIf="analytics.scheduledDetails.length > 0; else emptyScheduledDetails" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha programada</th>
+                <th>Descripcion</th>
+                <th>Categoria</th>
+                <th>Forma de pago</th>
+                <th>Entidad</th>
+                <th>Total</th>
+                <th>Pagado</th>
+                <th>Pendiente</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of analytics.scheduledDetails">
+                <td>{{ formatFullDate(item.scheduledDate) }}</td>
+                <td>{{ item.description }}</td>
+                <td>
+                  {{ item.categoryName }}
+                  <span *ngIf="item.subcategoryName !== 'Sin subcategoria'">
+                    / {{ item.subcategoryName }}
+                  </span>
+                </td>
+                <td>{{ item.paymentMethodName }}</td>
+                <td>{{ item.entityName }}</td>
+                <td>{{ formatCurrency(item.amount) }}</td>
+                <td>{{ formatCurrency(item.amountPaid) }}</td>
+                <td>{{ formatCurrency(item.pending) }}</td>
+                <td>
+                  <span class="score-chip" [ngClass]="'tone-' + item.tone">
+                    {{ item.statusLabel }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </section>
 
@@ -557,6 +628,13 @@
       <div class="chart-empty">
         <strong>No tienes recordatorios programados</strong>
         <p>Crea tus notificaciones de pago para verlas destacadas aqui en el dashboard.</p>
+      </div>
+    </ng-template>
+
+    <ng-template #emptyScheduledDetails>
+      <div class="chart-empty">
+        <strong>Sin transacciones programadas este mes</strong>
+        <p>Cuando existan cuotas o movimientos con fecha programada del mes actual apareceran aqui.</p>
       </div>
     </ng-template>
   </main>

@@ -1,8 +1,21 @@
-<div class="module-page">
+<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
-      <p class="eyebrow">Flujo de Gastos</p>
-      <h1>Panel</h1>
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
     </div>
 
     <nav class="nav">
@@ -23,7 +36,8 @@
         </div>
       </div>
       <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
-      <a class="nav-item" routerLink="/transacciones/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Cuotas/Compartidos</a>
       <div class="nav-group" [class.open]="maintenanceOpen">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
           <span>Mantenimiento</span>
@@ -106,6 +120,18 @@
             <p class="panel-title">{{ panelTitle }}</p>
             <h3>{{ panelSubtitle }}</h3>
           </div>
+          <div
+            *ngIf="isDetalleViewMode && quickPayCurrentMonthSummaryRows.length > 0"
+            class="header-actions"
+          >
+            <button
+              type="button"
+              class="secondary-button compact-button"
+              (click)="openQuickPaySummaryModal()"
+            >
+              Ver resumen mensual
+            </button>
+          </div>
         </div>
 
         <div class="messages">
@@ -113,9 +139,61 @@
           <p *ngIf="errorMessage" class="message error">{{ errorMessage }}</p>
         </div>
 
+        <div
+          *ngIf="isDetalleViewMode && filteredDetalleTransacciones.length > 0"
+          class="quick-pay-bulk-toolbar"
+        >
+          <div class="quick-pay-bulk-summary">
+            <strong>Pagos masivos</strong>
+            <span *ngIf="quickPayBulkSelectedCount === 0">
+              Marca varias cuotas . Solo se pueden combinar pagos con la misma forma de pago.
+            </span>
+            <span *ngIf="quickPayBulkSelectedCount > 0">
+              {{ quickPayBulkSelectedCount }} pagos seleccionados por ${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}
+              con {{ quickPayBulkSelectedMetodoPago }}.
+            </span>
+          </div>
+
+          <div class="quick-pay-bulk-actions">
+            <button
+              *ngIf="quickPayBulkSelectedCount > 0"
+              type="button"
+              class="secondary-button compact-button"
+              [disabled]="applyingBulkQuickPayments"
+              (click)="clearQuickPayBulkSelection()"
+            >
+              Limpiar seleccion
+            </button>
+            <button
+              type="button"
+              class="table-button complete compact-button"
+              [disabled]="!canApplyQuickPayBulk"
+              (click)="applyQuickPayBulkSelection()"
+            >
+              {{ applyingBulkQuickPayments ? 'Procesando...' : 'Pagar seleccionados' }}
+            </button>
+          </div>
+        </div>
+
         <form [formGroup]="filtrosForm" class="filters-panel" novalidate>
-          <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones" class="filters-grid">
-            <div class="field">
+          <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones" class="filters-grid quick-pay-filters-grid">
+            <div class="field quick-pay-days-field">
+              <label class="checkbox-row quick-pay-checkbox-row" for="prioritariosDetalle">
+                <input id="prioritariosDetalle" type="checkbox" formControlName="prioritarios" />
+                <span>Dias a vencer</span>
+              </label>
+              <input
+                id="diasPrioridadDetalle"
+                type="number"
+                min="1"
+                max="30"
+                inputmode="numeric"
+                formControlName="diasPrioridad"
+                [class.is-disabled]="!filtrosForm.controls.prioritarios.value"
+              />
+            </div>
+
+            <div class="field quick-pay-state-field">
               <label for="estadoDetalle">Estado</label>
               <select id="estadoDetalle" formControlName="estado">
                 <option [ngValue]="null">Todos</option>
@@ -125,36 +203,28 @@
               </select>
             </div>
 
-            <div class="field" style="display:flex;align-items:flex-end;">
-              <label class="checkbox-row" for="enviadasDetalle" style="margin:0;">
+            <div class="field quick-pay-checkbox-field">
+              <label class="checkbox-row quick-pay-checkbox-row" for="enviadasDetalle">
                 <input id="enviadasDetalle" type="checkbox" formControlName="enviadas" />
                 <span>Enviados</span>
               </label>
-            </div>
-
-            <div class="field">
-              <label for="diasPrioridadDetalle">Dias por vencer</label>
-              <input
-                id="diasPrioridadDetalle"
-                type="number"
-                min="1"
-                max="30"
-                inputmode="numeric"
-                formControlName="diasPrioridad"
-                style="max-width:5.5rem;"
-              />
             </div>
           </div>
 
           <ng-template #filtrosListadoTransacciones>
             <div class="filter-toggle-group filter-toggle-group-compact">
+              <label class="checkbox-row checkbox-row-compact" for="todos">
+                <input id="todos" type="checkbox" formControlName="todos" (change)="onTodosToggle($event)" />
+                <span>Todos</span>
+              </label>
+
               <label class="checkbox-row checkbox-row-compact" for="soloHoy">
-                <input id="soloHoy" type="checkbox" formControlName="soloHoy" (change)="onSoloHoyToggle()" />
+                <input id="soloHoy" type="checkbox" formControlName="soloHoy" (change)="onSoloHoyToggle($event)" />
                 <span>Hoy</span>
               </label>
 
               <label class="checkbox-row checkbox-row-compact" for="mesActual">
-                <input id="mesActual" type="checkbox" formControlName="mesActual" (change)="onMesActualToggle()" />
+                <input id="mesActual" type="checkbox" formControlName="mesActual" (change)="onMesActualToggle($event)" />
                 <span>Mes actual</span>
               </label>
 
@@ -175,6 +245,19 @@
               >
                 {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
               </button>
+            </div>
+
+            <div class="filters-search-row">
+              <div class="field">
+                <label for="busquedaDescripcion">Buscar por descripcion</label>
+                <input
+                  id="busquedaDescripcion"
+                  type="text"
+                  formControlName="busquedaDescripcion"
+                  maxlength="250"
+                  placeholder="Escribe parte de la descripcion..."
+                />
+              </div>
             </div>
 
             <div *ngIf="showAdvancedFilters" class="filters-grid">
@@ -321,7 +404,7 @@
             </thead>
             <tbody>
               <tr
-                *ngFor="let transaccion of filteredTransacciones; trackBy: trackTransaccion"
+                *ngFor="let transaccion of paginatedFilteredTransacciones; trackBy: trackTransaccion"
                 class="table-row-action"
                 [class.is-active]="editingTransaccionId === transaccion.id_transaccion"
                 [class.is-disabled]="!canEditTransaccion(transaccion)"
@@ -530,13 +613,44 @@
             </tbody>
           </table>
         </div>
+        <div
+          *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0 && getListadoTotalPages() > 1"
+          class="table-pagination"
+        >
+          <span class="table-pagination-summary">
+            Mostrando {{ getListadoPageStart() }}-{{ getListadoPageEnd() }}
+            de {{ filteredTransacciones.length }} transacciones
+          </span>
+          <div class="table-pagination-actions">
+            <button
+              type="button"
+              class="secondary-button compact-button"
+              [disabled]="getListadoCurrentPage() === 1"
+              (click)="changeListadoPage(-1)"
+            >
+              Anterior
+            </button>
+            <span class="table-pagination-summary">
+              Pagina {{ getListadoCurrentPage() }} de {{ getListadoTotalPages() }}
+            </span>
+            <button
+              type="button"
+              class="secondary-button compact-button"
+              [disabled]="getListadoCurrentPage() === getListadoTotalPages()"
+              (click)="changeListadoPage(1)"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
 
         <div *ngIf="!loading && isDetalleViewMode && filteredDetalleTransacciones.length > 0" class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th>Pagar</th>
+                <th>ID</th>
                 <th>Transaccion</th>
-                <th>Participante</th>
                 <th>Fecha programada</th>
                 <th>Cuota</th>
                 <th>Monto</th>
@@ -550,12 +664,24 @@
             <tbody>
               <tr *ngFor="let row of filteredDetalleTransacciones; trackBy: trackDetalleTransaccion">
                 <td>
-                  <div style="display:grid;gap:0.3rem;">
-                    <strong>#{{ row.transaccion.id_transaccion }}</strong>
-                    <span [attr.title]="row.descripcion">{{ row.descripcion }}</span>
-                  </div>
+                  <label
+                    class="quick-pay-select-cell"
+                    [attr.title]="getQuickPayDetalleSelectionHint(row)"
+                  >
+                    <input
+                      type="checkbox"
+                      [checked]="isQuickPayDetalleSelected(row)"
+                      [disabled]="isQuickPayDetalleSelectionDisabled(row)"
+                      (change)="onQuickPayDetalleSelectionChange(row, $event)"
+                    />
+                  </label>
                 </td>
-                <td>{{ getDetalleRowParticipanteLabel(row) }}</td>
+                <td>{{ row.transaccion.id_transaccion }}</td>
+                <td>
+                  <strong [attr.title]="getTransaccionTitle(row.transaccion)">
+                    {{ getTransaccionTitle(row.transaccion) }}
+                  </strong>
+                </td>
                 <td>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</td>
                 <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
                 <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
@@ -713,7 +839,7 @@
               </select>
             </div>
 
-            <div class="field">
+            <div class="field" *ngIf="!isEditingSharedExpenseMode">
               <label for="edit_monto">{{ editingMontoLabel }}</label>
               <input
                 id="edit_monto"
@@ -722,6 +848,7 @@
                 step="0.01"
                 inputmode="decimal"
                 formControlName="monto"
+                [readonly]="isEditingSharedExpenseMode"
                 [disabled]="hasAppliedPagosInEditor"
                 (keydown)="onMontoKeydown($event)"
                 (paste)="onMontoPaste($event)"
@@ -813,6 +940,31 @@
           </label>
 
           <section class="participants-section">
+            <div
+              *ngIf="isEditingSharedExpenseMode"
+              style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;"
+            >
+              <div>
+                <p class="panel-title" style="margin:0;">Cuotas y participantes</p>
+                <h4 style="margin:.35rem 0 0;">Configura el detalle del gasto</h4>
+              </div>
+              <div class="field" style="min-width:min(280px,100%);margin:0 0 0 auto;">
+                <label for="edit_monto">{{ editingMontoLabel }}</label>
+                <input
+                  id="edit_monto"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputmode="decimal"
+                  formControlName="monto"
+                  [readonly]="isEditingSharedExpenseMode"
+                  [disabled]="hasAppliedPagosInEditor"
+                  (keydown)="onMontoKeydown($event)"
+                  (paste)="onMontoPaste($event)"
+                  (blur)="normalizeMoneyInput('monto')"
+                />
+              </div>
+            </div>
             <label class="checkbox-row" for="edit_usar_participantes">
               <input
                 id="edit_usar_participantes"
@@ -854,7 +1006,7 @@
                         {{ (participanteGroup.controls.cantidad_cuotas.value ?? 0) === 1 ? 'cuota' : 'cuotas' }}
                       </span>
                       <span>
-                        Monto: ${{ (participanteGroup.controls.monto.value ?? 0) | number: '1.2-2' }}
+                        Monto total: ${{ getEditorParticipanteMontoTotal(participanteGroup) | number: '1.2-2' }}
                       </span>
                     </div>
                   </div>
@@ -887,6 +1039,12 @@
                           {{ getParticipanteDisplayName(participante) }}
                         </option>
                       </select>
+                      <small
+                        *ngIf="isEditingSharedExpenseMode && !participanteGroup.controls.es_titular.value && getParticipantePorcentajeSugerido(participanteGroup) !== null"
+                        class="user-hint"
+                      >
+                        Porcentaje de participacion sugerida {{ getParticipantePorcentajeSugerido(participanteGroup) | number: '1.0-6' }}%
+                      </small>
                     </div>
 
                     <div class="field" *ngIf="isEditingIncomeMode && participanteGroup.controls.es_titular.value; else porcentajeParticipanteEditor">
@@ -903,20 +1061,26 @@
                       </select>
                     </div>
                     <ng-template #porcentajeParticipanteEditor>
-                      <div class="field">
+                      <div class="field" *ngIf="!isEditingSharedExpenseMode">
                         <label [for]="'edit_participante_porcentaje_' + i">Porcentaje</label>
                         <input
                           [id]="'edit_participante_porcentaje_' + i"
                           type="number"
                           min="0"
                           max="100"
-                          step="0.01"
+                          step="0.000001"
                           inputmode="decimal"
                           formControlName="porcentaje"
+                          [readonly]="isEditingSharedExpenseMode"
                           [disabled]="hasAppliedPagosInEditor"
                           (input)="onParticipantePorcentajeInput(participanteGroup)"
                           (blur)="normalizePercentageInput(participanteGroup)"
                         />
+                        <small
+                          *ngIf="participanteGroup.controls.porcentaje.touched && participanteGroup.controls.porcentaje.errors?.['maxSixDecimals']"
+                        >
+                          Solo se permiten hasta 6 decimales.
+                        </small>
                       </div>
                     </ng-template>
 
@@ -955,15 +1119,16 @@
                       </label>
                       <input
                         [id]="'edit_participante_monto_' + i"
-                        type="number"
+                        type="text"
                         [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
                         step="0.01"
                         inputmode="decimal"
+                        autocomplete="off"
                         formControlName="monto"
                         [disabled]="hasAppliedPagosInEditor"
                         (keydown)="onMontoKeydown($event)"
                         (paste)="onMontoPaste($event)"
-                        (input)="onParticipanteMontoInput(participanteGroup)"
+                        (input)="onParticipanteMontoInput(participanteGroup, $event)"
                         (blur)="normalizeMoneyInput('monto', participanteGroup)"
                       />
                       <small *ngIf="getEditorParticipanteMontoHint(participanteGroup)" class="user-hint">
@@ -1116,10 +1281,11 @@
                             >
                               <input
                                 [id]="'edit_cuota_' + i + '_' + cuotaItem.index"
-                                type="number"
+                                type="text"
                                 [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
                                 step="0.01"
                                 inputmode="decimal"
+                                autocomplete="off"
                                 formControlName="monto"
                                 [readonly]="isCuotaMontoReadonly(participanteGroup)"
                                 (keydown)="onMontoKeydown($event)"
@@ -1416,6 +1582,68 @@
               Siguiente
             </button>
           </div>
+        </div>
+      </section>
+    </div>
+
+    <div
+      *ngIf="quickPaySummaryModalOpen"
+      class="payment-modal-backdrop"
+      (click)="closeQuickPaySummaryModal()"
+    >
+      <section
+        class="payment-modal detail-modal"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="payment-modal-header">
+          <div>
+            <p class="panel-title">Resumen mensual</p>
+            <h3>Pago Rapido por forma de pago</h3>
+            <p class="user-hint payment-modal-hint">
+              Pagado y pendiente segun cuotas programadas en el mes actual.
+            </p>
+          </div>
+          <div class="header-actions">
+            <button
+              type="button"
+              class="secondary-button compact-button"
+              (click)="closeQuickPaySummaryModal()"
+            >
+              Cerrar
+            </button>
+          </div>
+        </header>
+
+        <div class="quick-pay-month-summary-table-wrapper">
+          <table class="quick-pay-month-summary-table">
+            <thead>
+              <tr>
+                <th>Forma de pago</th>
+                <th>Cuotas</th>
+                <th>Pagado</th>
+                <th>Pendiente</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let resumen of quickPayCurrentMonthSummaryRows">
+                <td>{{ resumen.metodoPago }}</td>
+                <td>{{ resumen.cuotas }}</td>
+                <td>${{ resumen.montoPagado | number: '1.2-2' }}</td>
+                <td>${{ resumen.saldoPendiente | number: '1.2-2' }}</td>
+                <td>${{ resumen.montoTotal | number: '1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>{{ quickPayCurrentMonthSummaryTotals.metodoPago }}</th>
+                <th>{{ quickPayCurrentMonthSummaryTotals.cuotas }}</th>
+                <th>${{ quickPayCurrentMonthSummaryTotals.montoPagado | number: '1.2-2' }}</th>
+                <th>${{ quickPayCurrentMonthSummaryTotals.saldoPendiente | number: '1.2-2' }}</th>
+                <th>${{ quickPayCurrentMonthSummaryTotals.montoTotal | number: '1.2-2' }}</th>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </section>
     </div>

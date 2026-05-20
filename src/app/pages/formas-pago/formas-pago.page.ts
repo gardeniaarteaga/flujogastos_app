@@ -131,6 +131,7 @@ export class FormasPagoPage implements OnInit {
   tiposEntidad: TipoEntidad[] = [];
   tipos: TipoProducto[] = [];
   currentPage = 1;
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

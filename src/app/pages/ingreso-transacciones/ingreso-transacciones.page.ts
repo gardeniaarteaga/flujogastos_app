@@ -33,6 +33,7 @@ import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/use
 type TipoTransaccionId = number;
 type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
 type ModoCuotas = 'fijas' | 'divididas';
+type ExpenseMode = 'individual' | 'shared';
 
 interface CuotaPayload {
   monto: number;
@@ -125,6 +126,18 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.flowConfig.defaultTipoTransaccionId === 2;
   }
 
+  get expenseMode(): ExpenseMode {
+    return this.route.snapshot.data['expenseMode'] === 'shared' ? 'shared' : 'individual';
+  }
+
+  get isSharedExpenseMode(): boolean {
+    return !this.isIncomeMode && this.expenseMode === 'shared';
+  }
+
+  get isIndividualExpenseMode(): boolean {
+    return !this.isIncomeMode && this.expenseMode === 'individual';
+  }
+
   get sectionLabel(): string {
     return this.flowConfig.sectionLabel;
   }
@@ -142,16 +155,24 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get shouldManageTitularCuotas(): boolean {
-    return this.isIncomeMode || Boolean(this.usarParticipantesControl.value);
+    return this.isIncomeMode || this.isSharedExpenseMode;
   }
 
   get shouldShowExpenseCuotasSetup(): boolean {
-    return !this.isIncomeMode && Boolean(this.selectedFormaPago);
+    return this.isSharedExpenseMode && Boolean(this.selectedFormaPago);
+  }
+
+  get isMontoPrincipalReadonly(): boolean {
+    return this.isSharedExpenseMode;
   }
 
   get montoPrincipalLabel(): string {
+    if (this.isSharedExpenseMode) {
+      return 'Monto total';
+    }
+
     if (!this.isIncomeMode) {
-      return this.shouldShowExpenseCuotasSetup ? 'Monto total' : 'Monto';
+      return 'Monto';
     }
 
     const titularGroup = this.titularDetalleGroup;
@@ -183,6 +204,10 @@ export class IngresoTransaccionesPage implements OnInit {
 
   get montoPrincipalHint(): string {
     const titularGroup = this.titularDetalleGroup;
+
+    if (this.isSharedExpenseMode) {
+      return '';
+    }
 
     if (!titularGroup || !this.isIncomeTitularGroup(titularGroup)) {
       return this.shouldShowExpenseCuotasSetup
@@ -248,10 +273,29 @@ export class IngresoTransaccionesPage implements OnInit {
 
   getParticipanteMontoHint(group: ParticipanteDetalleForm): string {
     return this.isFixedCuotasMode(group)
-      ? `Este monto se repetira en cada cuota. Total programado: $${this.getGroupMontoTarget(group).toFixed(2)}.`
+      ? ''
       : this.isIncomeMode
         ? 'Este monto total se dividira automaticamente entre las cuotas de la persona.'
         : 'Este monto total se dividira automaticamente entre las cuotas.';
+  }
+
+  getParticipantePorcentajeSugerido(group: ParticipanteDetalleForm): number | null {
+    const participante = this.getCatalogParticipanteForGroup(group);
+    const porcentaje = participante?.porcentaje_participacion;
+
+    if (porcentaje === null || porcentaje === undefined) {
+      return null;
+    }
+
+    return this.normalizePercentageValue(Number(porcentaje));
+  }
+
+  private getPorcentajeValidators(): ValidatorFn[] {
+    if (this.isSharedExpenseMode) {
+      return [];
+    }
+
+    return [Validators.min(0), Validators.max(100), this.maxSixDecimalsValidator()];
   }
 
   readonly tiposTransaccion: Array<{ value: TipoTransaccionId; label: string }> = [
@@ -272,6 +316,7 @@ export class IngresoTransaccionesPage implements OnInit {
   ];
   readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
 
+  sidebarCollapsed = false;
   maintenanceOpen = false;
   transactionsOpen = false;
   loading = false;
@@ -280,6 +325,7 @@ export class IngresoTransaccionesPage implements OnInit {
   successMessage = '';
   private readonly openCuotasGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
+  private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
   private titularManualOverride = false;
   selectedFormaPago: CatalogoFormaPago | null = null;
   readonly today = new Date();
@@ -321,7 +367,7 @@ export class IngresoTransaccionesPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.applyIncomeModeRestrictions();
+    this.applyScreenModeRestrictions();
     void this.loadCatalogos(true);
   }
 
@@ -458,6 +504,19 @@ export class IngresoTransaccionesPage implements OnInit {
   get hasAdditionalParticipantsInForm(): boolean {
     return this.participantesDetalleArray.controls.some(
       (group) => !group.controls.es_titular.value,
+    );
+  }
+
+  get sharedExpenseCalculatedTotal(): number {
+    if (!this.isSharedExpenseMode) {
+      return this.normalizeDecimalValue(Number(this.transaccionForm.controls.monto.value ?? 0));
+    }
+
+    return this.normalizeDecimalValue(
+      this.participantesDetalleArray.controls.reduce(
+        (sum, group) => sum + this.getCuotasTotal(group),
+        0,
+      ),
     );
   }
 
@@ -632,6 +691,7 @@ export class IngresoTransaccionesPage implements OnInit {
   onUsarParticipantesChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.usarParticipantesControl.setValue(checked);
+    this.updateMontoPrincipalValidators();
 
     if (checked) {
       this.titularManualOverride = false;
@@ -670,11 +730,7 @@ export class IngresoTransaccionesPage implements OnInit {
           nonNullable: true,
         }),
         dia_programado: this.fb.control<number | null>(null),
-        porcentaje: this.fb.control<number | null>(100, [
-          Validators.min(0),
-          Validators.max(100),
-          this.maxTwoDecimalsValidator(),
-        ]),
+        porcentaje: this.fb.control<number | null>(100, this.getPorcentajeValidators()),
         monto: this.fb.control<number | null>(this.transaccionForm.controls.monto.value, [
           Validators.required,
           Validators.min(0),
@@ -684,6 +740,7 @@ export class IngresoTransaccionesPage implements OnInit {
       }),
     );
     this.titularManualOverride = false;
+    this.syncSharedExpenseCalculatedMonto();
     this.updateEstadoRegistroPreview();
   }
 
@@ -707,11 +764,7 @@ export class IngresoTransaccionesPage implements OnInit {
           nonNullable: true,
         }),
         dia_programado: this.fb.control<number | null>(null),
-        porcentaje: this.fb.control<number | null>(null, [
-          Validators.min(0),
-          Validators.max(100),
-          this.maxTwoDecimalsValidator(),
-        ]),
+        porcentaje: this.fb.control<number | null>(null, this.getPorcentajeValidators()),
         monto: this.fb.control<number | null>(null, [
           Validators.required,
           Validators.min(0.01),
@@ -720,6 +773,7 @@ export class IngresoTransaccionesPage implements OnInit {
         cuotas: this.createCuotasArray(0, 1),
       }),
     );
+    this.syncSharedExpenseCalculatedMonto();
     this.updateEstadoRegistroPreview();
   }
 
@@ -744,6 +798,10 @@ export class IngresoTransaccionesPage implements OnInit {
     this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
+
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+    }
   }
 
   normalizeCuotaMontoInput(group: ParticipanteDetalleForm, cuotaIndex: number): void {
@@ -778,7 +836,11 @@ export class IngresoTransaccionesPage implements OnInit {
       this.titularManualOverride = false;
     }
 
-    this.rebalanceMontoDistribution();
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+    } else {
+      this.rebalanceMontoDistribution();
+    }
 
     this.updateEstadoRegistroPreview();
   }
@@ -835,7 +897,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.successMessage = '';
     this.errorMessage = '';
 
-    this.applyIncomeModeRestrictions();
+    this.applyScreenModeRestrictions();
     this.normalizeFormForSubmit();
 
     if (this.shouldManageTitularCuotas && this.participantesDetalleArray.length === 0) {
@@ -1034,6 +1096,7 @@ export class IngresoTransaccionesPage implements OnInit {
         this.titularManualOverride = true;
       }
 
+      this.markGroupAmountAsManual(group);
       this.updatePorcentajeFromMonto(group, this.shouldRebalanceCounterpart(group));
     } else if (this.shouldManageTitularCuotas) {
       this.refreshParticipantesMontos();
@@ -1042,8 +1105,12 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateEstadoRegistroPreview();
   }
 
-  onMontoInput(): void {
+  onMontoInput(event?: Event): void {
     if (!this.shouldManageTitularCuotas) {
+      return;
+    }
+
+    if (this.isMoneyInputPendingDecimal(event)) {
       return;
     }
 
@@ -1131,6 +1198,12 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   normalizePercentageInput(group: ParticipanteDetalleForm): void {
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
     const control = group.controls.porcentaje;
     const rawValue = control.value;
 
@@ -1152,23 +1225,36 @@ export class IngresoTransaccionesPage implements OnInit {
       this.titularManualOverride = true;
     }
 
+    this.markGroupAmountAsAutomatic(group);
     this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
   }
 
   onParticipantePorcentajeInput(group: ParticipanteDetalleForm): void {
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
     if (group.controls.es_titular.value) {
       this.titularManualOverride = true;
     }
 
+    this.markGroupAmountAsAutomatic(group);
     this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
     this.updateEstadoRegistroPreview();
   }
 
-  onParticipanteMontoInput(group: ParticipanteDetalleForm): void {
+  onParticipanteMontoInput(group: ParticipanteDetalleForm, event?: Event): void {
+    if (this.isMoneyInputPendingDecimal(event)) {
+      return;
+    }
+
     if (group.controls.es_titular.value) {
       this.titularManualOverride = true;
     }
 
+    this.markGroupAmountAsManual(group);
     this.updatePorcentajeFromMonto(group, this.shouldRebalanceCounterpart(group));
     this.updateEstadoRegistroPreview();
   }
@@ -1213,10 +1299,22 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   onCuotaModeChange(group: ParticipanteDetalleForm): void {
-    if (!this.isIncomeMode) {
-      const montoObjetivo = this.getCuotasTotal(group);
+    if (this.isSharedExpenseMode) {
+      group.controls.cantidad_cuotas.setValue(1, { emitEvent: false });
+      group.controls.cantidad_cuotas.updateValueAndValidity({ emitEvent: false });
+      group.controls.monto.setValue(0, { emitEvent: false });
+      group.controls.monto.updateValueAndValidity({ emitEvent: false });
+      this.syncCuotasWithMonto(group);
+      this.syncSharedExpenseCalculatedMonto();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
+    const montoObjetivoActual = this.getCuotasTotal(group);
+
+    if (this.shouldPreserveGroupTargetOnCuotaModeChange(group)) {
       group.controls.monto.setValue(
-        this.getMontoInputValueForTarget(group, montoObjetivo),
+        this.getMontoInputValueForTarget(group, montoObjetivoActual),
         { emitEvent: false },
       );
       group.controls.monto.updateValueAndValidity({ emitEvent: false });
@@ -1228,6 +1326,7 @@ export class IngresoTransaccionesPage implements OnInit {
 
     if (!this.isIncomeMode) {
       this.updatePorcentajeFromMonto(group, this.shouldRebalanceCounterpart(group));
+      this.updateEstadoRegistroPreview();
     } else {
       if (group.controls.es_titular.value) {
         this.syncCuotasWithMonto(group);
@@ -1237,6 +1336,16 @@ export class IngresoTransaccionesPage implements OnInit {
       this.updateEstadoRegistroPreview();
       return;
     }
+  }
+
+  private shouldPreserveGroupTargetOnCuotaModeChange(
+    group: ParticipanteDetalleForm,
+  ): boolean {
+    if (this.isIncomeMode) {
+      return false;
+    }
+
+    return true;
   }
 
   onMontoPaste(event: ClipboardEvent): void {
@@ -1277,10 +1386,17 @@ export class IngresoTransaccionesPage implements OnInit {
       emitEvent: false,
     });
 
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
     if (participante?.porcentaje_participacion !== null && participante?.porcentaje_participacion !== undefined) {
       group.controls.porcentaje.setValue(participante.porcentaje_participacion, {
         emitEvent: false,
       });
+      this.markGroupAmountAsAutomatic(group);
       this.updateMontoFromPorcentaje(group);
     }
 
@@ -1323,7 +1439,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.applyDefaultEstado();
     this.onFormaPagoChange();
     this.onCategoriaChange();
-    this.applyIncomeModeRestrictions();
+    this.applyScreenModeRestrictions();
     this.updateEstadoRegistroPreview();
   }
 
@@ -1339,13 +1455,24 @@ export class IngresoTransaccionesPage implements OnInit {
       };
     }
 
+    if (this.route.snapshot.data['expenseMode'] === 'shared') {
+      return {
+        defaultTipoTransaccionId: 1,
+        sectionLabel: 'Cuotas/Compartidos',
+        pageTitle: 'Ingreso de Gastos Compartidos',
+        formTitle: 'Registrar gasto compartido',
+        submitLabel: 'Guardar gasto compartido',
+        successMessage: 'Gasto compartido guardado correctamente.',
+      };
+    }
+
     return {
       defaultTipoTransaccionId: 1,
-      sectionLabel: 'Transacciones',
-      pageTitle: 'Ingreso de Gastos',
-      formTitle: 'Registrar transaccion',
-      submitLabel: 'Guardar transaccion',
-      successMessage: 'Transaccion guardada correctamente.',
+      sectionLabel: 'Gastos',
+      pageTitle: 'Ingreso de Gastos Individuales',
+      formTitle: 'Registrar gasto individual',
+      submitLabel: 'Guardar gasto individual',
+      successMessage: 'Gasto individual guardado correctamente.',
     };
   }
 
@@ -1434,6 +1561,15 @@ export class IngresoTransaccionesPage implements OnInit {
     this.setEstadoTransaccionByName(
       this.selectedFormaPago.tipo_producto?.pago_inmediato === true ? 'PAGADO' : 'PENDIENTE',
     );
+
+    if (this.isIndividualExpenseMode) {
+      this.usarParticipantesControl.setValue(false, { emitEvent: false });
+      this.titularManualOverride = false;
+      this.participantesDetalleArray.clear();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
     this.usarParticipantesControl.setValue(true, { emitEvent: false });
 
     if (!this.titularDetalleGroup) {
@@ -1501,6 +1637,40 @@ export class IngresoTransaccionesPage implements OnInit {
     );
   }
 
+  private applyExpenseModeRestrictions(): void {
+    if (this.isIncomeMode) {
+      return;
+    }
+
+    if (this.isIndividualExpenseMode) {
+      this.titularManualOverride = false;
+      this.participantesDetalleArray.clear();
+      this.transaccionForm.patchValue(
+        {
+          usar_participantes: false,
+          cuotas_sin_intereses: false,
+        },
+        { emitEvent: false },
+      );
+    }
+  }
+
+  private applyScreenModeRestrictions(): void {
+    this.applyIncomeModeRestrictions();
+    this.applyExpenseModeRestrictions();
+    this.updateMontoPrincipalValidators();
+  }
+
+  private updateMontoPrincipalValidators(): void {
+    const control = this.transaccionForm.controls.monto;
+    const validators = this.isSharedExpenseMode
+      ? [this.maxTwoDecimalsValidator()]
+      : [Validators.required, Validators.min(0.01), this.maxTwoDecimalsValidator()];
+
+    control.setValidators(validators);
+    control.updateValueAndValidity({ emitEvent: false });
+  }
+
   private formatDateApi(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1529,19 +1699,43 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    const participantesAdicionales = this.participantesDetalleArray.controls.filter(
-      (group) => !group.controls.es_titular.value,
-    );
+    if (this.isSharedExpenseMode) {
+      this.participantesDetalleArray.controls.forEach((group) => {
+        this.syncCuotasWithMonto(group);
+      });
+      this.syncSharedExpenseCalculatedMonto();
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+    const participantesAdicionales = this.getAdditionalParticipants();
 
     participantesAdicionales.forEach((group) => {
-      if (group.controls.porcentaje.value === null || group.controls.porcentaje.value === undefined) {
+      if (
+        this.isGroupAmountManual(group) ||
+        group.controls.porcentaje.value === null ||
+        group.controls.porcentaje.value === undefined
+      ) {
         return;
       }
 
       this.updateMontoFromPorcentaje(group, false);
     });
 
-    this.rebalanceMontoDistribution();
+    if (titularGroup) {
+      if (participantesAdicionales.length === 0) {
+        if (
+          !this.isGroupAmountManual(titularGroup) &&
+          titularGroup.controls.porcentaje.value !== null &&
+          titularGroup.controls.porcentaje.value !== undefined
+        ) {
+          this.updateMontoFromPorcentaje(titularGroup, false);
+        }
+      } else {
+        this.syncSharedExpenseTitularResidual();
+      }
+    }
 
     this.updateEstadoRegistroPreview();
   }
@@ -1555,6 +1749,18 @@ export class IngresoTransaccionesPage implements OnInit {
       }
 
       return /^\d+(\.\d{1,2})?$/.test(String(value)) ? null : { maxTwoDecimals: true };
+    };
+  }
+
+  private maxSixDecimalsValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control.value;
+
+      if (value === null || value === undefined || value === '') {
+        return null;
+      }
+
+      return /^\d+(\.\d{1,6})?$/.test(String(value)) ? null : { maxSixDecimals: true };
     };
   }
 
@@ -1590,13 +1796,20 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private sanitizeMoneyInputValue(value: string): string {
-    const sanitizedValue = value.replace(/[^0-9.]/g, '');
+    const sanitizedValue = value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
     const [integerPart, ...decimalParts] = sanitizedValue.split('.');
     const decimalPart = decimalParts.join('').slice(0, 2);
 
     return decimalParts.length > 0
       ? `${integerPart || '0'}.${decimalPart}`
       : integerPart;
+  }
+
+  private isMoneyInputPendingDecimal(event?: Event): boolean {
+    const input = event?.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    return rawValue.endsWith('.') || rawValue.endsWith(',');
   }
 
   private blockThirdDecimal(event: KeyboardEvent): void {
@@ -1628,10 +1841,9 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    if (event.key === '.') {
-      if (input.value.includes('.')) {
-        event.preventDefault();
-      }
+    if (this.isDecimalSeparatorKey(event.key)) {
+      event.preventDefault();
+      this.insertDecimalSeparator(input);
       return;
     }
 
@@ -1658,6 +1870,34 @@ export class IngresoTransaccionesPage implements OnInit {
     }
   }
 
+  private isDecimalSeparatorKey(key: string): boolean {
+    return key === '.' || key === ',' || key === 'Decimal';
+  }
+
+  private insertDecimalSeparator(input: HTMLInputElement): void {
+    const normalizedValue = input.value.replace(/,/g, '.');
+    const selectionStart = input.selectionStart ?? normalizedValue.length;
+    const selectionEnd = input.selectionEnd ?? selectionStart;
+    const decimalIndex = normalizedValue.indexOf('.');
+    const isReplacingCurrentDecimal =
+      decimalIndex >= selectionStart && decimalIndex < selectionEnd;
+
+    if (decimalIndex !== -1 && !isReplacingCurrentDecimal) {
+      return;
+    }
+
+    const nextValue =
+      normalizedValue.slice(0, selectionStart) +
+      '.' +
+      normalizedValue.slice(selectionEnd);
+    const sanitizedValue = this.sanitizeMoneyInputValue(nextValue);
+    const nextCursorPosition = Math.min(sanitizedValue.length, selectionStart + 1);
+
+    input.value = sanitizedValue;
+    input.setSelectionRange(nextCursorPosition, nextCursorPosition);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
   private sanitizeMoneyPaste(event: ClipboardEvent): void {
     const input = event.target as HTMLInputElement | null;
     const pastedText = event.clipboardData?.getData('text') ?? '';
@@ -1681,7 +1921,8 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private normalizePercentageValue(value: number): number {
-    return this.normalizeDecimalValue(Math.min(100, Math.max(0, value)));
+    const boundedValue = Math.min(100, Math.max(0, value));
+    return Math.round(boundedValue * 1_000_000) / 1_000_000;
   }
 
   private normalizeText(value: string): string {
@@ -2162,9 +2403,14 @@ export class IngresoTransaccionesPage implements OnInit {
   private normalizeFormForSubmit(): void {
     this.onFechaBlur();
     this.normalizeMoneyInput('monto');
+    const shouldNormalizePorcentaje = !this.isSharedExpenseMode;
 
     this.participantesDetalleArray.controls.forEach((group) => {
-      if (group.controls.porcentaje.value !== null && group.controls.porcentaje.value !== undefined) {
+      if (
+        shouldNormalizePorcentaje &&
+        group.controls.porcentaje.value !== null &&
+        group.controls.porcentaje.value !== undefined
+      ) {
         const porcentajeNormalizado = this.normalizePercentageValue(
           Number(group.controls.porcentaje.value),
         );
@@ -2261,9 +2507,9 @@ export class IngresoTransaccionesPage implements OnInit {
       return 'PENDIENTE';
     }
 
-    const montoTotal = this.normalizeDecimalValue(
-      Number(this.transaccionForm.controls.monto.value ?? 0),
-    );
+    const montoTotal = this.isSharedExpenseMode
+      ? this.sharedExpenseCalculatedTotal
+      : this.normalizeDecimalValue(Number(this.transaccionForm.controls.monto.value ?? 0));
 
     if (this.toCents(montoTotal) <= 0) {
       return 'PENDIENTE';
@@ -2292,6 +2538,11 @@ export class IngresoTransaccionesPage implements OnInit {
     group: ParticipanteDetalleForm,
     shouldRebalanceTitular = true,
   ): void {
+    if (this.isSharedExpenseMode) {
+      this.syncSharedExpenseCalculatedMonto();
+      return;
+    }
+
     const totalMonto = this.normalizeDecimalValue(
       Number(this.transaccionForm.controls.monto.value ?? 0),
     );
@@ -2309,7 +2560,11 @@ export class IngresoTransaccionesPage implements OnInit {
     this.syncCuotasWithMonto(group);
 
     if (shouldRebalanceTitular) {
-      this.rebalanceMontoDistribution(group);
+      if (this.isSharedExpenseMode) {
+        this.syncSharedExpenseTitularResidual();
+      } else {
+        this.rebalanceMontoDistribution(group);
+      }
     }
   }
 
@@ -2317,6 +2572,12 @@ export class IngresoTransaccionesPage implements OnInit {
     group: ParticipanteDetalleForm,
     shouldRebalanceTitular = true,
   ): void {
+    if (this.isSharedExpenseMode) {
+      this.syncCuotasWithMonto(group);
+      this.syncSharedExpenseCalculatedMonto();
+      return;
+    }
+
     const totalMonto = this.normalizeDecimalValue(
       Number(this.transaccionForm.controls.monto.value ?? 0),
     );
@@ -2329,7 +2590,11 @@ export class IngresoTransaccionesPage implements OnInit {
     this.syncCuotasWithMonto(group);
 
     if (shouldRebalanceTitular) {
-      this.rebalanceMontoDistribution(group);
+      if (this.isSharedExpenseMode) {
+        this.syncSharedExpenseTitularResidual();
+      } else {
+        this.rebalanceMontoDistribution(group);
+      }
     }
   }
 
@@ -2416,6 +2681,62 @@ export class IngresoTransaccionesPage implements OnInit {
     );
   }
 
+  private getCatalogParticipanteForGroup(
+    group: ParticipanteDetalleForm,
+  ): CatalogoParticipante | null {
+    if (group.controls.es_titular.value) {
+      return this.currentUserParticipante;
+    }
+
+    const participanteId = group.controls.id_participante.value;
+
+    if (participanteId === null || participanteId === undefined) {
+      return null;
+    }
+
+    return this.participantes.find((item) => item.id_participante === participanteId) ?? null;
+  }
+
+  private markGroupAmountAsManual(group: ParticipanteDetalleForm): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    this.manualAmountGroups.add(group);
+  }
+
+  private markGroupAmountAsAutomatic(group: ParticipanteDetalleForm): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    this.manualAmountGroups.delete(group);
+  }
+
+  private isGroupAmountManual(group: ParticipanteDetalleForm): boolean {
+    return this.isSharedExpenseMode && this.manualAmountGroups.has(group);
+  }
+
+  private syncSharedExpenseTitularResidual(): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+
+    if (!titularGroup || this.isGroupAmountManual(titularGroup)) {
+      return;
+    }
+
+    this.rebalanceTitularParticipation();
+  }
+
+  private getSharedExpenseGroupTotal(group: ParticipanteDetalleForm): number {
+    return this.getGroupCuotasCount(group) > 1
+      ? this.getCuotasTotal(group)
+      : this.getGroupMontoTarget(group);
+  }
+
   private rebalanceTitularParticipation(): void {
     const titularGroup = this.titularDetalleGroup;
 
@@ -2468,6 +2789,10 @@ export class IngresoTransaccionesPage implements OnInit {
       return Number(this.titularDetalleGroup?.controls.monto.value ?? formMonto ?? 0);
     }
 
+    if (this.isSharedExpenseMode) {
+      return this.sharedExpenseCalculatedTotal;
+    }
+
     const titularGroup = this.titularDetalleGroup;
 
     if (titularGroup && this.getAdditionalParticipants().length === 0) {
@@ -2475,6 +2800,27 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     return this.normalizeDecimalValue(Number(formMonto ?? 0));
+  }
+
+  private syncSharedExpenseCalculatedMonto(): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    const montoTotal = this.sharedExpenseCalculatedTotal;
+    this.transaccionForm.controls.monto.setValue(montoTotal, { emitEvent: false });
+    this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
+
+    this.participantesDetalleArray.controls.forEach((group) => {
+      const montoGrupo = this.getCuotasTotal(group);
+      const porcentaje =
+        montoTotal > 0
+          ? this.normalizePercentageValue((montoGrupo / montoTotal) * 100)
+          : 0;
+
+      group.controls.porcentaje.setValue(porcentaje, { emitEvent: false });
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
   }
 
   private isIncomeTitularGroup(group: ParticipanteDetalleForm): boolean {
@@ -2592,7 +2938,7 @@ export class IngresoTransaccionesPage implements OnInit {
       missingFields.push('Descripcion/Comercio');
     }
 
-    if (this.transaccionForm.controls.monto.invalid) {
+    if (!this.isSharedExpenseMode && this.transaccionForm.controls.monto.invalid) {
       missingFields.push('Monto total');
     }
 

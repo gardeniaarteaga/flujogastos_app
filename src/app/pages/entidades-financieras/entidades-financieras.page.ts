@@ -92,6 +92,7 @@ export class EntidadesFinancierasPage {
     { code: 'PA', name: 'Panama' },
     { code: 'US', name: 'Estados Unidos' },
   ];
+  sidebarCollapsed = false;
   transactionsOpen = false;
   maintenanceOpen = false;
   loading = false;

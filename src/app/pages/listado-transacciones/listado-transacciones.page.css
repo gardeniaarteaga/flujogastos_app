@@ -15,8 +15,78 @@
 .header-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
 .messages { min-height:1.5rem; margin-bottom:1rem; }
 .user-hint { margin:-.25rem 0 1rem; color:#6b7a90; font-size:.85rem; font-weight:600; }
+.quick-pay-bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #d9e3f0;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #fbfcff 0%, #f4f8ff 100%);
+}
+
+.quick-pay-bulk-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.quick-pay-bulk-summary strong {
+  color: var(--color-heading);
+}
+
+.quick-pay-bulk-summary span {
+  color: #5f6f82;
+  font-size: 0.9rem;
+}
+
+.quick-pay-bulk-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
+.quick-pay-filters-grid {
+  grid-template-columns: minmax(160px, 220px) minmax(240px, 1fr) auto;
+  align-items: end;
+}
+
+.quick-pay-days-field input {
+  max-width: 7rem;
+}
+
+.quick-pay-days-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.quick-pay-days-field input.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quick-pay-state-field select {
+  width: fit-content;
+  min-width: 9rem;
+  max-width: 100%;
+  padding-right: 2.2rem;
+}
+
+.quick-pay-checkbox-field {
+  display: flex;
+  align-items: end;
+}
+
+.quick-pay-checkbox-row {
+  min-height: 2.65rem;
+  margin: 0;
+}
 .filter-toggle-group { display:flex; gap:.75rem; flex-wrap:wrap; }
 .filter-toggle-group-compact { align-items:center; gap:.6rem; }
 .participants-section { display:grid; gap:1rem; padding:1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:#fbfcfe; }
@@ -159,6 +229,21 @@
   padding: 0;
 }
 
+.quick-pay-select-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #5f6f82;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.quick-pay-select-cell input {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+}
+
 .compact-button { min-height:auto; padding:.45rem .8rem; font-size:.86rem; }
 
 .participant-row { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(120px,.65fr) minmax(110px,.5fr) minmax(150px,.75fr) auto; gap:.85rem; align-items:end; }
@@ -177,6 +262,30 @@
 .table-wrap {
   max-height: 65vh;
   overflow: auto;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-top: 0.95rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #dbe4ef;
+  flex-wrap: wrap;
+}
+
+.table-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.table-pagination-summary {
+  color: #5f6f82;
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .table-row-action {
@@ -370,6 +479,10 @@
     grid-template-columns: 1fr;
   }
 
+  .quick-pay-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
   .cuotas-list-head {
     display: none;
   }
@@ -382,8 +495,25 @@
     flex-direction: column;
   }
 
+  .quick-pay-bulk-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-pay-bulk-actions {
+    justify-content: flex-start;
+  }
+
   .payment-modal-header {
     flex-direction: column;
+  }
+
+  .table-pagination {
+    align-items: flex-start;
+  }
+
+  .table-pagination-actions {
+    width: 100%;
   }
 
 }
