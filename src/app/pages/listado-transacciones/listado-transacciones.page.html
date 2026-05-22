@@ -1012,8 +1012,8 @@
                   </div>
 
                   <div class="participant-row">
-                    <div class="field">
-                      <label [for]="'edit_participante_' + i">
+                    <div class="field participant-field participant-field--identity" style="display:grid;gap:.35rem;min-width:0;">
+                      <label [for]="'edit_participante_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">
                         {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
                       </label>
                       <input
@@ -1021,12 +1021,14 @@
                         [id]="'edit_participante_' + i"
                         type="text"
                         formControlName="nombre_mostrado"
+                        style="width:100%;min-height:2.65rem;padding:.55rem .75rem;font-size:.92rem;"
                         readonly
                       />
                       <select
                         *ngIf="!participanteGroup.controls.es_titular.value"
                         [id]="'edit_participante_' + i"
                         formControlName="id_participante"
+                        style="width:100%;min-height:2.65rem;padding:.55rem .75rem;font-size:.92rem;"
                         [disabled]="hasAppliedPagosInEditor"
                         (change)="onParticipanteSelectionChange(participanteGroup)"
                       >
@@ -1043,7 +1045,7 @@
                         *ngIf="isEditingSharedExpenseMode && !participanteGroup.controls.es_titular.value && getParticipantePorcentajeSugerido(participanteGroup) !== null"
                         class="user-hint"
                       >
-                        Porcentaje de participacion sugerida {{ getParticipantePorcentajeSugerido(participanteGroup) | number: '1.0-6' }}%
+                        Porcentaje de participacion sugerida {{ getParticipantePorcentajeSugerido(participanteGroup) | number: '1.0-3' }}%
                       </small>
                     </div>
 
@@ -1061,17 +1063,18 @@
                       </select>
                     </div>
                     <ng-template #porcentajeParticipanteEditor>
-                      <div class="field" *ngIf="!isEditingSharedExpenseMode">
-                        <label [for]="'edit_participante_porcentaje_' + i">Porcentaje</label>
+                      <div class="field participant-field participant-field--percentage" style="display:grid;gap:.35rem;min-width:0;">
+                        <label [for]="'edit_participante_porcentaje_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">Porcentaje</label>
                         <input
                           [id]="'edit_participante_porcentaje_' + i"
                           type="number"
                           min="0"
                           max="100"
-                          step="0.000001"
+                          step="0.001"
                           inputmode="decimal"
                           formControlName="porcentaje"
-                          [readonly]="isEditingSharedExpenseMode"
+                          style="width:100%;min-height:2.65rem;padding:.55rem .75rem;font-size:.92rem;"
+                          [readonly]="isEditingSharedExpenseMode && participanteGroup.controls.es_titular.value"
                           [disabled]="hasAppliedPagosInEditor"
                           (input)="onParticipantePorcentajeInput(participanteGroup)"
                           (blur)="normalizePercentageInput(participanteGroup)"

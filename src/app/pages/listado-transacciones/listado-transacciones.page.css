@@ -246,7 +246,7 @@
 
 .compact-button { min-height:auto; padding:.45rem .8rem; font-size:.86rem; }
 
-.participant-row { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(120px,.65fr) minmax(110px,.5fr) minmax(150px,.75fr) auto; gap:.85rem; align-items:end; }
+.participant-row { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,.42fr) minmax(0,1fr) minmax(0,.52fr) minmax(0,1fr) auto; gap:.85rem; align-items:end; }
 
 .cuotas-remaining { color:#c62828; font-weight:800; }
 
