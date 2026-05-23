@@ -55,6 +55,183 @@ textarea {
   font: inherit;
 }
 
+.module-page .stats-strip {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.module-page .stat-card-lite {
+  padding: 1rem 1.1rem;
+  border: 1px solid #e3e8ee;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  box-shadow: 0 0.15rem 0.4rem rgba(44, 62, 80, 0.08);
+}
+
+.module-page .stat-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.module-page .stat-card-lite strong {
+  font-size: 1.65rem;
+  color: var(--color-heading);
+}
+
+.module-page .messages {
+  min-height: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.module-page .participants-section {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #e3e8ee;
+  border-radius: 0.65rem;
+  background: #fbfcfe;
+}
+
+.module-page .checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+}
+
+.module-page .checkbox-row input {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.module-page .compact-button {
+  min-height: auto;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.86rem;
+}
+
+.module-page .payment-details-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.module-page .payment-groups-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.module-page .payment-group-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid #d9e3f0;
+  border-left: 0.45rem solid var(--group-accent, #3f6ad8);
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.module-page .payment-group-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.module-page .payment-group-summary,
+.module-page .payment-detail-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.module-page .payment-role-badge {
+  font-weight: 800;
+}
+
+.module-page .payment-group-summary span,
+.module-page .payment-detail-summary span {
+  color: #6b7a90;
+  font-size: 0.88rem;
+}
+
+.module-page .payment-group-actions,
+.module-page .payment-detail-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.module-page .payment-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(170px, 0.7fr) minmax(170px, 0.7fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+  padding: 0.9rem;
+  border: 1px solid #e3e8ee;
+  border-radius: 0.65rem;
+  background: #ffffff;
+}
+
+.module-page .payment-detail-row.is-paid {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: #f8fbff;
+}
+
+.module-page .payment-detail-summary strong {
+  color: var(--color-heading);
+}
+
+.module-page .payment-saldo {
+  color: #c62828 !important;
+  font-weight: 800;
+}
+
+.module-page .payment-modal-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.module-page .detail-description {
+  padding: 0.9rem 1rem;
+  border: 1px solid #e3e8ee;
+  border-radius: 0.75rem;
+  background: #fbfcfe;
+}
+
+.module-page .payment-modal-chip {
+  padding: 0.9rem 1rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #fbfcff 0%, #f3f7ff 100%);
+}
+
+.module-page .payment-modal-chip span {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #6b7a90;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.module-page .payment-modal-chip strong {
+  color: var(--color-heading);
+  font-size: 1.02rem;
+}
+
 .date-entry {
   position: relative;
 }
@@ -100,6 +277,23 @@ textarea {
   margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+}
+
+@media (max-width: 640px) {
+  .module-page .stats-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .module-page .payment-detail-row,
+  .module-page .payment-modal-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .module-page .payment-group-header {
+    flex-direction: column;
+  }
 }
 
 a {

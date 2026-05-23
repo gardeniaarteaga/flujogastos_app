@@ -8,41 +8,10 @@
 }
 
 .stats-strip {
-  display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.stat-card-lite {
-  padding: 1rem 1.1rem;
-  border: 1px solid #e3e8ee;
-  border-radius: 0.65rem;
-  background: #ffffff;
-  box-shadow: 0 0.15rem 0.4rem rgba(44, 62, 80, 0.08);
-}
-
-.stat-label {
-  display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-primary);
-}
-
-.stat-card-lite strong {
-  font-size: 1.65rem;
-  color: var(--color-heading);
 }
 
 .message.error {
-  margin-bottom: 1rem;
-}
-
-.messages {
-  min-height: 1.5rem;
   margin-bottom: 1rem;
 }
 
@@ -179,35 +148,12 @@
   transform: translateX(-50%) translateY(0);
 }
 
-.participants-section {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid #e3e8ee;
-  border-radius: 0.65rem;
-  background: #fbfcfe;
-}
-
 .participants-section-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-}
-
-.checkbox-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  font-weight: 700;
-}
-
-.checkbox-row input {
-  width: auto;
-  min-height: auto;
-  margin: 0;
-  padding: 0;
 }
 
 .participants-list {
@@ -286,6 +232,50 @@
 .participant-row .field select {
   width: 100%;
   min-height: 2.65rem;
+}
+
+.participant-single-cuota-field input[readonly] {
+  font-weight: 700;
+  color: var(--color-heading);
+  background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
+}
+
+.participant-inline-check-field {
+  display: grid;
+  align-content: end;
+  justify-self: start;
+  min-width: 0;
+  max-width: 10.5rem;
+}
+
+.participant-inline-check-label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.65rem;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.participant-inline-check-field input[type='checkbox'],
+.participant-inline-check-label input {
+  inline-size: 0.95rem;
+  block-size: 0.95rem;
+  width: 0.95rem;
+  max-width: 0.95rem;
+  min-width: 0.95rem;
+  min-height: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  justify-self: start;
+}
+
+.participant-inline-check-label span {
+  overflow-wrap: anywhere;
 }
 
 .participant-field--identity input,
@@ -406,58 +396,6 @@
   align-content: start;
 }
 
-.date-entry {
-  position: relative;
-  display: block;
-}
-
-.date-entry > input[type='text'] {
-  padding-right: 3.5rem;
-}
-
-.date-picker-button {
-  position: absolute;
-  top: 50%;
-  right: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-primary);
-  transform: translateY(-50%);
-  box-shadow: none;
-}
-
-.date-picker-button svg {
-  width: 1.2rem;
-  height: 1.2rem;
-  fill: currentColor;
-}
-
-.date-picker-button:hover,
-.date-picker-button:focus-visible {
-  background: rgba(63, 106, 216, 0.12);
-  transform: translateY(-50%);
-  box-shadow: none;
-  outline: none;
-}
-
-.date-picker-native {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  border: 0;
-  clip: rect(0, 0, 0, 0);
-  overflow: hidden;
-}
-
 .field-grid-compact input,
 .field-grid-compact select {
   min-height: 3rem;
@@ -500,10 +438,10 @@
   .cuota-row {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 640px) {
-  .stats-strip {
-    grid-template-columns: 1fr;
+  .participant-inline-check-label {
+    min-height: auto;
+    white-space: normal;
   }
 }
+

@@ -526,9 +526,6 @@
                         (paste)="onMontoPaste($event)"
                         (blur)="normalizeMoneyInput('monto', $event)"
                       />
-                      <small *ngIf="transaccionForm.controls.monto.touched && transaccionForm.controls.monto.errors?.['maxTwoDecimals']">
-                        Solo se permiten 2 decimales.
-                      </small>
                     </div>
                   </div>
                   <div class="participant-row">
@@ -616,6 +613,34 @@
                     </div>
 
                     <div
+                      *ngIf="isSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1"
+                      class="field participant-single-cuota-field"
+                    >
+                      <label [for]="'participante_cuota_monto_' + i">Monto cuota</label>
+                      <input
+                        [id]="'participante_cuota_monto_' + i"
+                        type="text"
+                        [value]="getGroupMontoTarget(participanteGroup) | number: '1.2-2'"
+                        readonly
+                      />
+                    </div>
+
+                    <div
+                      *ngIf="shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"
+                      class="field participant-inline-check-field"
+                      [formGroup]="transaccionForm"
+                    >
+                      <label class="participant-inline-check-label" for="titular_cuota_unica_pagada">
+                        <input
+                          id="titular_cuota_unica_pagada"
+                          type="checkbox"
+                          formControlName="titular_cuota_unica_pagada"
+                        />
+                        <span>Marcar como pagada</span>
+                      </label>
+                    </div>
+
+                    <div
                       class="field"
                       *ngIf="!isSharedExpenseMode || !participanteGroup.controls.dividir_monto.value"
                     >
@@ -642,9 +667,6 @@
                             ? 'El monto del titular no puede ser negativo.'
                             : 'El monto debe ser mayor que 0.'
                         }}
-                      </small>
-                      <small *ngIf="participanteGroup.controls.monto.touched && participanteGroup.controls.monto.errors?.['maxTwoDecimals']">
-                        Solo se permiten 2 decimales.
                       </small>
                       <small *ngIf="getParticipanteMontoHint(participanteGroup)" class="field-hint">
                         {{ getParticipanteMontoHint(participanteGroup) }}

@@ -1,6 +1,7 @@
 import { DecimalPipe, NgFor, NgIf } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormArray,
@@ -75,6 +76,7 @@ interface CreateTransaccionPayload {
   descripcion?: string;
   cuotas_sin_intereses: boolean;
   pagocompartido: boolean;
+  titular_cuota_unica_pagada?: boolean;
   cantidad_cuotas_titular: number;
   cuotas_titular: CuotaPayload[];
   participantes_detalle?: Array<{
@@ -112,6 +114,7 @@ export class IngresoTransaccionesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly alerts = inject(SweetAlertService);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly route = inject(ActivatedRoute);
@@ -270,6 +273,14 @@ export class IngresoTransaccionesPage implements OnInit {
     return !this.isIncomeMode && this.selectedFormaPago?.tipo_producto?.pago_inmediato === true;
   }
 
+  get titularCuotaUnicaPagadaControl(): FormControl<boolean | null> {
+    return this.transaccionForm.get('titular_cuota_unica_pagada') as FormControl<boolean | null>;
+  }
+
+  get isTitularCuotaUnicaPagadaSelected(): boolean {
+    return Boolean(this.titularCuotaUnicaPagadaControl.value);
+  }
+
   getParticipanteMontoLabel(group: ParticipanteDetalleForm): string {
     return this.isFixedCuotasMode(group)
       ? 'Monto por cuota'
@@ -288,6 +299,16 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isSharedExpenseMode
       ? 'Dividir monto en cuotas/participantes'
       : 'Dividir monto en cuotas';
+  }
+
+  shouldShowTitularCuotaUnicaPagadaOption(group: ParticipanteDetalleForm): boolean {
+    return Boolean(
+      this.isSharedExpenseMode &&
+      group.controls.es_titular.value &&
+      Number(group.controls.cantidad_cuotas.value ?? 1) === 1 &&
+      this.getCuotasArray(group).length === 1 &&
+      this.toCents(this.getGroupMontoTarget(group)) > 0,
+    );
   }
 
   getModoCuotasLabel(group: ParticipanteDetalleForm): string {
@@ -370,6 +391,7 @@ export class IngresoTransaccionesPage implements OnInit {
     tipo_entidad: [{ value: '', disabled: true }],
     usar_participantes: [false],
     cuotas_sin_intereses: [false],
+    titular_cuota_unica_pagada: [false],
     participantes_detalle: this.fb.array<ParticipanteDetalleForm>([]),
     id_estado: [null as number | null, [Validators.required]],
     estado_transaccion: [{ value: this.getDefaultStatusName(), disabled: true }],
@@ -382,6 +404,13 @@ export class IngresoTransaccionesPage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.titularCuotaUnicaPagadaControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncSharedExpenseEstadoForTitularCuotaUnica();
+        this.updateEstadoRegistroPreview();
+      });
+
     this.applyScreenModeRestrictions();
     void this.loadCatalogos(true);
   }
@@ -963,6 +992,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
+    this.syncTitularCuotaUnicaPagadaOption();
     const formValue = this.transaccionForm.getRawValue();
     const participantesDetalle = this.usarParticipantesControl.value
       ? this.participantesDetalleArray.controls
@@ -1035,6 +1065,13 @@ export class IngresoTransaccionesPage implements OnInit {
       titularDetalleGroup
         ? (titularDetalleGroup.controls.cantidad_cuotas.value ?? cuotasTitularPayload.length)
         : 1;
+    const titularCuotaUnicaPagada =
+      titularDetalleGroup
+        ? (
+            this.shouldShowTitularCuotaUnicaPagadaOption(titularDetalleGroup) &&
+            Boolean(formValue.titular_cuota_unica_pagada)
+          )
+        : false;
 
     const payload: CreateTransaccionPayload = {
       fecha: normalizedFecha,
@@ -1046,6 +1083,7 @@ export class IngresoTransaccionesPage implements OnInit {
       cuotas_sin_intereses:
         this.showCuotasSinInteresesOption && Boolean(formValue.cuotas_sin_intereses),
       pagocompartido: Boolean(usarParticipantes && hasAdditionalParticipants),
+      titular_cuota_unica_pagada: titularCuotaUnicaPagada,
       cantidad_cuotas_titular: cantidadCuotasTitularPayload,
       cuotas_titular: cuotasTitularPayload,
     };
@@ -1479,6 +1517,7 @@ export class IngresoTransaccionesPage implements OnInit {
       tipo_entidad: '',
       usar_participantes: false,
       cuotas_sin_intereses: false,
+      titular_cuota_unica_pagada: false,
       participantes_detalle: [],
       id_estado: null,
       estado_transaccion: this.getDefaultStatusName(),
@@ -1609,7 +1648,11 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     this.setEstadoTransaccionByName(
-      this.selectedFormaPago.tipo_producto?.pago_inmediato === true ? 'PAGADO' : 'PENDIENTE',
+      this.isSharedExpenseMode
+        ? this.resolveSharedExpenseEstadoName()
+        : this.selectedFormaPago.tipo_producto?.pago_inmediato === true
+          ? 'PAGADO'
+          : 'PENDIENTE',
     );
 
     if (this.isIndividualExpenseMode) {
@@ -2012,7 +2055,7 @@ export class IngresoTransaccionesPage implements OnInit {
     return Math.max(1, Math.trunc(Number(group.controls.cantidad_cuotas.value ?? 1)));
   }
 
-  private getGroupMontoTarget(group: ParticipanteDetalleForm): number {
+  public getGroupMontoTarget(group: ParticipanteDetalleForm): number {
     const montoBase = this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0));
 
     if (!this.isIncomeTitularGroup(group) && this.isFixedCuotasMode(group)) {
@@ -2543,12 +2586,48 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private updateEstadoRegistroPreview(): void {
+    this.syncTitularCuotaUnicaPagadaOption();
     this.transaccionForm.patchValue(
       {
         estado_registro: this.resolveEstadoRegistroPreview(),
       },
       { emitEvent: false },
     );
+  }
+
+  private syncTitularCuotaUnicaPagadaOption(): void {
+    const titularGroup = this.titularDetalleGroup;
+
+    if (titularGroup && this.shouldShowTitularCuotaUnicaPagadaOption(titularGroup)) {
+      this.syncSharedExpenseEstadoForTitularCuotaUnica();
+      return;
+    }
+
+    this.titularCuotaUnicaPagadaControl.setValue(false, { emitEvent: false });
+    this.syncSharedExpenseEstadoForTitularCuotaUnica();
+  }
+
+  private syncSharedExpenseEstadoForTitularCuotaUnica(): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    this.setEstadoTransaccionByName(this.resolveSharedExpenseEstadoName());
+  }
+
+  private resolveSharedExpenseEstadoName(): string {
+    const titularGroup = this.titularDetalleGroup;
+    const shouldUsePartialStatus = Boolean(
+      titularGroup &&
+      this.shouldShowTitularCuotaUnicaPagadaOption(titularGroup) &&
+      this.titularCuotaUnicaPagadaControl.value,
+    );
+    const estadoPreferido = shouldUsePartialStatus ? 'PAGO PARCIAL' : 'PENDIENTE';
+    const estadoDisponible = this.getEstadosDisponiblesParaSeleccion().some(
+      (item) => item.nombre_estado.trim().toUpperCase() === estadoPreferido,
+    );
+
+    return estadoDisponible ? estadoPreferido : this.getDefaultStatusName();
   }
 
   private resolveEstadoRegistroPreview(): string {
