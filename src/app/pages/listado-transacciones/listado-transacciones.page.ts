@@ -3064,7 +3064,14 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   onMontoKeydown(event: KeyboardEvent): void {
-    this.blockThirdDecimal(event);
+    const input = event.target as HTMLInputElement | null;
+    const maxDecimals = Number(input?.dataset['decimals'] ?? '2');
+    const sanitizeValue =
+      input?.dataset['sanitize'] === 'percentage'
+        ? (value: string) => this.sanitizePercentageInputValue(value)
+        : (value: string) => this.sanitizeMoneyInputValue(value);
+
+    this.blockDecimalInput(event, Number.isFinite(maxDecimals) ? maxDecimals : 2, sanitizeValue);
   }
 
   normalizePercentageInput(group: ParticipanteDetalleForm): void {
@@ -3332,15 +3339,13 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   onMontoPaste(event: ClipboardEvent): void {
-    this.sanitizeMoneyPaste(event);
-  }
+    const input = event.target as HTMLInputElement | null;
+    const sanitizeValue =
+      input?.dataset['sanitize'] === 'percentage'
+        ? (value: string) => this.sanitizePercentageInputValue(value)
+        : (value: string) => this.sanitizeMoneyInputValue(value);
 
-  onPorcentajeKeydown(event: KeyboardEvent): void {
-    this.blockDecimalInput(event, 6, (value) => this.sanitizePercentageInputValue(value));
-  }
-
-  onPorcentajePaste(event: ClipboardEvent): void {
-    this.sanitizeDecimalPaste(event, (value) => this.sanitizePercentageInputValue(value));
+    this.sanitizeDecimalPaste(event, sanitizeValue);
   }
 
   onParticipanteSelectionChange(group: ParticipanteDetalleForm): void {
