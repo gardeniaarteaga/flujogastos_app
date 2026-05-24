@@ -471,6 +471,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   isCuotaMontoReadonly(group: ParticipanteDetalleForm): boolean {
+    if (this.isSharedExpenseMode) {
+      return this.isIncomeTitularGroup(group);
+    }
+
     return this.isIncomeTitularGroup(group) || this.isFixedCuotasMode(group);
   }
 
@@ -886,7 +890,20 @@ export class IngresoTransaccionesPage implements OnInit {
 
     cuotaGroup.controls.monto.setValue(normalizedValue, { emitEvent: false });
     cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
+
+    if (this.isSharedExpenseMode && !this.isCuotaMontoReadonly(group)) {
+      if (group.controls.es_titular.value) {
+        this.titularManualOverride = true;
+      }
+
+      this.markGroupAmountAsManual(group);
+      this.syncSharedExpenseGroupFromCuotas(group);
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
     this.syncLastCuotaWithMonto(group);
+    this.updateEstadoRegistroPreview();
   }
 
   removeParticipanteDetalle(index: number): void {
@@ -1216,7 +1233,14 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   onMontoKeydown(event: KeyboardEvent): void {
-    this.blockThirdDecimal(event);
+    const input = event.target as HTMLInputElement | null;
+    const maxDecimals = Number(input?.dataset['decimals'] ?? '2');
+    const sanitizeValue =
+      input?.dataset['sanitize'] === 'percentage'
+        ? (value: string) => this.sanitizePercentageInputValue(value)
+        : (value: string) => this.sanitizeMoneyInputValue(value);
+
+    this.blockDecimalInput(event, Number.isFinite(maxDecimals) ? maxDecimals : 2, sanitizeValue);
   }
 
   onFechaInput(event: Event): void {
@@ -1321,7 +1345,13 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
   }
 
-  onParticipantePorcentajeInput(group: ParticipanteDetalleForm): void {
+  onParticipantePorcentajeInput(group: ParticipanteDetalleForm, event?: Event): void {
+    this.sanitizePercentageInput(group, event);
+
+    if (this.isPercentageInputPendingDecimal(event)) {
+      return;
+    }
+
     if (group.controls.es_titular.value) {
       this.titularManualOverride = true;
     }
@@ -1342,6 +1372,34 @@ export class IngresoTransaccionesPage implements OnInit {
 
     this.markGroupAmountAsManual(group);
     this.updatePorcentajeFromMonto(group, this.shouldRebalanceCounterpart(group));
+    this.updateEstadoRegistroPreview();
+  }
+
+  onCuotaMontoInput(
+    group: ParticipanteDetalleForm,
+    cuotaIndex: number,
+    event?: Event,
+  ): void {
+    if (this.isCuotaMontoReadonly(group)) {
+      return;
+    }
+
+    if (this.isMoneyInputPendingDecimal(event)) {
+      return;
+    }
+
+    if (!this.isSharedExpenseMode) {
+      this.syncLastCuotaWithMonto(group);
+      this.updateEstadoRegistroPreview();
+      return;
+    }
+
+    if (group.controls.es_titular.value) {
+      this.titularManualOverride = true;
+    }
+
+    this.markGroupAmountAsManual(group);
+    this.syncSharedExpenseGroupFromCuotas(group);
     this.updateEstadoRegistroPreview();
   }
 
@@ -1443,7 +1501,13 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   onMontoPaste(event: ClipboardEvent): void {
-    this.sanitizeMoneyPaste(event);
+    const input = event.target as HTMLInputElement | null;
+    const sanitizeValue =
+      input?.dataset['sanitize'] === 'percentage'
+        ? (value: string) => this.sanitizePercentageInputValue(value)
+        : (value: string) => this.sanitizeMoneyInputValue(value);
+
+    this.sanitizeDecimalPaste(event, sanitizeValue);
   }
 
   onFechaPaste(event: ClipboardEvent): void {
@@ -1915,6 +1979,16 @@ export class IngresoTransaccionesPage implements OnInit {
       : integerPart;
   }
 
+  private sanitizePercentageInputValue(value: string): string {
+    const sanitizedValue = value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+    const [integerPart, ...decimalParts] = sanitizedValue.split('.');
+    const decimalPart = decimalParts.join('').slice(0, 6);
+
+    return decimalParts.length > 0
+      ? `${integerPart || '0'}.${decimalPart}`
+      : integerPart;
+  }
+
   private isMoneyInputPendingDecimal(event?: Event): boolean {
     const input = event?.target as HTMLInputElement | null;
     const rawValue = input?.value ?? '';
@@ -1930,7 +2004,42 @@ export class IngresoTransaccionesPage implements OnInit {
     );
   }
 
+  private isPercentageInputPendingDecimal(event?: Event): boolean {
+    const input = event?.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    return rawValue.endsWith('.') || rawValue.endsWith(',');
+  }
+
+  private sanitizePercentageInput(group: ParticipanteDetalleForm, event?: Event): void {
+    const input = event?.target as HTMLInputElement | null;
+
+    if (!input) {
+      return;
+    }
+
+    const sanitizedValue = this.sanitizePercentageInputValue(input.value);
+
+    if (input.value !== sanitizedValue) {
+      input.value = sanitizedValue;
+    }
+
+    group.controls.porcentaje.setValue(
+      (sanitizedValue === '' ? null : sanitizedValue) as unknown as number | null,
+      { emitEvent: false },
+    );
+    group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+  }
+
   private blockThirdDecimal(event: KeyboardEvent): void {
+    this.blockDecimalInput(event, 2, (value) => this.sanitizeMoneyInputValue(value));
+  }
+
+  private blockDecimalInput(
+    event: KeyboardEvent,
+    maxDecimals: number,
+    sanitizeValue: (value: string) => string,
+  ): void {
     const input = event.target as HTMLInputElement | null;
 
     if (!input) {
@@ -1961,7 +2070,7 @@ export class IngresoTransaccionesPage implements OnInit {
 
     if (this.isDecimalSeparatorKey(event.key)) {
       event.preventDefault();
-      this.insertDecimalSeparator(input);
+      this.insertDecimalSeparator(input, sanitizeValue);
       return;
     }
 
@@ -1983,7 +2092,7 @@ export class IngresoTransaccionesPage implements OnInit {
     const currentDecimalLength =
       decimalDigits.length - replacingDecimalDigits;
 
-    if (selectionStart > decimalIndex && currentDecimalLength >= 2) {
+    if (selectionStart > decimalIndex && currentDecimalLength >= maxDecimals) {
       event.preventDefault();
     }
   }
@@ -1992,7 +2101,10 @@ export class IngresoTransaccionesPage implements OnInit {
     return key === '.' || key === ',' || key === 'Decimal';
   }
 
-  private insertDecimalSeparator(input: HTMLInputElement): void {
+  private insertDecimalSeparator(
+    input: HTMLInputElement,
+    sanitizeValue: (value: string) => string,
+  ): void {
     const normalizedValue = input.value.replace(/,/g, '.');
     const selectionStart = input.selectionStart ?? normalizedValue.length;
     const selectionEnd = input.selectionEnd ?? selectionStart;
@@ -2008,7 +2120,7 @@ export class IngresoTransaccionesPage implements OnInit {
       normalizedValue.slice(0, selectionStart) +
       '.' +
       normalizedValue.slice(selectionEnd);
-    const sanitizedValue = this.sanitizeMoneyInputValue(nextValue);
+    const sanitizedValue = sanitizeValue(nextValue);
     const nextCursorPosition = Math.min(sanitizedValue.length, selectionStart + 1);
 
     input.value = sanitizedValue;
@@ -2017,6 +2129,13 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private sanitizeMoneyPaste(event: ClipboardEvent): void {
+    this.sanitizeDecimalPaste(event, (value) => this.sanitizeMoneyInputValue(value));
+  }
+
+  private sanitizeDecimalPaste(
+    event: ClipboardEvent,
+    sanitizeValue: (value: string) => string,
+  ): void {
     const input = event.target as HTMLInputElement | null;
     const pastedText = event.clipboardData?.getData('text') ?? '';
 
@@ -2032,7 +2151,7 @@ export class IngresoTransaccionesPage implements OnInit {
       input.value.slice(0, selectionStart) +
       pastedText +
       input.value.slice(selectionEnd);
-    const sanitizedValue = this.sanitizeMoneyInputValue(nextValue);
+    const sanitizedValue = sanitizeValue(nextValue);
 
     input.value = sanitizedValue;
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2929,6 +3048,66 @@ export class IngresoTransaccionesPage implements OnInit {
     }
   }
 
+  private syncSharedExpenseGroupFromCuotas(group: ParticipanteDetalleForm): void {
+    const montoActual = this.getCuotasTotal(group);
+
+    group.controls.monto.setValue(this.getMontoInputValueForTarget(group, montoActual), {
+      emitEvent: false,
+    });
+    group.controls.monto.updateValueAndValidity({ emitEvent: false });
+
+    if (this.shouldRebalanceCounterpart(group)) {
+      this.syncSharedExpenseCounterpart(group);
+    }
+
+    this.syncSharedExpenseCalculatedMonto();
+  }
+
+  private syncSharedExpensePercentagesToHundred(
+    totalMonto: number,
+    preferredResidualGroup?: ParticipanteDetalleForm,
+  ): void {
+    const groups = this.participantesDetalleArray.controls;
+
+    if (groups.length === 0) {
+      return;
+    }
+
+    if (totalMonto <= 0) {
+      groups.forEach((group) => {
+        group.controls.porcentaje.setValue(0, { emitEvent: false });
+        group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+      });
+      return;
+    }
+
+    const residualGroup =
+      this.resolveResidualGroup(preferredResidualGroup) ?? groups[groups.length - 1] ?? null;
+
+    if (!residualGroup) {
+      return;
+    }
+
+    let porcentajeAsignado = 0;
+
+    groups.forEach((group) => {
+      if (group === residualGroup) {
+        return;
+      }
+
+      const montoGrupo = this.getCuotasTotal(group);
+      const porcentaje = this.normalizePercentageValue((montoGrupo / totalMonto) * 100);
+
+      porcentajeAsignado = this.normalizePercentageValue(porcentajeAsignado + porcentaje);
+      group.controls.porcentaje.setValue(porcentaje, { emitEvent: false });
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
+
+    const porcentajeResidual = this.normalizePercentageValue(100 - porcentajeAsignado);
+    residualGroup.controls.porcentaje.setValue(porcentajeResidual, { emitEvent: false });
+    residualGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+  }
+
   private syncSharedExpenseMainMontoToTitular(): void {
     if (!this.isSharedExpenseMode || !this.isSharedExpenseTotalEditable) {
       return;
@@ -3065,16 +3244,7 @@ export class IngresoTransaccionesPage implements OnInit {
         this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
       }
 
-      this.participantesDetalleArray.controls.forEach((group) => {
-        const montoGrupo = this.getCuotasTotal(group);
-        const porcentaje =
-          montoTotal > 0
-            ? this.normalizePercentageValue((montoGrupo / montoTotal) * 100)
-            : 0;
-
-        group.controls.porcentaje.setValue(porcentaje, { emitEvent: false });
-        group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
-      });
+      this.syncSharedExpensePercentagesToHundred(montoTotal);
     } finally {
       this.syncingSharedExpenseCalculatedMonto = false;
     }

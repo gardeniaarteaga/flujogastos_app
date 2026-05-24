@@ -1034,7 +1034,7 @@
               formControlName="cuotas_sin_intereses"
               [disabled]="hasAppliedPagosInEditor"
             />
-            <span>Cuotas sin intereses</span>
+            <span>Cuotas sin intereses/Desde fecha programada</span>
           </label>
 
           <section class="participants-section">
@@ -1188,15 +1188,17 @@
                         <label [for]="'edit_participante_porcentaje_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">Porcentaje</label>
                         <input
                           [id]="'edit_participante_porcentaje_' + i"
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.001"
+                          type="text"
                           inputmode="decimal"
+                          autocomplete="off"
+                          data-decimals="6"
+                          data-sanitize="percentage"
                           formControlName="porcentaje"
                           style="width:100%;min-height:2.65rem;padding:.55rem .75rem;font-size:.92rem;"
                           [disabled]="!canEditParticipantePorcentaje(participanteGroup)"
-                          (input)="onParticipantePorcentajeInput(participanteGroup)"
+                          (input)="onParticipantePorcentajeInput(participanteGroup, $event)"
+                          (keydown)="onMontoKeydown($event)"
+                          (paste)="onMontoPaste($event)"
                           (blur)="normalizePercentageInput(participanteGroup)"
                         />
                         <small
@@ -1272,15 +1274,19 @@
                     </div>
 
                     <div
-                      *ngIf="isEditingSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1"
+                      *ngIf="isEditingSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && getCuotasArray(participanteGroup).at(0) as cuotaUnicaGroup"
                       class="field participant-single-cuota-field"
                     >
                       <label [for]="'edit_participante_cuota_monto_' + i">Monto cuota</label>
                       <input
                         [id]="'edit_participante_cuota_monto_' + i"
                         type="text"
-                        [value]="getEditorParticipanteMontoTotal(participanteGroup) | number: '1.2-2'"
-                        readonly
+                        [formControl]="cuotaUnicaGroup.controls.monto"
+                        [readonly]="isCuotaMontoReadonly(participanteGroup) || isCuotaBloqueadaEnEditor(participanteGroup, 0)"
+                        (input)="onCuotaMontoInput(participanteGroup, 0, $event)"
+                        (keydown)="onMontoKeydown($event)"
+                        (paste)="onMontoPaste($event)"
+                        (blur)="normalizeCuotaMontoInput(participanteGroup, 0)"
                       />
                     </div>
 
@@ -1436,6 +1442,7 @@
                                 autocomplete="off"
                                 formControlName="monto"
                                 [readonly]="isCuotaMontoReadonly(participanteGroup)"
+                                (input)="onCuotaMontoInput(participanteGroup, cuotaItem.index, $event)"
                                 (keydown)="onMontoKeydown($event)"
                                 (paste)="onMontoPaste($event)"
                                 (blur)="normalizeCuotaMontoInput(participanteGroup, cuotaItem.index)"
