@@ -185,6 +185,15 @@
               </select>
             </div>
 
+            <div class="field quick-pay-type-field">
+              <label for="tipoTransaccionDetalle">Tipo</label>
+              <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
+                <option [ngValue]="null">Todos</option>
+                <option value="credito">Credito</option>
+                <option value="debito">Debito</option>
+              </select>
+            </div>
+
             <div class="field quick-pay-participant-field">
               <label for="participanteDetalle">Participantes</label>
               <select id="participanteDetalle" formControlName="idParticipante">
@@ -272,12 +281,20 @@
               </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:minmax(190px,1fr) auto;align-items:flex-end;gap:.8rem;min-width:0;">
-              <div class="detail-description" style="padding:.65rem .8rem;min-width:190px;max-width:none;text-align:right;">
-                <span class="stat-label" style="margin-bottom:.2rem;font-size:.62rem;letter-spacing:.12em;">{{ quickPayFilteredSubtotalLabel }}</span>
-                <strong style="display:block;font-size:1.7rem;line-height:1.1;color:var(--color-heading);">
-                  ${{ quickPayFilteredSubtotal | number: '1.2-2' }}
-                </strong>
+            <div class="quick-pay-summary-layout">
+              <div class="quick-pay-summary-grid" *ngIf="quickPayFilteredSubtotalSummary as quickPaySummary">
+                <div class="quick-pay-summary-card quick-pay-summary-card-pending">
+                  <span class="stat-label">Pendiente</span>
+                  <strong>${{ quickPaySummary.pendiente | number: '1.2-2' }}</strong>
+                </div>
+                <div class="quick-pay-summary-card quick-pay-summary-card-paid">
+                  <span class="stat-label">Pagado</span>
+                  <strong>${{ quickPaySummary.pagado | number: '1.2-2' }}</strong>
+                </div>
+                <div class="quick-pay-summary-card quick-pay-summary-card-income">
+                  <span class="stat-label">Ingresos</span>
+                  <strong>${{ quickPaySummary.ingresos | number: '1.2-2' }}</strong>
+                </div>
               </div>
 
               <div class="field quick-pay-checkbox-field">
@@ -291,7 +308,12 @@
                   <span>Mes actual</span>
                 </label>
                 <label class="checkbox-row quick-pay-checkbox-row" for="enviadasDetalle">
-                  <input id="enviadasDetalle" type="checkbox" formControlName="enviadas" />
+                  <input
+                    id="enviadasDetalle"
+                    type="checkbox"
+                    formControlName="enviadas"
+                    (change)="onEnviadasToggle($event)"
+                  />
                   <span>Enviados</span>
                 </label>
                 <label class="checkbox-row quick-pay-checkbox-row" for="compartidosDetalle">

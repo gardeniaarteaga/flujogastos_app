@@ -19,11 +19,19 @@
 .filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 .filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
-.quick-pay-filters-grid { grid-template-columns:minmax(118px,136px) minmax(128px,146px) minmax(148px,170px) minmax(320px,380px) minmax(0,1fr); align-items:end; gap:.8rem; }
+.quick-pay-filters-grid { grid-template-columns:minmax(118px,136px) minmax(128px,146px) minmax(118px,136px) minmax(148px,170px) minmax(320px,380px) minmax(0,1fr); align-items:end; gap:.8rem; }
+.quick-pay-summary-layout { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.8rem; min-width:0; }
+.quick-pay-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; min-width:0; }
+.quick-pay-summary-card { min-width:0; padding:.7rem .85rem; border:1px solid #dce6f2; border-radius:.85rem; background:#f4f8ff; }
+.quick-pay-summary-card strong { display:block; color:var(--color-heading); font-size:1.35rem; line-height:1.1; }
+.quick-pay-summary-card small { display:block; margin-top:.3rem; color:#64748b; font-size:.73rem; line-height:1.35; }
+.quick-pay-summary-card-pending { border-color:#bfd4ff; background:#eef5ff; }
+.quick-pay-summary-card-paid { border-color:#c8e7d2; background:#eef9f1; }
+.quick-pay-summary-card-income { border-color:#efd9b1; background:#fff6e6; }
 .quick-pay-days-field input { max-width:5.4rem; }
 .quick-pay-days-field { display:grid; gap:.45rem; }
 .quick-pay-days-field input.is-disabled { opacity:.6; cursor:not-allowed; }
-.quick-pay-state-field select { width:100%; min-width:0; max-width:100%; padding-right:2.2rem; }
+.quick-pay-state-field select, .quick-pay-type-field select { width:100%; min-width:0; max-width:100%; padding-right:2.2rem; }
 .quick-pay-participant-field select { width:100%; min-width:0; max-width:100%; }
 .quick-pay-checkbox-field { display:grid; gap:.55rem; justify-items:start; align-self:end; margin:0; }
 .quick-pay-checkbox-row { min-height:2.65rem; margin:0; }
@@ -286,6 +294,11 @@
   }
 
   .quick-pay-filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-pay-summary-layout,
+  .quick-pay-summary-grid {
     grid-template-columns: 1fr;
   }
 

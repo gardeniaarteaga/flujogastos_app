@@ -222,6 +222,12 @@ interface PagoDetalleGroupView {
   monto_pagado_total: number;
 }
 
+interface QuickPaySubtotalSummary {
+  pendiente: number;
+  pagado: number;
+  ingresos: number;
+}
+
 type FiltroDateControlName = 'fechaDesde' | 'fechaHasta';
 
 @Component({
@@ -306,6 +312,7 @@ export class ListadoTransaccionesPage implements OnInit {
       [this.dateDisplayValidator()],
     ],
     estado: [this.viewMode === 'detalle' ? 'PENDIENTE' : null as string | null],
+    tipoTransaccion: [null as 'credito' | 'debito' | null],
     idMetodoPago: [null as number | null],
     idParticipante: [null as number | null],
     busquedaDescripcion: [''],
@@ -588,6 +595,8 @@ export class ListadoTransaccionesPage implements OnInit {
   get filteredDetalleTransacciones(): DetalleTransaccionListadoRow[] {
     const filtros = this.filtrosForm.getRawValue();
     const estadoFiltro = this.normalizeText(filtros.estado ?? '');
+    const tipoTransaccionFiltro =
+      (this.normalizeText(filtros.tipoTransaccion ?? '') as 'credito' | 'debito' | '') || null;
     const prioridadActiva = !!filtros.prioritarios;
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
@@ -619,6 +628,13 @@ export class ListadoTransaccionesPage implements OnInit {
         }
 
         if (estadoFiltro && estadoDetalle !== estadoFiltro) {
+          return false;
+        }
+
+        if (
+          tipoTransaccionFiltro &&
+          this.resolveTipoTransaccion(row.transaccion) !== tipoTransaccionFiltro
+        ) {
           return false;
         }
 
@@ -670,44 +686,31 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
-  get quickPayFilteredSubtotal(): number {
-    const estadoFiltro = this.normalizeText(this.filtrosForm.controls.estado.value ?? '');
-
-    return this.roundMoneyValue(
-      this.filteredDetalleTransacciones.reduce((sum, row) => {
+  get quickPayFilteredSubtotalSummary(): QuickPaySubtotalSummary {
+    const summary = this.filteredDetalleTransacciones.reduce<QuickPaySubtotalSummary>(
+      (totals, row) => {
         const detalleAjustado = this.getDetalleWithAdjustedInteres(row.detalle);
+        const saldoPendiente = Number(detalleAjustado.saldo_pendiente ?? 0);
+        const montoPagado = this.getDetalleMontoPagadoTotal(detalleAjustado);
 
-        if (['pagado', 'pagada'].includes(estadoFiltro)) {
-          return sum + this.getDetalleMontoPagadoTotal(detalleAjustado);
+        totals.pagado += montoPagado;
+
+        if (this.isIngresoDetalleRow(row)) {
+          totals.ingresos += montoPagado;
+          return totals;
         }
 
-        return sum + Number(detalleAjustado.saldo_pendiente ?? 0);
-      }, 0),
+        totals.pendiente += saldoPendiente;
+        return totals;
+      },
+      { pendiente: 0, pagado: 0, ingresos: 0 },
     );
-  }
 
-  get quickPayFilteredSubtotalLabel(): string {
-    const estadoFiltro = this.normalizeText(this.filtrosForm.controls.estado.value ?? '');
-
-    if (['pagado', 'pagada'].includes(estadoFiltro)) {
-      return 'Subtotal pagado';
-    }
-
-    return 'Subtotal pendiente';
-  }
-
-  get quickPayFilteredSubtotalHint(): string {
-    const estadoFiltro = this.normalizeText(this.filtrosForm.controls.estado.value ?? '');
-
-    if (['pendiente', 'pago parcial'].includes(estadoFiltro)) {
-      return 'Saldo pendiente segun los filtros aplicados.';
-    }
-
-    if (['pagado', 'pagada'].includes(estadoFiltro)) {
-      return 'Monto pagado segun los filtros aplicados.';
-    }
-
-    return 'Subtotal visible segun los filtros aplicados.';
+    return {
+      pendiente: this.roundMoneyValue(summary.pendiente),
+      pagado: this.roundMoneyValue(summary.pagado),
+      ingresos: this.roundMoneyValue(summary.ingresos),
+    };
   }
 
   get pageEyebrow(): string {
@@ -6314,6 +6317,7 @@ export class ListadoTransaccionesPage implements OnInit {
         ? this.formatDateDisplayFromApi(this.currentMonthEndValue)
         : '',
       estado: this.viewMode === 'detalle' ? 'PENDIENTE' : null,
+      tipoTransaccion: null,
       idMetodoPago: null,
       idParticipante: this.getDefaultQuickPayParticipanteFilterId(),
       busquedaDescripcion: '',
@@ -6612,8 +6616,29 @@ export class ListadoTransaccionesPage implements OnInit {
     }
   }
 
+  onEnviadasToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.filtrosForm.controls.enviadas.setValue(checked);
+
+    if (
+      checked &&
+      this.isDetalleViewMode &&
+      this.filtrosForm.controls.compartidos.value
+    ) {
+      this.setQuickPayCompartidosFilterState(false);
+    }
+  }
+
   onCompartidosToggle(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
+    this.setQuickPayCompartidosFilterState(checked);
+
+    if (checked && this.filtrosForm.controls.enviadas.value) {
+      this.filtrosForm.controls.enviadas.setValue(false);
+    }
+  }
+
+  private setQuickPayCompartidosFilterState(checked: boolean): void {
     const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
     const currentParticipanteId = this.filtrosForm.controls.idParticipante.value;
 
@@ -6640,6 +6665,18 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.sharedParticipantFilterAutoReset = false;
+  }
+
+  private isIngresoDetalleRow(
+    row: Pick<DetalleTransaccionListadoRow, 'transaccion' | 'categoria'>,
+  ): boolean {
+    if (this.isCreditoTransaccion(row.transaccion)) {
+      return true;
+    }
+
+    return (
+      this.normalizeText(row.categoria ?? row.transaccion.nombre_categoria ?? '') === 'ingresos'
+    );
   }
 
   private isValidDateParts(year: number, month: number, day: number): boolean {
