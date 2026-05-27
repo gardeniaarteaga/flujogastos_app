@@ -682,7 +682,8 @@ export class ListadoTransaccionesPage implements OnInit {
     return (
       this.isDetalleViewMode &&
       !this.applyingBulkQuickPayments &&
-      this.quickPayBulkSelectedCount > 0
+      this.quickPayBulkSelectedCount > 0 &&
+      !this.hasMixedQuickPayBulkMethods(this.quickPayBulkSelectedRows)
     );
   }
 
@@ -1524,7 +1525,8 @@ export class ListadoTransaccionesPage implements OnInit {
   canSelectQuickPayDetalle(row: DetalleTransaccionListadoRow): boolean {
     return (
       this.canPagarDetalle(row) &&
-      this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario)
+      this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario) &&
+      this.isQuickPayMetodoPagoCompatible(row)
     );
   }
 
@@ -1543,6 +1545,10 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (!this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario)) {
       return 'Solo puedes incluir pagos que pertenezcan al usuario logueado.';
+    }
+
+    if (!this.isQuickPayMetodoPagoCompatible(row)) {
+      return `Solo puedes combinar cuotas del mismo metodo de pago (${this.quickPayBulkSelectedMetodoPago}).`;
     }
 
     return 'Seleccionar para pago masivo.';
@@ -1585,6 +1591,14 @@ export class ListadoTransaccionesPage implements OnInit {
       await this.alerts.warning(
         'Sin pagos seleccionados',
         'Selecciona al menos una cuota valida del usuario logueado para aplicar el pago masivo.',
+      );
+      return;
+    }
+
+    if (this.hasMixedQuickPayBulkMethods(selectedRows)) {
+      await this.alerts.warning(
+        'Metodos de pago incompatibles',
+        'El pago masivo en Pago Rapido solo permite cuotas del mismo metodo de pago.',
       );
       return;
     }
@@ -5504,6 +5518,27 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.quickPayBulkSelectedRows[0]
       ? this.getQuickPayMetodoPagoId(this.quickPayBulkSelectedRows[0])
       : null;
+  }
+
+  private isQuickPayMetodoPagoCompatible(row: DetalleTransaccionListadoRow): boolean {
+    if (this.selectedQuickPayDetalleIds.has(row.detalle.id)) {
+      return true;
+    }
+
+    const selectedMetodoPagoId = this.getQuickPaySelectedMetodoPagoId();
+    return (
+      selectedMetodoPagoId === null ||
+      this.getQuickPayMetodoPagoId(row) === selectedMetodoPagoId
+    );
+  }
+
+  private hasMixedQuickPayBulkMethods(rows: DetalleTransaccionListadoRow[]): boolean {
+    if (rows.length <= 1) {
+      return false;
+    }
+
+    const firstMetodoPagoId = this.getQuickPayMetodoPagoId(rows[0]);
+    return rows.some((row) => this.getQuickPayMetodoPagoId(row) !== firstMetodoPagoId);
   }
 
   private getQuickPayMetodoPagoId(row: DetalleTransaccionListadoRow): number {
