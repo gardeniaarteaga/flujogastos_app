@@ -295,6 +295,26 @@ export class IngresoTransaccionesPage implements OnInit {
         : '';
   }
 
+  canGroupUseZeroCuotas(group: ParticipanteDetalleForm): boolean {
+    return Boolean(
+      this.isSharedExpenseMode &&
+      group.controls.es_titular.value &&
+      this.toCents(this.normalizeDecimalValue(Number(group.controls.monto.value ?? 0))) === 0,
+    );
+  }
+
+  canRemoveTitularCuota(group: ParticipanteDetalleForm): boolean {
+    return Boolean(
+      this.isSharedExpenseMode &&
+      group.controls.es_titular.value &&
+      this.getCuotasArray(group).length > 0,
+    );
+  }
+
+  shouldShowTitularSection(group: ParticipanteDetalleForm): boolean {
+    return !group.controls.es_titular.value || !this.titularSectionDismissed;
+  }
+
   get dividirMontoLabel(): string {
     return this.isSharedExpenseMode
       ? 'Dividir monto en cuotas/participantes'
@@ -362,6 +382,7 @@ export class IngresoTransaccionesPage implements OnInit {
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
   private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
   private syncingSharedExpenseCalculatedMonto = false;
+  titularSectionDismissed = false;
   private titularManualOverride = false;
   selectedFormaPago: CatalogoFormaPago | null = null;
   readonly today = new Date();
@@ -761,6 +782,8 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
+    this.titularSectionDismissed = false;
+
     const titularMontoInicial = this.isSharedExpenseMode
       ? 0
       : (this.transaccionForm.controls.monto.value ?? 0);
@@ -777,7 +800,7 @@ export class IngresoTransaccionesPage implements OnInit {
         modo_cuotas: this.fb.control<ModoCuotas>('divididas', { nonNullable: true }),
         cantidad_cuotas: this.fb.control<number | null>(1, [
           Validators.required,
-          Validators.min(1),
+          Validators.min(0),
           this.wholeNumberValidator(),
         ]),
         tipo_programacion: this.fb.control<ProgramacionCuotaTipo>('ninguna', {
@@ -842,7 +865,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   syncCuotasCount(group: ParticipanteDetalleForm): void {
-    const cuotasCount = Math.max(1, Math.trunc(Number(group.controls.cantidad_cuotas.value ?? 1)));
+    const cuotasCount = this.normalizeCuotasCountValue(
+      group,
+      group.controls.cantidad_cuotas.value,
+    );
     group.controls.cantidad_cuotas.setValue(cuotasCount, { emitEvent: false });
 
     if (cuotasCount > 1) {
@@ -1411,7 +1437,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
-    const normalizedValue = Math.max(1, Math.trunc(Number(rawValue)));
+    const normalizedValue = this.normalizeCuotasCountValue(group, rawValue);
 
     if (Number.isNaN(normalizedValue)) {
       return;
@@ -1419,6 +1445,33 @@ export class IngresoTransaccionesPage implements OnInit {
 
     control.setValue(normalizedValue, { emitEvent: false });
     control.updateValueAndValidity({ emitEvent: false });
+    this.syncCuotasCount(group);
+    this.updateEstadoRegistroPreview();
+  }
+
+  clearTitularCuota(group: ParticipanteDetalleForm): void {
+    if (!this.canRemoveTitularCuota(group)) {
+      return;
+    }
+
+    const montoParticipantes = this.normalizeDecimalValue(
+      this.getAdditionalParticipants().reduce(
+        (sum, participanteGroup) => sum + this.getGroupMontoTarget(participanteGroup),
+        0,
+      ),
+    );
+
+    group.controls.porcentaje.setValue(0, { emitEvent: false });
+    group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    group.controls.monto.setValue(0, { emitEvent: false });
+    group.controls.monto.updateValueAndValidity({ emitEvent: false });
+    group.controls.cantidad_cuotas.setValue(0, { emitEvent: false });
+    group.controls.cantidad_cuotas.updateValueAndValidity({ emitEvent: false });
+    this.transaccionForm.controls.monto.setValue(montoParticipantes, { emitEvent: false });
+    this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
+    this.titularCuotaUnicaPagadaControl.setValue(false, { emitEvent: false });
+    this.markGroupAmountAsManual(group);
+    this.titularSectionDismissed = true;
     this.syncCuotasCount(group);
     this.updateEstadoRegistroPreview();
   }
@@ -2171,7 +2224,21 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private getGroupCuotasCount(group: ParticipanteDetalleForm): number {
-    return Math.max(1, Math.trunc(Number(group.controls.cantidad_cuotas.value ?? 1)));
+    return this.normalizeCuotasCountValue(group, group.controls.cantidad_cuotas.value);
+  }
+
+  private normalizeCuotasCountValue(
+    group: ParticipanteDetalleForm,
+    value: number | string | null | undefined,
+  ): number {
+    const parsedValue = Math.trunc(Number(value));
+    const minimumValue = this.canGroupUseZeroCuotas(group) ? 0 : 1;
+
+    if (Number.isNaN(parsedValue)) {
+      return minimumValue;
+    }
+
+    return Math.max(minimumValue, parsedValue);
   }
 
   public getGroupMontoTarget(group: ParticipanteDetalleForm): number {
@@ -2191,7 +2258,8 @@ export class IngresoTransaccionesPage implements OnInit {
     const montoNormalizado = this.normalizeDecimalValue(montoObjetivo);
 
     if (!this.isIncomeTitularGroup(group) && this.isFixedCuotasMode(group)) {
-      return this.normalizeDecimalValue(montoNormalizado / this.getGroupCuotasCount(group));
+      const cuotasCount = this.getGroupCuotasCount(group);
+      return cuotasCount > 0 ? this.normalizeDecimalValue(montoNormalizado / cuotasCount) : 0;
     }
 
     return montoNormalizado;
@@ -2213,6 +2281,10 @@ export class IngresoTransaccionesPage implements OnInit {
     cantidadCuotas: number,
     fechasProgramadas: Array<string | null> = [],
   ): FormArray<CuotaMontoForm> {
+    if (cantidadCuotas <= 0) {
+      return this.fb.array<CuotaMontoForm>([]);
+    }
+
     return this.fb.array(
       this.distributeMontoEnCuotas(montoTotal, cantidadCuotas).map((monto, index) =>
         this.createCuotaGroup(
@@ -2261,7 +2333,12 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private distributeMontoEnCuotas(montoTotal: number, cantidadCuotas: number): number[] {
-    const cuotas = Math.max(1, Math.trunc(cantidadCuotas || 1));
+    const cuotas = Math.max(0, Math.trunc(cantidadCuotas || 0));
+
+    if (cuotas === 0) {
+      return [];
+    }
+
     const totalCentavos = this.toCents(this.normalizeDecimalValue(Number(montoTotal ?? 0)));
     const cuotaBase = Math.floor(totalCentavos / cuotas);
     const residuo = totalCentavos % cuotas;
@@ -2272,9 +2349,9 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncCuotasWithMonto(group: ParticipanteDetalleForm): void {
-    const cantidadCuotas = Math.max(
-      1,
-      Math.trunc(Number(group.controls.cantidad_cuotas.value ?? 1)),
+    const cantidadCuotas = this.normalizeCuotasCountValue(
+      group,
+      group.controls.cantidad_cuotas.value,
     );
 
     if (this.isIncomeTitularGroup(group)) {
@@ -2336,7 +2413,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private ensureProgramacionConfig(group: ParticipanteDetalleForm): void {
-    const cuotasCount = Math.max(1, Math.trunc(Number(group.controls.cantidad_cuotas.value ?? 1)));
+    const cuotasCount = this.normalizeCuotasCountValue(
+      group,
+      group.controls.cantidad_cuotas.value,
+    );
 
     if (cuotasCount <= 1) {
       group.controls.tipo_programacion.setValue('ninguna', { emitEvent: false });
@@ -3258,7 +3338,11 @@ export class IngresoTransaccionesPage implements OnInit {
     group: ParticipanteDetalleForm,
     cantidadCuotas: number,
   ): CuotaPayload[] {
-    const cuotasCount = Math.max(1, Math.trunc(Number(cantidadCuotas ?? 1)));
+    const cuotasCount = this.normalizeCuotasCountValue(group, cantidadCuotas);
+
+    if (cuotasCount <= 0) {
+      return [];
+    }
 
     if (this.isIncomeTitularGroup(group)) {
       const montoBase = this.normalizeDecimalValue(

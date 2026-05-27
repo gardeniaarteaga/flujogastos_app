@@ -329,6 +329,19 @@
             </div>
           </div>
 
+          <div *ngIf="isDetalleViewMode" class="filters-search-row">
+            <div class="field">
+              <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
+              <input
+                id="busquedaDescripcionDetalle"
+                type="text"
+                formControlName="busquedaDescripcion"
+                maxlength="250"
+                placeholder="Escribe parte de la descripcion..."
+              />
+            </div>
+          </div>
+
           <ng-template #filtrosListadoTransacciones>
             <div class="filter-toggle-group filter-toggle-group-compact">
               <label class="checkbox-row checkbox-row-compact" for="todos">
@@ -1086,7 +1099,7 @@
                 *ngIf="titularDetalleGroup as titularGroup"
                 class="participant-inline-controls"
                 [formGroup]="titularGroup"
-                style="margin:0 0 0 auto;min-width:min(420px,100%);"
+                style="margin:0 auto;min-width:min(420px,100%);"
               >
                 <label class="checkbox-row">
                   <input
@@ -1097,25 +1110,26 @@
                   />
                   <span>{{ dividirMontoLabel }}</span>
                 </label>
-                <div
-                  class="field participants-summary-field participants-summary-field--inline"
-                  [formGroup]="transaccionForm"
-                >
-                  <label for="edit_monto">{{ editingMontoLabel }}</label>
-                  <input
-                    id="edit_monto"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    formControlName="monto"
-                    [readonly]="!isEditingSharedExpenseTotalEditable"
-                    [disabled]="hasAppliedPagosInEditor"
-                    (input)="onMontoInput($event)"
-                    (keydown)="onMontoKeydown($event)"
-                    (paste)="onMontoPaste($event)"
-                    (blur)="normalizeMoneyInput('monto')"
-                  />
-                </div>
+              </div>
+              <div
+                *ngIf="titularDetalleGroup"
+                class="field participants-summary-field participants-summary-field--inline"
+                [formGroup]="transaccionForm"
+              >
+                <label for="edit_monto">{{ editingMontoLabel }}</label>
+                <input
+                  id="edit_monto"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  formControlName="monto"
+                  [readonly]="!isEditingSharedExpenseTotalEditable"
+                  [disabled]="hasAppliedPagosInEditor"
+                  (input)="onMontoInput($event)"
+                  (keydown)="onMontoKeydown($event)"
+                  (paste)="onMontoPaste($event)"
+                  (blur)="normalizeMoneyInput('monto')"
+                />
               </div>
             </div>
             <label *ngIf="!isEditingSharedExpenseMode" class="checkbox-row" for="edit_usar_participantes">
@@ -1132,10 +1146,22 @@
             <div *ngIf="usarParticipantesControl.value" class="participants-list">
               <div *ngFor="let participanteGroup of participantesDetalleControls; let i = index">
                 <div
+                  *ngIf="shouldShowTitularSection(participanteGroup)"
                   class="participant-block payment-group-card"
+                  [class.participant-block--with-clear]="canRemoveTitularCuota(participanteGroup)"
                   [formGroup]="participanteGroup"
                   [style.--group-accent]="getPaymentGroupAccentColor(i)"
                 >
+                  <button
+                    *ngIf="canRemoveTitularCuota(participanteGroup)"
+                    type="button"
+                    class="participant-clear-button"
+                    aria-label="Quitar cuota del titular"
+                    title="Quitar cuota"
+                    (click)="clearTitularCuota(participanteGroup)"
+                  >
+                    X
+                  </button>
                   <div class="participant-block-header payment-group-header">
                     <div class="participant-block-title payment-group-summary">
                       <span class="payment-role-badge" [style.color]="getPaymentGroupAccentColor(i)">
@@ -1188,12 +1214,6 @@
                           {{ getParticipanteDisplayName(participante) }}
                         </option>
                       </select>
-                      <small
-                        *ngIf="isEditingSharedExpenseMode && !participanteGroup.controls.es_titular.value && getParticipantePorcentajeSugerido(participanteGroup) !== null"
-                        class="user-hint"
-                      >
-                        Porcentaje de participacion sugerida {{ getParticipantePorcentajeSugerido(participanteGroup) | number: '1.0-3' }}%
-                      </small>
                     </div>
 
                     <div class="field" *ngIf="isEditingIncomeMode && participanteGroup.controls.es_titular.value; else porcentajeParticipanteEditor">
@@ -1209,6 +1229,32 @@
                         </option>
                       </select>
                     </div>
+                    <div
+                      class="field participant-field participant-field--monto participant-highlight-field"
+                      *ngIf="!isEditingSharedExpenseMode || !participanteGroup.controls.dividir_monto.value"
+                    >
+                      <label [for]="'edit_participante_monto_' + i">
+                        {{ getEditorParticipanteMontoLabel(participanteGroup) }}
+                      </label>
+                      <input
+                        [id]="'edit_participante_monto_' + i"
+                        type="text"
+                        [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
+                        step="0.01"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        formControlName="monto"
+                        [disabled]="!canEditParticipanteMonto(participanteGroup)"
+                        (keydown)="onMontoKeydown($event)"
+                        (paste)="onMontoPaste($event)"
+                        (input)="onParticipanteMontoInput(participanteGroup, $event)"
+                        (blur)="normalizeMoneyInput('monto', participanteGroup)"
+                      />
+                      <small *ngIf="getEditorParticipanteMontoHint(participanteGroup)" class="user-hint">
+                        {{ getEditorParticipanteMontoHint(participanteGroup) }}
+                      </small>
+                    </div>
+
                     <ng-template #porcentajeParticipanteEditor>
                       <div class="field participant-field participant-field--percentage" style="display:grid;gap:.35rem;min-width:0;">
                         <label [for]="'edit_participante_porcentaje_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">Porcentaje</label>
@@ -1258,38 +1304,12 @@
                       </ng-template>
                     </div>
 
-                    <div
-                      class="field"
-                      *ngIf="!isEditingSharedExpenseMode || !participanteGroup.controls.dividir_monto.value"
-                    >
-                      <label [for]="'edit_participante_monto_' + i">
-                        {{ getEditorParticipanteMontoLabel(participanteGroup) }}
-                      </label>
-                      <input
-                        [id]="'edit_participante_monto_' + i"
-                        type="text"
-                        [attr.min]="participanteGroup.controls.es_titular.value ? 0 : 0.01"
-                        step="0.01"
-                        inputmode="decimal"
-                        autocomplete="off"
-                        formControlName="monto"
-                        [disabled]="!canEditParticipanteMonto(participanteGroup)"
-                        (keydown)="onMontoKeydown($event)"
-                        (paste)="onMontoPaste($event)"
-                        (input)="onParticipanteMontoInput(participanteGroup, $event)"
-                        (blur)="normalizeMoneyInput('monto', participanteGroup)"
-                      />
-                      <small *ngIf="getEditorParticipanteMontoHint(participanteGroup)" class="user-hint">
-                        {{ getEditorParticipanteMontoHint(participanteGroup) }}
-                      </small>
-                    </div>
-
                     <div class="field">
                       <label [for]="'edit_participante_cuotas_' + i">Cuotas</label>
                       <input
                         [id]="'edit_participante_cuotas_' + i"
                         type="number"
-                        min="1"
+                        [attr.min]="canGroupUseZeroCuotas(participanteGroup) ? 0 : 1"
                         step="1"
                         inputmode="numeric"
                         formControlName="cantidad_cuotas"

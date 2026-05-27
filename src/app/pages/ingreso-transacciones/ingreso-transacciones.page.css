@@ -173,15 +173,28 @@
 
 .participants-summary-field--inline {
   min-width: min(100%, 260px);
+  width: min(100%, 260px);
+  margin: 0;
 }
 
+.participants-summary-field--inline label {
+  color: #8a3d00;
+  font-weight: 800;
+  text-align: center;
+}
+
+.participants-summary-field--inline input,
 .participants-summary-field input[readonly] {
   font-weight: 800;
-  color: var(--color-heading);
-  background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
+  color: #7a3200;
+  text-align: center;
+  border: 1px solid #e8a35d;
+  background: linear-gradient(180deg, #fff4e4 0%, #ffd89d 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .participant-block {
+  position: relative;
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
@@ -190,18 +203,50 @@
   background: #ffffff;
 }
 
+.participant-block--with-clear {
+  padding-right: 3.25rem;
+}
+
+.participant-clear-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #d6dfec;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #48617f;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.participant-clear-button:hover,
+.participant-clear-button:focus-visible {
+  background: #fff0f1;
+  border-color: #f2b8bf;
+  color: #c62839;
+  outline: none;
+}
+
 .participant-inline-controls {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.85rem;
   flex-wrap: wrap;
 }
 
 .participant-row {
   display: grid;
   grid-template-columns:
-    minmax(0, 1.2fr)
+    minmax(0, 1.05fr)
     minmax(0, 0.42fr)
     minmax(0, 1fr)
     minmax(0, 0.52fr)
@@ -216,7 +261,8 @@
 }
 
 .participant-field--identity label,
-.participant-field--percentage label {
+.participant-field--percentage label,
+.participant-field--monto label {
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -238,6 +284,25 @@
   font-weight: 700;
   color: var(--color-heading);
   background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
+}
+
+.participant-highlight-field label {
+  color: #8a3d00;
+}
+
+.participant-highlight-field input {
+  font-weight: 800;
+  color: #7a3200;
+  border: 1px solid #e8a35d;
+  background: linear-gradient(180deg, #fff4e4 0%, #ffe7c6 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.participant-highlight-field input:focus {
+  border-color: #d17820;
+  box-shadow:
+    0 0 0 0.2rem rgba(209, 120, 32, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .participant-inline-check-field {
