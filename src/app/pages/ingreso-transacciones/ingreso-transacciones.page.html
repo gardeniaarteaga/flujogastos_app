@@ -202,6 +202,8 @@
                   formControlName="monto"
                   [readonly]="isMontoPrincipalReadonly"
                   (input)="onMontoInput($event)"
+                  (focus)="onMoneyInputActivate($event)"
+                  (click)="onMoneyInputActivate($event)"
                   (keydown)="onMontoKeydown($event)"
                   (paste)="onMontoPaste($event)"
                   (blur)="normalizeMoneyInput('monto', $event)"
@@ -282,7 +284,7 @@
 
               <div class="field">
                 <label for="id_subcategoria">Subcategoria</label>
-                <select id="id_subcategoria" formControlName="id_subcategoria">
+                <select id="id_subcategoria" formControlName="id_subcategoria" (change)="onSubcategoriaChange()">
                   <option [ngValue]="null">
                     {{ selectedCategoriaHasSubcategorias ? 'Seleccione una subcategoria' : 'Sin subcategoria' }}
                   </option>
@@ -538,6 +540,8 @@
                       formControlName="monto"
                       [readonly]="isMontoPrincipalReadonly"
                       (input)="onMontoInput($event)"
+                      (focus)="onMoneyInputActivate($event)"
+                      (click)="onMoneyInputActivate($event)"
                       (keydown)="onMontoKeydown($event)"
                       (paste)="onMontoPaste($event)"
                       (blur)="normalizeMoneyInput('monto', $event)"
@@ -590,6 +594,8 @@
                         inputmode="decimal"
                         autocomplete="off"
                         formControlName="monto"
+                        (focus)="onMoneyInputActivate($event)"
+                        (click)="onMoneyInputActivate($event)"
                         (keydown)="onMontoKeydown($event)"
                         (paste)="onMontoPaste($event)"
                         (input)="onParticipanteMontoInput(participanteGroup, $event)"
@@ -666,6 +672,8 @@
                         [formControl]="cuotaUnicaGroup.controls.monto"
                         [readonly]="isCuotaMontoReadonly(participanteGroup)"
                         (input)="onCuotaMontoInput(participanteGroup, 0, $event)"
+                        (focus)="onMoneyInputActivate($event)"
+                        (click)="onMoneyInputActivate($event)"
                         (keydown)="onMontoKeydown($event)"
                         (paste)="onMontoPaste($event)"
                         (blur)="normalizeCuotaMontoInput(participanteGroup, 0)"
@@ -763,6 +771,8 @@
                           formControlName="monto"
                           [readonly]="isCuotaMontoReadonly(participanteGroup)"
                           (input)="onCuotaMontoInput(participanteGroup, cuotaItem.index, $event)"
+                          (focus)="onMoneyInputActivate($event)"
+                          (click)="onMoneyInputActivate($event)"
                           (keydown)="onMontoKeydown($event)"
                           (paste)="onMontoPaste($event)"
                           (blur)="normalizeCuotaMontoInput(participanteGroup, cuotaItem.index)"

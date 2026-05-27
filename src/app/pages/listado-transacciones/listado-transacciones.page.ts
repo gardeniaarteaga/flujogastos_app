@@ -286,9 +286,9 @@ export class ListadoTransaccionesPage implements OnInit {
   ];
   readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
   readonly filtrosForm = this.fb.group({
-    todos: [false],
+    todos: [this.viewMode !== 'detalle'],
     soloHoy: [false],
-    mesActual: [this.viewMode !== 'detalle'],
+    mesActual: [false],
     prioritarios: [false],
     diasPrioridad: [
       this.viewMode === 'detalle'
@@ -299,18 +299,8 @@ export class ListadoTransaccionesPage implements OnInit {
     enviadas: [false],
     compartidos: [false],
     pendienteRegistro: [false],
-    fechaDesde: [
-      this.viewMode === 'detalle'
-        ? ''
-        : this.formatDateDisplayFromApi(this.currentMonthStartValue),
-      [this.dateDisplayValidator()],
-    ],
-    fechaHasta: [
-      this.viewMode === 'detalle'
-        ? ''
-        : this.formatDateDisplayFromApi(this.currentMonthEndValue),
-      [this.dateDisplayValidator()],
-    ],
+    fechaDesde: ['', [this.dateDisplayValidator()]],
+    fechaHasta: ['', [this.dateDisplayValidator()]],
     estado: [this.viewMode === 'detalle' ? 'PENDIENTE' : null as string | null],
     tipoTransaccion: [null as 'credito' | 'debito' | null],
     idMetodoPago: [null as number | null],
@@ -356,6 +346,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private syncingSharedExpenseCalculatedMonto = false;
   private sharedParticipantFilterAutoReset = false;
   private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
+  private readonly pendingDismissedTitularFullShareGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
   readonly listadoPageSize = 10;
   readonly cuotasPageSize = 12;
@@ -509,6 +500,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
     const estadoFiltro = this.normalizeText(filtros.estado ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
+    const mostrarTodas = !!filtros.todos;
 
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
@@ -516,7 +508,11 @@ export class ListadoTransaccionesPage implements OnInit {
       const estadoCoincideFiltro = !!estadoFiltro && estadoTransaccion === estadoFiltro;
       const descripcionTransaccion = this.normalizeText(transaccion.descripcion ?? '');
 
-      if (!this.isEstadoVisibleEnListado(estadoTransaccion) && !estadoCoincideFiltro) {
+      if (
+        !mostrarTodas &&
+        !this.isEstadoVisibleEnListado(estadoTransaccion) &&
+        !estadoCoincideFiltro
+      ) {
         return false;
       }
 
@@ -1138,6 +1134,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.markGroupAmountAsManual(group);
     this.titularSectionDismissed = true;
     this.syncCuotasCount(group);
+    this.applyDismissedTitularDefaultShare();
     this.refreshEstadoTransaccionForEdit();
   }
 
@@ -2647,34 +2644,35 @@ export class ListadoTransaccionesPage implements OnInit {
     const dividirMontoInicial = this.titularDetalleGroup?.controls.dividir_monto.value ?? true;
     const modoCuotasInicial: ModoCuotas = dividirMontoInicial ? 'divididas' : 'fijas';
 
-    this.participantesDetalleArray.push(
-      this.registerParticipanteDetalleGroup(this.fb.group({
-        id_participante: this.fb.control<number | null>(null, [Validators.required]),
-        nombre_mostrado: this.fb.control('', { nonNullable: true }),
-        es_titular: this.fb.control(false, { nonNullable: true }),
-        dividir_monto: this.fb.control(dividirMontoInicial, { nonNullable: true }),
-        modo_cuotas: this.fb.control<ModoCuotas>(modoCuotasInicial, { nonNullable: true }),
-        cantidad_cuotas: this.fb.control<number | null>(1, [
-          Validators.required,
-          Validators.min(1),
-          this.wholeNumberValidator(),
-        ]),
-        tipo_programacion: this.fb.control<ProgramacionCuotaTipo>('ninguna', {
-          nonNullable: true,
-        }),
-        dia_programado: this.fb.control<number | null>(null),
-        porcentaje: this.fb.control<number | null>(
-          this.isEditingSharedExpenseMode ? 0 : null,
-          this.getPorcentajeValidatorsForEditor(),
-        ),
-        monto: this.fb.control<number | null>(this.isEditingSharedExpenseMode ? 0 : null, [
-          Validators.required,
-          Validators.min(0.01),
-          this.maxTwoDecimalsValidator(),
-        ]),
-        cuotas: this.createCuotasArray(undefined, 0, 1),
-      })),
-    );
+    const newGroup = this.registerParticipanteDetalleGroup(this.fb.group({
+      id_participante: this.fb.control<number | null>(null, [Validators.required]),
+      nombre_mostrado: this.fb.control('', { nonNullable: true }),
+      es_titular: this.fb.control(false, { nonNullable: true }),
+      dividir_monto: this.fb.control(dividirMontoInicial, { nonNullable: true }),
+      modo_cuotas: this.fb.control<ModoCuotas>(modoCuotasInicial, { nonNullable: true }),
+      cantidad_cuotas: this.fb.control<number | null>(1, [
+        Validators.required,
+        Validators.min(1),
+        this.wholeNumberValidator(),
+      ]),
+      tipo_programacion: this.fb.control<ProgramacionCuotaTipo>('ninguna', {
+        nonNullable: true,
+      }),
+      dia_programado: this.fb.control<number | null>(null),
+      porcentaje: this.fb.control<number | null>(
+        this.isEditingSharedExpenseMode ? 0 : null,
+        this.getPorcentajeValidatorsForEditor(),
+      ),
+      monto: this.fb.control<number | null>(this.isEditingSharedExpenseMode ? 0 : null, [
+        Validators.required,
+        Validators.min(0.01),
+        this.maxTwoDecimalsValidator(),
+      ]),
+      cuotas: this.createCuotasArray(undefined, 0, 1),
+    }));
+
+    this.participantesDetalleArray.push(newGroup);
+    this.applyDismissedTitularDefaultShare(newGroup);
     this.syncCalculatedExpenseMontoForEdit();
   }
 
@@ -3134,6 +3132,28 @@ export class ListadoTransaccionesPage implements OnInit {
     this.refreshParticipantesMontos();
   }
 
+  onMoneyInputActivate(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+
+    if (!input || input.readOnly || input.disabled) {
+      return;
+    }
+
+    const sanitizedValue = this.sanitizeMoneyInputValue(input.value);
+
+    if (!sanitizedValue) {
+      return;
+    }
+
+    const numericValue = Number(sanitizedValue);
+
+    if (Number.isNaN(numericValue) || this.toCents(numericValue) !== 0) {
+      return;
+    }
+
+    setTimeout(() => input.setSelectionRange(0, input.value.length));
+  }
+
   onMontoKeydown(event: KeyboardEvent): void {
     const input = event.target as HTMLInputElement | null;
     const maxDecimals = Number(input?.dataset['decimals'] ?? '2');
@@ -3167,6 +3187,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.titularManualOverride = true;
     }
 
+    this.clearDismissedTitularFullShareDefault(group);
     this.markGroupAmountAsAutomatic(group);
     this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
     this.refreshEstadoTransaccionForEdit();
@@ -3320,6 +3341,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.titularManualOverride = true;
     }
 
+    this.clearDismissedTitularFullShareDefault(group);
     this.markGroupAmountAsAutomatic(group);
     this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
     this.refreshEstadoTransaccionForEdit();
@@ -3338,6 +3360,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.titularManualOverride = true;
     }
 
+    this.clearDismissedTitularFullShareDefault(group);
     this.markGroupAmountAsManual(group);
     this.updatePorcentajeFromMonto(group, this.shouldRebalanceCounterpart(group));
     this.refreshEstadoTransaccionForEdit();
@@ -3401,6 +3424,7 @@ export class ListadoTransaccionesPage implements OnInit {
         this.titularManualOverride = true;
       }
 
+      this.clearDismissedTitularFullShareDefault(group);
       this.markGroupAmountAsManual(group);
       this.syncSharedExpenseGroupFromCuotas(group);
       return;
@@ -3431,6 +3455,12 @@ export class ListadoTransaccionesPage implements OnInit {
     group.controls.nombre_mostrado.setValue(participante?.nombre_participante ?? '', {
       emitEvent: false,
     });
+
+    if (this.shouldDefaultToFullShare(group)) {
+      this.assignFullShareToGroup(group);
+      this.refreshEstadoTransaccionForEdit();
+      return;
+    }
 
     if (
       participante?.porcentaje_participacion !== null &&
@@ -4580,11 +4610,19 @@ export class ListadoTransaccionesPage implements OnInit {
       return null;
     }
 
+    const additionalParticipants = this.getAdditionalParticipants();
+
+    if (this.titularSectionDismissed && additionalParticipants.length > 0) {
+      if (preferredGroup && !preferredGroup.controls.es_titular.value) {
+        return preferredGroup;
+      }
+
+      return additionalParticipants[additionalParticipants.length - 1] ?? titularGroup;
+    }
+
     if (!this.titularManualOverride) {
       return titularGroup;
     }
-
-    const additionalParticipants = this.getAdditionalParticipants();
 
     if (additionalParticipants.length === 0) {
       return titularGroup;
@@ -4609,6 +4647,78 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
+  private shouldDefaultToFullShare(group: ParticipanteDetalleForm): boolean {
+    return Boolean(
+      this.shouldKeepDismissedTitularFullShareDefault(group),
+    );
+  }
+
+  private shouldKeepDismissedTitularFullShareDefault(
+    group?: ParticipanteDetalleForm,
+  ): boolean {
+    const additionalParticipants = this.getAdditionalParticipants();
+
+    if (
+      !this.isEditingSharedExpenseMode ||
+      !this.titularSectionDismissed ||
+      additionalParticipants.length !== 1
+    ) {
+      return false;
+    }
+
+    if (!group) {
+      return additionalParticipants.some((item) =>
+        this.pendingDismissedTitularFullShareGroups.has(item),
+      );
+    }
+
+    return (
+      !group.controls.es_titular.value &&
+      additionalParticipants[0] === group &&
+      this.pendingDismissedTitularFullShareGroups.has(group)
+    );
+  }
+
+  private shouldPreserveManualPercentageWithoutTitular(
+    group: ParticipanteDetalleForm,
+    totalMonto: number,
+  ): boolean {
+    return Boolean(
+      this.isEditingSharedExpenseMode &&
+      this.titularSectionDismissed &&
+      !group.controls.es_titular.value &&
+      this.getAdditionalParticipants().length === 1 &&
+      this.toCents(totalMonto) <= 0,
+    );
+  }
+
+  private assignFullShareToGroup(group: ParticipanteDetalleForm): void {
+    this.pendingDismissedTitularFullShareGroups.add(group);
+    group.controls.porcentaje.setValue(100, { emitEvent: false });
+    group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    this.markGroupAmountAsAutomatic(group);
+    this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+  }
+
+  private clearDismissedTitularFullShareDefault(group: ParticipanteDetalleForm): void {
+    this.pendingDismissedTitularFullShareGroups.delete(group);
+  }
+
+  private applyDismissedTitularDefaultShare(
+    preferredGroup?: ParticipanteDetalleForm,
+  ): void {
+    const targetGroup =
+      preferredGroup && this.shouldDefaultToFullShare(preferredGroup)
+        ? preferredGroup
+        : this.getAdditionalParticipants().find((group) => this.shouldDefaultToFullShare(group));
+
+    if (!targetGroup) {
+      return;
+    }
+
+    this.assignFullShareToGroup(targetGroup);
+  }
+
   private rebalanceMontoDistribution(preferredGroup?: ParticipanteDetalleForm): void {
     const residualGroup = this.resolveResidualGroup(preferredGroup);
 
@@ -4630,7 +4740,13 @@ export class ListadoTransaccionesPage implements OnInit {
       Math.max(0, totalMontoCentavos - montoOtrosCentavos),
     );
     const porcentajeResidual =
-      totalMonto > 0 ? this.normalizePercentageValue((montoResidual / totalMonto) * 100) : 0;
+      totalMonto > 0
+        ? this.normalizePercentageValue((montoResidual / totalMonto) * 100)
+        : (
+            this.shouldKeepDismissedTitularFullShareDefault(residualGroup)
+              ? 100
+              : 0
+          );
 
     residualGroup.controls.monto.setValue(
       this.getMontoInputValueForTarget(residualGroup, montoResidual),
@@ -4753,6 +4869,19 @@ export class ListadoTransaccionesPage implements OnInit {
         group.controls.porcentaje.setValue(0, { emitEvent: false });
         group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
       });
+
+      const fullShareGroup =
+        preferredResidualGroup && this.shouldKeepDismissedTitularFullShareDefault(preferredResidualGroup)
+          ? preferredResidualGroup
+          : this.getAdditionalParticipants().find((group) =>
+              this.shouldKeepDismissedTitularFullShareDefault(group),
+            );
+
+      if (fullShareGroup) {
+        fullShareGroup.controls.porcentaje.setValue(100, { emitEvent: false });
+        fullShareGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+      }
+
       return;
     }
 
@@ -6126,6 +6255,10 @@ export class ListadoTransaccionesPage implements OnInit {
       group.controls.monto.updateValueAndValidity({ emitEvent: false });
       this.syncCuotasWithMonto(group);
 
+      if (this.shouldPreserveManualPercentageWithoutTitular(group, totalMonto)) {
+        return;
+      }
+
       if (shouldRebalanceTitular) {
         this.syncSharedExpenseCounterpart(group);
       }
@@ -6420,11 +6553,11 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private resetDefaultFilters(): void {
     const useTodayDefaults = false;
-    const useCurrentMonthDefaults = this.viewMode !== 'detalle';
+    const useAllListadoDefaults = this.viewMode !== 'detalle';
     this.filtrosForm.reset({
-      todos: false,
+      todos: useAllListadoDefaults,
       soloHoy: useTodayDefaults,
-      mesActual: useCurrentMonthDefaults,
+      mesActual: false,
       prioritarios: false,
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -6433,12 +6566,8 @@ export class ListadoTransaccionesPage implements OnInit {
       enviadas: false,
       compartidos: false,
       pendienteRegistro: false,
-      fechaDesde: useCurrentMonthDefaults
-        ? this.formatDateDisplayFromApi(this.currentMonthStartValue)
-        : '',
-      fechaHasta: useCurrentMonthDefaults
-        ? this.formatDateDisplayFromApi(this.currentMonthEndValue)
-        : '',
+      fechaDesde: '',
+      fechaHasta: '',
       estado: this.viewMode === 'detalle' ? 'PENDIENTE' : null,
       tipoTransaccion: null,
       idMetodoPago: null,
