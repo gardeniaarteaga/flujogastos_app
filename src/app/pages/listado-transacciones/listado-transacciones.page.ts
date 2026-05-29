@@ -433,6 +433,16 @@ export class ListadoTransaccionesPage implements OnInit {
         this.hasManualEstadoSelectionInEdit = true;
       });
 
+    this.transaccionForm.controls.cuotas_sin_intereses.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.isEditingSharedExpenseMode || !this.isEditing) {
+          return;
+        }
+
+        this.syncCalculatedExpenseMontoForEdit();
+      });
+
     this.aplicarPagosForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.refreshPagosDetalleGroups();
     });
@@ -722,7 +732,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   get pageTitle(): string {
-    return this.isDetalleViewMode ? 'Pago Rapido' : 'Listado de Transacciones';
+    return this.isDetalleViewMode ? 'Pago Rapido' : 'Todas las Transacciones';
   }
 
   get panelTitle(): string {
@@ -730,7 +740,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   get panelSubtitle(): string {
-    return this.isDetalleViewMode ? 'Detalle programado para pago' : 'Listado general';
+    return this.isDetalleViewMode ? 'Detalle programado para pago' : 'Todas las Transacciones';
   }
 
   get currentUserIdValue(): number {
@@ -4594,6 +4604,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private shouldRebalanceCounterpart(group: ParticipanteDetalleForm): boolean {
+    if (this.usesIndependentSharedExpenseAmounts) {
+      return false;
+    }
+
     if (!this.titularManualOverride) {
       return true;
     }
@@ -4778,8 +4792,15 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.isEditingSharedExpenseMode && this.manualAmountGroups.has(group);
   }
 
+  private get usesIndependentSharedExpenseAmounts(): boolean {
+    return (
+      this.isEditingSharedExpenseMode &&
+      !Boolean(this.transaccionForm.controls.cuotas_sin_intereses.value)
+    );
+  }
+
   private syncSharedExpenseCounterpart(group: ParticipanteDetalleForm): void {
-    if (!this.isEditingSharedExpenseMode) {
+    if (!this.isEditingSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
       return;
     }
 
@@ -4826,7 +4847,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseTitularResidual(): void {
-    if (!this.isEditingSharedExpenseMode) {
+    if (!this.isEditingSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
       return;
     }
 

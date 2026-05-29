@@ -15,6 +15,20 @@
   margin-bottom: 1rem;
 }
 
+.monto-toggle-field,
+.transaction-essentials-toggle {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.transaction-essentials-toggle {
+  justify-self: end;
+  justify-items: end;
+  margin-top: -0.15rem;
+  text-align: right;
+}
+
+
 .transaction-essentials {
   display: grid;
   gap: 1rem;

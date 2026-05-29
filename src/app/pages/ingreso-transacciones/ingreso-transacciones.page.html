@@ -108,7 +108,7 @@
             <p class="panel-title">Formulario</p>
             <h3>{{ formTitle }}</h3>
           </div>
-          <span class="pill">Base</span>
+          <span class="pill">{{ transactionTypePillLabel }}</span>
         </div>
 
         <div class="messages">
@@ -124,6 +124,22 @@
                 <p class="panel-title">Datos base</p>
                 <h4>Captura principal</h4>
               </div>
+            </div>
+
+            <div
+              *ngIf="isIncomeMode && titularDetalleGroup as titularGroup"
+              class="transaction-essentials-toggle"
+              [formGroup]="titularGroup"
+            >
+              <label class="checkbox-row" for="dividir_monto_ingreso">
+                <input
+                  id="dividir_monto_ingreso"
+                  type="checkbox"
+                  formControlName="dividir_monto"
+                  (change)="onDividirMontoChange(titularGroup)"
+                />
+                <span>{{ dividirMontoLabel }}</span>
+              </label>
             </div>
 
             <div class="field-grid field-grid-compact field-grid-primary">
@@ -225,33 +241,6 @@
 
             <div class="field-grid field-grid-compact">
               <div class="field">
-                <label for="id_tipo_transaccion" class="label-with-help">
-                  <span>Tipo de transaccion</span>
-                  <span class="help-tooltip">
-                    <button
-                      type="button"
-                      class="help-badge"
-                      aria-label="Mostrar ayuda sobre tipo de transaccion"
-                    >
-                      ?
-                    </button>
-                    <span class="help-tooltip-content" role="tooltip">
-                      Credito: entrada de dinero.<br />
-                      Debito: salida de dinero.
-                    </span>
-                  </span>
-                </label>
-                <select id="id_tipo_transaccion" formControlName="id_tipo_transaccion">
-                  <option *ngFor="let tipo of tiposTransaccion" [ngValue]="tipo.value">
-                    {{ tipo.label }}
-                  </option>
-                </select>
-                <small *ngIf="transaccionForm.controls.id_tipo_transaccion.touched && transaccionForm.controls.id_tipo_transaccion.errors?.['required']">
-                  Selecciona un tipo de transaccion.
-                </small>
-              </div>
-
-              <div class="field">
                 <label for="forma_pago">Forma de pago</label>
                 <select id="forma_pago" formControlName="forma_pago" (change)="onFormaPagoChange()">
                   <option [ngValue]="null">Seleccione una forma de pago</option>
@@ -324,14 +313,6 @@
               <h4>Configura el plan del titular</h4>
             </div>
             <div class="participant-block" [formGroup]="titularGroup">
-              <label class="checkbox-row">
-                <input
-                  type="checkbox"
-                  formControlName="dividir_monto"
-                  (change)="onDividirMontoChange(titularGroup)"
-                />
-                <span>{{ dividirMontoLabel }}</span>
-              </label>
               <div class="participant-row participant-row--titular-cuotas">
                 <div class="field">
                   <label for="titular_modo_cuotas_ingreso">Modo de cuotas</label>

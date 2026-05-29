@@ -158,6 +158,10 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.flowConfig.submitLabel;
   }
 
+  get transactionTypePillLabel(): string {
+    return this.isIncomeMode ? 'Credito' : 'Debito';
+  }
+
   get shouldManageTitularCuotas(): boolean {
     return this.isIncomeMode || this.isSharedExpenseMode;
   }
@@ -174,7 +178,15 @@ export class IngresoTransaccionesPage implements OnInit {
     return Boolean(this.isSharedExpenseMode && this.titularDetalleGroup?.controls.dividir_monto.value);
   }
 
+  get isIncomeMontoEnabled(): boolean {
+    return true;
+  }
+
   get isMontoPrincipalReadonly(): boolean {
+    if (this.isIncomeMode) {
+      return !this.isIncomeMontoEnabled;
+    }
+
     return this.isSharedExpenseMode ? !this.isSharedExpenseTotalEditable : false;
   }
 
@@ -227,9 +239,7 @@ export class IngresoTransaccionesPage implements OnInit {
         : '';
     }
 
-    return this.isFixedCuotasMode(titularGroup)
-      ? 'El monto principal se repetira en cada cuota del ingreso.'
-      : 'El monto principal se toma como monto total y se distribuye automaticamente entre las cuotas.';
+    return '';
   }
 
   get shouldShowEstadoPago(): boolean {
@@ -434,6 +444,17 @@ export class IngresoTransaccionesPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.syncSharedExpenseEstadoForTitularCuotaUnica();
+        this.updateEstadoRegistroPreview();
+      });
+
+    this.transaccionForm.controls.cuotas_sin_intereses.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.isSharedExpenseMode || !this.usarParticipantesControl.value) {
+          return;
+        }
+
+        this.syncSharedExpenseCalculatedMonto();
         this.updateEstadoRegistroPreview();
       });
 
@@ -806,6 +827,11 @@ export class IngresoTransaccionesPage implements OnInit {
       : (this.transaccionForm.controls.monto.value ?? 0);
     const titularPorcentajeInicial = this.isSharedExpenseMode ? 0 : 100;
 
+    const dividirMontoTitularInicial = this.isIncomeMode ? false : true;
+    const modoCuotasTitularInicial: ModoCuotas = dividirMontoTitularInicial
+      ? 'divididas'
+      : 'fijas';
+
     this.participantesDetalleArray.push(
       this.fb.group({
         id_participante: this.fb.control<number | null>(
@@ -813,8 +839,8 @@ export class IngresoTransaccionesPage implements OnInit {
         ),
         nombre_mostrado: this.fb.control(this.currentUserDisplayName, { nonNullable: true }),
         es_titular: this.fb.control(true, { nonNullable: true }),
-        dividir_monto: this.fb.control(true, { nonNullable: true }),
-        modo_cuotas: this.fb.control<ModoCuotas>('divididas', { nonNullable: true }),
+        dividir_monto: this.fb.control(dividirMontoTitularInicial, { nonNullable: true }),
+        modo_cuotas: this.fb.control<ModoCuotas>(modoCuotasTitularInicial, { nonNullable: true }),
         cantidad_cuotas: this.fb.control<number | null>(1, [
           Validators.required,
           Validators.min(0),
@@ -3108,6 +3134,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private shouldRebalanceCounterpart(group: ParticipanteDetalleForm): boolean {
+    if (this.usesIndependentSharedExpenseAmounts) {
+      return false;
+    }
+
     if (!this.titularManualOverride) {
       return true;
     }
@@ -3272,8 +3302,12 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isSharedExpenseMode && this.manualAmountGroups.has(group);
   }
 
+  private get usesIndependentSharedExpenseAmounts(): boolean {
+    return this.isSharedExpenseMode && !Boolean(this.transaccionForm.controls.cuotas_sin_intereses.value);
+  }
+
   private syncSharedExpenseCounterpart(group: ParticipanteDetalleForm): void {
-    if (!this.isSharedExpenseMode) {
+    if (!this.isSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
       return;
     }
 
@@ -3393,7 +3427,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseTitularResidual(): void {
-    if (!this.isSharedExpenseMode) {
+    if (!this.isSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
       return;
     }
 
