@@ -11,6 +11,7 @@
 .stats-strip { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .header-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
 .user-hint { margin:-.25rem 0 1rem; color:#6b7a90; font-size:.85rem; font-weight:600; }
+.payment-entity-note { display:block; margin-top:.45rem; color:#1d4ed8; font-size:.88rem; font-weight:800; }
 .quick-pay-bulk-toolbar { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; padding:.9rem 1rem; border:1px solid #d9e3f0; border-radius:.75rem; background:linear-gradient(180deg,#fbfcff 0%,#f4f8ff 100%); }
 .quick-pay-bulk-summary { display:grid; gap:.2rem; }
 .quick-pay-bulk-summary span { color:#5f6f82; font-size:.9rem; }
@@ -20,7 +21,14 @@
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 .filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
 .quick-pay-filters-grid { grid-template-columns:minmax(118px,136px) minmax(128px,146px) minmax(118px,136px) minmax(148px,170px) minmax(320px,380px) minmax(0,1fr); align-items:end; gap:.8rem; }
-.quick-pay-summary-layout { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.8rem; min-width:0; }
+.quick-pay-summary-layout {
+  grid-column: 5 / -1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:.8rem;
+  min-width:0;
+}
 .quick-pay-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; min-width:0; }
 .quick-pay-summary-card { min-width:0; padding:.7rem .85rem; border:1px solid #dce6f2; border-radius:.85rem; background:#f4f8ff; }
 .quick-pay-summary-card strong { display:block; color:var(--color-heading); font-size:1.35rem; line-height:1.1; }
@@ -33,7 +41,15 @@
 .quick-pay-days-field input.is-disabled { opacity:.6; cursor:not-allowed; }
 .quick-pay-state-field select, .quick-pay-type-field select { width:100%; min-width:0; max-width:100%; padding-right:2.2rem; }
 .quick-pay-participant-field select { width:100%; min-width:0; max-width:100%; }
-.quick-pay-checkbox-field { display:grid; gap:.55rem; justify-items:start; align-self:end; margin:0; }
+.quick-pay-checkbox-field {
+  display:grid;
+  gap:.55rem;
+  justify-items:start;
+  justify-self:end;
+  align-self:end;
+  margin:0;
+  min-width:max-content;
+}
 .quick-pay-checkbox-row { min-height:2.65rem; margin:0; }
 .filter-toggle-group { display:flex; gap:.75rem; flex-wrap:wrap; }
 .filter-toggle-group-compact { align-items:center; gap:.6rem; }
@@ -175,6 +191,15 @@
 .participant-highlight-field input:focus {
   border-color:#d17820;
   box-shadow:0 0 0 .2rem rgba(209,120,32,.18), inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+.participant-single-cuota-field label {
+  color:#8a3d00;
+  font-weight:800;
+}
+
+.participant-single-cuota-field input {
+  text-align:center;
 }
 
 .cuotas-remaining { color:#c62828; font-weight:800; }
@@ -378,6 +403,10 @@
   .quick-pay-summary-layout,
   .quick-pay-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .quick-pay-summary-layout {
+    grid-column: auto;
   }
 
   .cuotas-list-head {

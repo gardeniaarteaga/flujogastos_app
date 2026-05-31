@@ -248,14 +248,15 @@
                     {{ forma.nombre_forma }}
                   </option>
                 </select>
+                <small
+                  class="field-hint payment-entity-note"
+                  *ngIf="transaccionForm.controls.entidad_financiera.value && selectedFormaPago?.nombre_forma !== 'Efectivo'"
+                >
+                  Entidad financiera: {{ transaccionForm.controls.entidad_financiera.value }}
+                </small>
                 <small *ngIf="transaccionForm.controls.forma_pago.touched && transaccionForm.controls.forma_pago.errors?.['required']">
                   Selecciona una forma de pago.
                 </small>
-              </div>
-
-              <div class="field">
-                <label for="entidad_financiera">Entidad financiera</label>
-                <input id="entidad_financiera" type="text" formControlName="entidad_financiera" readonly />
               </div>
 
               <div class="field">
@@ -601,15 +602,21 @@
                       <label [for]="'participante_porcentaje_' + i">Porcentaje</label>
                       <input
                         [id]="'participante_porcentaje_' + i"
-                        type="text"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.000001"
                         inputmode="decimal"
                         autocomplete="off"
+                        class="percentage-spinner-input"
                         data-decimals="6"
                         data-sanitize="percentage"
                         formControlName="porcentaje"
-                        (input)="onParticipantePorcentajeInput(participanteGroup, $event)"
+                        (focus)="onMoneyInputActivate($event)"
+                        (click)="onMoneyInputActivate($event)"
                         (keydown)="onMontoKeydown($event)"
                         (paste)="onMontoPaste($event)"
+                        (input)="onParticipantePorcentajeInput(participanteGroup, $event)"
                         (blur)="normalizePercentageInput(participanteGroup)"
                       />
                       <small

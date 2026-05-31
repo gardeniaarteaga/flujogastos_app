@@ -763,6 +763,10 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.selectedFormaPago?.calcula_interes === true;
   }
 
+  get shouldShowEntidadFinancieraNote(): boolean {
+    return Boolean(this.transaccionForm.controls.entidad_financiera.value) && !this.isCashFormaPagoSelected;
+  }
+
   get isEditingIncomeMode(): boolean {
     return Number(this.transaccionForm.controls.id_tipo_transaccion.value ?? 0) === 2;
   }
@@ -980,6 +984,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   canEditParticipantePorcentaje(group: ParticipanteDetalleForm): boolean {
+    if (this.isEditingSharedExpenseMode && group.controls.es_titular.value) {
+      return true;
+    }
+
     if (!this.hasAppliedPagosInEditor) {
       return true;
     }
@@ -2716,6 +2724,22 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (this.isCashFormaPagoSelected) {
+      this.transaccionForm.patchValue({
+        entidad_financiera: '',
+        tipo_entidad: '',
+      });
+
+      if (!this.showCuotasSinInteresesOption) {
+        this.transaccionForm.controls.cuotas_sin_intereses.setValue(false, {
+          emitEvent: false,
+        });
+      }
+
+      this.refreshEstadoTransaccionForEdit();
+      return;
+    }
+
     const entidad =
       this.entidadesFinancieras.find(
         (item) => item.id_entidad === this.selectedFormaPago?.id_entidad,
@@ -3149,6 +3173,16 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (input.dataset['sanitize'] === 'percentage') {
+      if (input.type === 'number') {
+        input.dataset['replaceOnNextInput'] = 'true';
+        return;
+      }
+
+      setTimeout(() => input.setSelectionRange(0, input.value.length));
+      return;
+    }
+
     const sanitizedValue = this.sanitizeMoneyInputValue(input.value);
 
     if (!sanitizedValue) {
@@ -3172,6 +3206,26 @@ export class ListadoTransaccionesPage implements OnInit {
         ? (value: string) => this.sanitizePercentageInputValue(value)
         : (value: string) => this.sanitizeMoneyInputValue(value);
 
+    if (input?.dataset['replaceOnNextInput'] === 'true') {
+      const allowedReplacementKeys = new Set(['Backspace', 'Delete']);
+
+      if (/^\d$/.test(event.key) || allowedReplacementKeys.has(event.key)) {
+        event.preventDefault();
+        input.dataset['replaceOnNextInput'] = 'false';
+        input.value = /^\d$/.test(event.key) ? event.key : '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+
+      if (this.isDecimalSeparatorKey(event.key)) {
+        event.preventDefault();
+        input.dataset['replaceOnNextInput'] = 'false';
+        input.value = '0.';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+    }
+
     this.blockDecimalInput(event, Number.isFinite(maxDecimals) ? maxDecimals : 2, sanitizeValue);
   }
 
@@ -3179,7 +3233,25 @@ export class ListadoTransaccionesPage implements OnInit {
     const control = group.controls.porcentaje;
     const rawValue = control.value;
 
+    if (this.isEditingSharedExpenseMode) {
+      if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
+        this.titularManualOverride = true;
+      }
+
+      this.clearDismissedTitularFullShareDefault(group);
+      this.recalculateSharedExpensePercentageDistribution(group);
+      return;
+    }
+
     if (rawValue === null || rawValue === undefined) {
+      if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
+        this.titularManualOverride = true;
+      }
+
+      this.clearDismissedTitularFullShareDefault(group);
+      this.markGroupAmountAsAutomatic(group);
+      this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+      this.refreshEstadoTransaccionForEdit();
       return;
     }
 
@@ -3341,19 +3413,59 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    this.sanitizePercentageInput(group, event);
+    const input = event?.target as HTMLInputElement | null;
 
-    if (this.isPercentageInputPendingDecimal(event)) {
+    if (input?.type === 'number') {
+      const rawValue = input.value.trim();
+
+      group.controls.porcentaje.setValue(
+        (rawValue === '' ? null : Number(rawValue)) as number | null,
+        { emitEvent: false },
+      );
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+
+      if (this.isEditingSharedExpenseMode) {
+        if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
+          this.titularManualOverride = true;
+        }
+
+        this.clearDismissedTitularFullShareDefault(group);
+        this.recalculateSharedExpensePercentageDistribution(group);
+        return;
+      }
+
+      if (!rawValue) {
+        if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
+          this.titularManualOverride = true;
+        }
+
+        this.clearDismissedTitularFullShareDefault(group);
+        this.markGroupAmountAsAutomatic(group);
+        this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+        this.refreshEstadoTransaccionForEdit();
+        return;
+      }
+
+      if (Number.isNaN(Number(rawValue))) {
+        return;
+      }
+
+      if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
+        this.titularManualOverride = true;
+      }
+
+      this.clearDismissedTitularFullShareDefault(group);
+      this.markGroupAmountAsAutomatic(group);
+      this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+      this.refreshEstadoTransaccionForEdit();
       return;
     }
 
-    if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
-      this.titularManualOverride = true;
+    if (input) {
+      input.dataset['replaceOnNextInput'] = 'false';
     }
 
-    this.clearDismissedTitularFullShareDefault(group);
-    this.markGroupAmountAsAutomatic(group);
-    this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+    this.sanitizePercentageInput(group, event);
     this.refreshEstadoTransaccionForEdit();
   }
 
@@ -3480,7 +3592,12 @@ export class ListadoTransaccionesPage implements OnInit {
         emitEvent: false,
       });
       this.markGroupAmountAsAutomatic(group);
-      this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+
+      if (this.isEditingSharedExpenseMode) {
+        this.recalculateSharedExpensePercentageDistribution(group);
+      } else {
+        this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
+      }
     }
 
     this.refreshEstadoTransaccionForEdit();
@@ -4603,6 +4720,10 @@ export class ListadoTransaccionesPage implements OnInit {
     return value.trim().toLowerCase();
   }
 
+  private get isCashFormaPagoSelected(): boolean {
+    return this.normalizeText(this.selectedFormaPago?.nombre_forma ?? '') === 'efectivo';
+  }
+
   private shouldRebalanceCounterpart(group: ParticipanteDetalleForm): boolean {
     if (this.usesIndependentSharedExpenseAmounts) {
       return false;
@@ -4740,6 +4861,14 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    this.rebalanceMontoDistributionToGroup(residualGroup);
+  }
+
+  private rebalanceMontoDistributionToGroup(residualGroup: ParticipanteDetalleForm): void {
+    if (!residualGroup) {
+      return;
+    }
+
     const totalMonto = this.normalizeDecimalValue(
       Number(this.transaccionForm.controls.monto.value ?? 0),
     );
@@ -4770,6 +4899,36 @@ export class ListadoTransaccionesPage implements OnInit {
     residualGroup.controls.porcentaje.setValue(porcentajeResidual, { emitEvent: false });
     residualGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
     this.syncCuotasWithMonto(residualGroup);
+  }
+
+  private getSharedExpenseCounterpartGroup(
+    editedGroup: ParticipanteDetalleForm,
+  ): ParticipanteDetalleForm | null {
+    const titularGroup = this.titularDetalleGroup;
+
+    if (!titularGroup) {
+      return null;
+    }
+
+    const additionalParticipants = this.getAdditionalParticipants();
+
+    if (additionalParticipants.length === 0) {
+      return null;
+    }
+
+    if (editedGroup.controls.es_titular.value) {
+      return additionalParticipants[additionalParticipants.length - 1] ?? null;
+    }
+
+    if (!this.titularManualOverride || additionalParticipants.length === 1) {
+      return titularGroup;
+    }
+
+    const residualParticipant = [...additionalParticipants]
+      .reverse()
+      .find((group) => group !== editedGroup);
+
+    return residualParticipant ?? titularGroup;
   }
 
   private markGroupAmountAsManual(group: ParticipanteDetalleForm): void {
@@ -4804,20 +4963,13 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const additionalParticipants = this.getAdditionalParticipants();
+    const counterpartGroup = this.getSharedExpenseCounterpartGroup(group);
 
-    if (additionalParticipants.length === 0) {
+    if (!counterpartGroup) {
       return;
     }
 
-    if (additionalParticipants.length === 1) {
-      this.rebalanceMontoDistribution(group);
-      return;
-    }
-
-    if (!group.controls.es_titular.value) {
-      this.syncSharedExpenseTitularResidual();
-    }
+    this.rebalanceMontoDistributionToGroup(counterpartGroup);
   }
 
   private syncSharedExpenseMainMontoToTitular(): void {
@@ -4875,9 +5027,98 @@ export class ListadoTransaccionesPage implements OnInit {
     this.syncCalculatedExpenseMontoForEdit();
   }
 
+  private recalculateSharedExpensePercentageDistribution(
+    editedGroup: ParticipanteDetalleForm,
+  ): void {
+    if (!this.isEditingSharedExpenseMode) {
+      return;
+    }
+
+    const groups = this.participantesDetalleArray.controls;
+
+    if (groups.length === 0) {
+      return;
+    }
+
+    const otherGroups = groups.filter((group) => group !== editedGroup);
+    const totalMonto = this.normalizeDecimalValue(
+      Number(this.transaccionForm.controls.monto.value ?? 0),
+    );
+    const totalMontoCentavos = this.toCents(totalMonto);
+    const editedPercentage =
+      otherGroups.length === 0
+        ? 100
+        : this.normalizePercentageValue(Number(editedGroup.controls.porcentaje.value ?? 0));
+
+    editedGroup.controls.porcentaje.setValue(editedPercentage, { emitEvent: false });
+    editedGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+
+    const totalOtherPercentage = otherGroups.reduce(
+      (sum, group) =>
+        sum + this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0)),
+      0,
+    );
+    let assignedPercentage = editedPercentage;
+
+    otherGroups.forEach((group, index) => {
+      const isLastGroup = index === otherGroups.length - 1;
+      let nextPercentage = 0;
+
+      if (isLastGroup) {
+        nextPercentage = this.normalizePercentageValue(Math.max(0, 100 - assignedPercentage));
+      } else if (totalOtherPercentage > 0) {
+        nextPercentage = this.normalizePercentageValue(
+          ((100 - editedPercentage) *
+            this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0))) /
+            totalOtherPercentage,
+        );
+        assignedPercentage = this.normalizePercentageValue(assignedPercentage + nextPercentage);
+      }
+
+      group.controls.porcentaje.setValue(nextPercentage, { emitEvent: false });
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
+
+    groups.forEach((group) => this.markGroupAmountAsAutomatic(group));
+
+    const residualAmountGroup = otherGroups[otherGroups.length - 1] ?? editedGroup;
+    let assignedMontoCentavos = 0;
+
+    groups.forEach((group) => {
+      if (group === residualAmountGroup) {
+        return;
+      }
+
+      const porcentaje = this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0));
+      const montoCentavos =
+        totalMontoCentavos > 0 ? Math.floor((totalMontoCentavos * porcentaje) / 100) : 0;
+
+      assignedMontoCentavos += montoCentavos;
+      group.controls.monto.setValue(
+        this.getMontoInputValueForTarget(group, this.centsToAmount(montoCentavos)),
+        { emitEvent: false },
+      );
+      group.controls.monto.updateValueAndValidity({ emitEvent: false });
+      this.syncCuotasWithMonto(group);
+    });
+
+    const residualMontoCentavos = Math.max(0, totalMontoCentavos - assignedMontoCentavos);
+    residualAmountGroup.controls.monto.setValue(
+      this.getMontoInputValueForTarget(
+        residualAmountGroup,
+        this.centsToAmount(residualMontoCentavos),
+      ),
+      { emitEvent: false },
+    );
+    residualAmountGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
+    this.syncCuotasWithMonto(residualAmountGroup);
+    this.refreshEstadoTransaccionForEdit();
+  }
+
   private syncSharedExpensePercentagesToHundred(
     totalMonto: number,
     preferredResidualGroup?: ParticipanteDetalleForm,
+    preservedPercentageGroup?: ParticipanteDetalleForm,
   ): void {
     const groups = this.participantesDetalleArray.controls;
 
@@ -4907,7 +5148,12 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     const residualGroup =
-      this.resolveResidualGroup(preferredResidualGroup) ?? groups[groups.length - 1] ?? null;
+      (preservedPercentageGroup
+        ? this.getSharedExpenseCounterpartGroup(preservedPercentageGroup)
+        : null) ??
+      this.resolveResidualGroup(preferredResidualGroup ?? preservedPercentageGroup) ??
+      groups[groups.length - 1] ??
+      null;
 
     if (!residualGroup) {
       return;
@@ -4917,6 +5163,14 @@ export class ListadoTransaccionesPage implements OnInit {
 
     groups.forEach((group) => {
       if (group === residualGroup) {
+        return;
+      }
+
+      if (preservedPercentageGroup && group === preservedPercentageGroup) {
+        porcentajeAsignado = this.normalizePercentageValue(
+          porcentajeAsignado +
+            this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0)),
+        );
         return;
       }
 
@@ -6440,7 +6694,9 @@ export class ListadoTransaccionesPage implements OnInit {
     control.updateValueAndValidity({ emitEvent: false });
   }
 
-  private syncCalculatedExpenseMontoForEdit(): void {
+  private syncCalculatedExpenseMontoForEdit(
+    preservedPercentageGroup?: ParticipanteDetalleForm,
+  ): void {
     if (!this.isEditingSharedExpenseMode || this.syncingSharedExpenseCalculatedMonto) {
       return;
     }
@@ -6465,7 +6721,11 @@ export class ListadoTransaccionesPage implements OnInit {
         this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
       }
 
-      this.syncSharedExpensePercentagesToHundred(montoTotal);
+      this.syncSharedExpensePercentagesToHundred(
+        montoTotal,
+        undefined,
+        preservedPercentageGroup,
+      );
     } finally {
       this.syncingSharedExpenseCalculatedMonto = false;
     }
@@ -6877,6 +7137,13 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (
+      this.filtrosForm.controls.enviadas.value ||
+      this.filtrosForm.controls.compartidos.value
+    ) {
+      return;
+    }
+
     const participanteDefaultId = this.getDefaultQuickPayParticipanteFilterId();
 
     if (
@@ -6891,15 +7158,12 @@ export class ListadoTransaccionesPage implements OnInit {
 
   onEnviadasToggle(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.filtrosForm.controls.enviadas.setValue(checked);
-
-    if (
-      checked &&
-      this.isDetalleViewMode &&
-      this.filtrosForm.controls.compartidos.value
-    ) {
-      this.setQuickPayCompartidosFilterState(false);
+    if (checked && this.isDetalleViewMode) {
+      this.applyQuickPayRecibidosFilterDefaults();
+      return;
     }
+
+    this.filtrosForm.controls.enviadas.setValue(checked);
   }
 
   onCompartidosToggle(event: Event): void {
@@ -6938,6 +7202,32 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.sharedParticipantFilterAutoReset = false;
+  }
+
+  private applyQuickPayRecibidosFilterDefaults(): void {
+    this.sharedParticipantFilterAutoReset = false;
+    this.showAdvancedFilters = false;
+
+    this.filtrosForm.patchValue(
+      {
+        todos: false,
+        soloHoy: false,
+        mesActual: false,
+        prioritarios: false,
+        pendientePago: false,
+        enviadas: true,
+        compartidos: false,
+        pendienteRegistro: false,
+        fechaDesde: '',
+        fechaHasta: '',
+        estado: 'PENDIENTE',
+        tipoTransaccion: null,
+        idMetodoPago: null,
+        idParticipante: null,
+        busquedaDescripcion: '',
+      },
+      { emitEvent: true },
+    );
   }
 
   private isIngresoDetalleRow(

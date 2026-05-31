@@ -298,9 +298,13 @@
                     formControlName="enviadas"
                     (change)="onEnviadasToggle($event)"
                   />
-                  <span>Enviados</span>
+                  <span>Recibidos</span>
                 </label>
-                <label class="checkbox-row quick-pay-checkbox-row" for="compartidosDetalle">
+                <label
+                  class="checkbox-row quick-pay-checkbox-row"
+                  for="compartidosDetalle"
+                  title="Cuotas que mandaste a otros participantes"
+                >
                   <input
                     id="compartidosDetalle"
                     type="checkbox"
@@ -350,7 +354,7 @@
 
               <label class="checkbox-row" for="enviadas">
                 <input id="enviadas" type="checkbox" formControlName="enviadas" />
-                <span>Enviadas</span>
+                <span>Recibidas</span>
               </label>
 
               <button
@@ -553,14 +557,14 @@
                       style="display: inline-flex; width: fit-content; align-items: center; gap: 0.4rem; padding: 0.2rem 0.58rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap;"
                       [style.background]="transaccion.es_propietario ? '#e9f9ef' : '#f1e8ff'"
                       [style.color]="transaccion.es_propietario ? '#18794e' : '#7a3db8'"
-                      [attr.title]="transaccion.es_propietario ? 'Gasto ingresado por ti' : 'Gasto enviado por otro usuario'"
-                      [attr.aria-label]="transaccion.es_propietario ? 'Gasto propio' : 'Gasto enviado por otro usuario'"
+                      [attr.title]="transaccion.es_propietario ? 'Gasto ingresado por ti' : 'Gasto recibido de otro usuario'"
+                      [attr.aria-label]="transaccion.es_propietario ? 'Gasto propio' : 'Gasto recibido de otro usuario'"
                     >
                       <span
                         style="width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; flex: 0 0 auto;"
                         aria-hidden="true"
                       ></span>
-                      {{ transaccion.es_propietario ? 'Propio' : 'Enviado' }}
+                      {{ transaccion.es_propietario ? 'Propio' : 'Recibido' }}
                     </span>
                   </div>
                 </td>
@@ -803,14 +807,14 @@
                     <span
                       *ngIf="!row.transaccion.es_propietario"
                       style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
-                      title="Transaccion enviada por otro usuario"
-                      aria-label="Transaccion enviada por otro usuario"
+                      title="Transaccion recibida de otro usuario"
+                      aria-label="Transaccion recibida de otro usuario"
                     >
                       <span
                         style="width:.45rem;height:.45rem;border-radius:50%;background:currentColor;flex:0 0 auto;"
                         aria-hidden="true"
                       ></span>
-                      Enviado
+                      Recibido
                     </span>
                   </div>
                 </td>
@@ -1029,6 +1033,9 @@
                   {{ forma.nombre_forma }}
                 </option>
               </select>
+              <small class="user-hint payment-entity-note" *ngIf="shouldShowEntidadFinancieraNote">
+                Entidad financiera: {{ transaccionForm.controls.entidad_financiera.value }}
+              </small>
             </div>
 
             <div class="field">
@@ -1058,9 +1065,14 @@
               <input id="edit_tipo_entidad" type="text" formControlName="tipo_entidad" readonly />
             </div>
 
-            <div class="field">
-              <label for="edit_entidad_financiera">Entidad financiera</label>
-              <input id="edit_entidad_financiera" type="text" formControlName="entidad_financiera" readonly />
+            <div class="field participant-highlight-field" *ngIf="isEditingSharedExpenseMode">
+              <label for="edit_monto_total_guardado">Monto total</label>
+              <input
+                id="edit_monto_total_guardado"
+                type="text"
+                [value]="formatMoneyFixedDisplay(transaccionForm.controls.monto.value)"
+                readonly
+              />
             </div>
           </div>
 
@@ -1107,28 +1119,6 @@
                   />
                   <span>{{ dividirMontoLabel }}</span>
                 </label>
-              </div>
-              <div
-                *ngIf="titularDetalleGroup"
-                class="field participants-summary-field participants-summary-field--inline"
-                [formGroup]="transaccionForm"
-              >
-                <label for="edit_monto">{{ editingMontoLabel }}</label>
-                <input
-                  id="edit_monto"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  formControlName="monto"
-                  [readonly]="!isEditingSharedExpenseTotalEditable"
-                  [disabled]="hasAppliedPagosInEditor"
-                  (input)="onMontoInput($event)"
-                  (focus)="onMoneyInputActivate($event)"
-                  (click)="onMoneyInputActivate($event)"
-                  (keydown)="onMontoKeydown($event)"
-                  (paste)="onMontoPaste($event)"
-                  (blur)="normalizeMoneyInput('monto')"
-                />
               </div>
             </div>
             <label *ngIf="!isEditingSharedExpenseMode" class="checkbox-row" for="edit_usar_participantes">
@@ -1261,17 +1251,23 @@
                         <label [for]="'edit_participante_porcentaje_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">Porcentaje</label>
                         <input
                           [id]="'edit_participante_porcentaje_' + i"
-                          type="text"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.000001"
                           inputmode="decimal"
                           autocomplete="off"
+                          class="percentage-spinner-input"
                           data-decimals="6"
                           data-sanitize="percentage"
                           formControlName="porcentaje"
                           style="width:100%;min-height:2.65rem;padding:.55rem .75rem;font-size:.92rem;"
                           [disabled]="!canEditParticipantePorcentaje(participanteGroup)"
-                          (input)="onParticipantePorcentajeInput(participanteGroup, $event)"
+                          (focus)="onMoneyInputActivate($event)"
+                          (click)="onMoneyInputActivate($event)"
                           (keydown)="onMontoKeydown($event)"
                           (paste)="onMontoPaste($event)"
+                          (input)="onParticipantePorcentajeInput(participanteGroup, $event)"
                           (blur)="normalizePercentageInput(participanteGroup)"
                         />
                         <small
@@ -1322,7 +1318,7 @@
 
                     <div
                       *ngIf="isEditingSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && getCuotasArray(participanteGroup).at(0) as cuotaUnicaGroup"
-                      class="field participant-single-cuota-field"
+                      class="field participant-single-cuota-field participant-highlight-field"
                     >
                       <label [for]="'edit_participante_cuota_monto_' + i">Monto cuota</label>
                       <input
@@ -1671,8 +1667,8 @@
             <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha gasto' }}</span>
             <strong>{{ detailModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
           </article>
-          <article class="payment-modal-chip">
-            <span>Monto</span>
+          <article class="payment-modal-chip payment-modal-chip-total">
+            <span>Monto total</span>
             <strong>${{ detailModalTransaccion.monto | number: '1.2-2' }}</strong>
           </article>
           <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
@@ -1831,17 +1827,13 @@
         </header>
 
         <section class="payment-modal-summary">
-          <article class="payment-modal-chip">
+          <article class="payment-modal-chip payment-modal-chip-total">
             <span>Monto total</span>
             <strong>${{ paymentModalTransaccion.monto | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Intereses</span>
             <strong>${{ paymentModalTransaccion.intereses | number: '1.2-2' }}</strong>
-          </article>
-          <article class="payment-modal-chip">
-            <span>Deuda total</span>
-            <strong>${{ paymentModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Estado</span>

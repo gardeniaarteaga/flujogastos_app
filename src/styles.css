@@ -55,6 +55,17 @@ textarea {
   font: inherit;
 }
 
+input.percentage-spinner-input {
+  appearance: auto;
+  -moz-appearance: auto;
+}
+
+input.percentage-spinner-input::-webkit-outer-spin-button,
+input.percentage-spinner-input::-webkit-inner-spin-button {
+  -webkit-appearance: auto;
+  margin: 0;
+}
+
 .module-page .stats-strip {
   display: grid;
   gap: 1rem;
@@ -230,6 +241,16 @@ textarea {
 .module-page .payment-modal-chip strong {
   color: var(--color-heading);
   font-size: 1.02rem;
+}
+
+.module-page .payment-modal-chip-total {
+  border-color: #f0bf7a;
+  background: linear-gradient(180deg, #fff7eb 0%, #ffe3ba 100%);
+}
+
+.module-page .payment-modal-chip-total span,
+.module-page .payment-modal-chip-total strong {
+  color: #9a4d00;
 }
 
 .date-entry {
