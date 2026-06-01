@@ -281,6 +281,7 @@ export class Dashboard implements OnInit {
   currentUserId = getCurrentUserId();
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
+  finalizingScheduledNotificationIds = new Set<number>();
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -363,6 +364,42 @@ export class Dashboard implements OnInit {
 
   formatScheduledDateLabel(configuracion: ScheduledNotificationView): string {
     return `${configuracion.nextDateLabel} | ${configuracion.relativeLabel}`;
+  }
+
+  isFinalizingScheduledNotification(idNotificacionProgramada: number): boolean {
+    return this.finalizingScheduledNotificationIds.has(idNotificacionProgramada);
+  }
+
+  async finalizeScheduledNotification(item: ScheduledNotificationView): Promise<void> {
+    if (this.finalizingScheduledNotificationIds.has(item.id_notificacion_programada)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se finalizara la notificacion programada "${item.descripcion}".`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.scheduledNotificationsError = '';
+    this.finalizingScheduledNotificationIds.add(item.id_notificacion_programada);
+
+    try {
+      await this.notificacionesService.finalizeConfiguracionPago(
+        item.id_notificacion_programada,
+      );
+      this.scheduledNotifications = this.scheduledNotifications.filter(
+        (scheduledItem) =>
+          scheduledItem.id_notificacion_programada !== item.id_notificacion_programada,
+      );
+    } catch {
+      this.scheduledNotificationsError =
+        'No se pudo finalizar la notificacion programada. Intenta nuevamente.';
+    } finally {
+      this.finalizingScheduledNotificationIds.delete(item.id_notificacion_programada);
+    }
   }
 
   private buildAnalytics(
@@ -1482,9 +1519,16 @@ export class Dashboard implements OnInit {
   }
 
   private getScheduledFrequencyLabel(configuracion: ConfiguracionNotificacionPago): string {
-    return this.resolvePeriodicidadCode(configuracion) === 'quincenal'
-      ? '15 y fin de mes'
-      : `Dia ${configuracion.dia_pago_programado}`;
+    switch (this.resolvePeriodicidadCode(configuracion)) {
+      case 'quincenal':
+        return 'Cada 15 y 30';
+      case 'anual':
+        return 'Cada ano';
+      case 'fecha-especifica':
+        return 'Fecha especifica';
+      default:
+        return 'Cada mes';
+    }
   }
 
   private getScheduledQuincenaLabel(

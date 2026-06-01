@@ -199,11 +199,22 @@
         >
           <div class="scheduled-card-header">
             <strong>{{ item.descripcion }}</strong>
-            <span class="score-chip" [ngClass]="'tone-' + item.tone">{{ item.statusLabel }}</span>
           </div>
-          <p>Prioridad {{ item.prioridad }} | {{ item.frecuenciaLabel }}</p>
-          <p>{{ item.periodicidadNombre }} | {{ item.quincenaLabel }} | {{ item.nextDateLabel }}</p>
-          <small>{{ item.relativeLabel }} | {{ item.vigenciaLabel }}</small>
+          <p>{{ item.frecuenciaLabel }} | {{ item.quincenaLabel }} | {{ item.nextDateLabel }}</p>
+          <div class="scheduled-card-actions">
+            <button
+              type="button"
+              class="scheduled-finalize-button"
+              (click)="finalizeScheduledNotification(item)"
+              [disabled]="isFinalizingScheduledNotification(item.id_notificacion_programada)"
+            >
+              {{
+                isFinalizingScheduledNotification(item.id_notificacion_programada)
+                  ? 'Finalizando...'
+                  : 'Finalizar'
+              }}
+            </button>
+          </div>
         </article>
       </div>
 

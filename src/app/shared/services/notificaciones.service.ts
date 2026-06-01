@@ -4,6 +4,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../config/api.config';
 import { CatalogosTransaccionService } from './catalogos-transaccion.service';
+import { getCurrentUserId } from '../user-profile';
 
 export interface NotificacionItem {
   id_notificacion: number;
@@ -87,6 +88,10 @@ export interface ConfiguracionNotificacionPagoPayload {
   fecha_fin: string;
   dia_pago_programado: number;
   id_periodicidad: number;
+}
+
+interface FinalizarConfiguracionNotificacionPagoPayload {
+  estado: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -283,6 +288,29 @@ export class NotificacionesService {
         .delete(`${this.baseUrl}/programadas/${idNotificacionProgramada}`, {
           params: { id_usuario: idUsuario },
         })
+        .pipe(timeout(this.timeoutMs)),
+    );
+  }
+
+  async finalizeConfiguracionPago(idNotificacionProgramada: number): Promise<void> {
+    const storedUserId = getCurrentUserId();
+    const idUsuario =
+      Number.isInteger(storedUserId) && storedUserId > 0
+        ? storedUserId
+        : await this.catalogosTransaccionService.syncCurrentUserId();
+    const requestPayload: FinalizarConfiguracionNotificacionPagoPayload = {
+      estado: false,
+    };
+
+    await firstValueFrom(
+      this.http
+        .patch<ConfiguracionNotificacionPagoApiItem>(
+          `${this.baseUrl}/programadas/${idNotificacionProgramada}`,
+          requestPayload,
+          {
+            params: { id_usuario: idUsuario },
+          },
+        )
         .pipe(timeout(this.timeoutMs)),
     );
   }
