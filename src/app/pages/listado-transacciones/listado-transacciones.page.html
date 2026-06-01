@@ -282,6 +282,14 @@
               </div>
 
               <div class="field quick-pay-checkbox-field">
+                <label class="checkbox-row quick-pay-checkbox-row" for="prioritariosDetalle">
+                  <input
+                    id="prioritariosDetalle"
+                    type="checkbox"
+                    formControlName="prioritarios"
+                  />
+                  <span>Proximo a vencer</span>
+                </label>
                 <label class="checkbox-row quick-pay-checkbox-row" for="mesActualDetalle">
                   <input
                     id="mesActualDetalle"
@@ -818,7 +826,18 @@
                     </span>
                   </div>
                 </td>
-                <td>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</td>
+                <td>
+                  <div style="display:grid;gap:.35rem;">
+                    <span>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</span>
+                    <span
+                      *ngIf="isDetalleVencido(row.detalle)"
+                      class="status-pill status-pill-pendiente"
+                      style="width:fit-content;padding:.2rem .5rem;font-size:.7rem;"
+                    >
+                      Vencido
+                    </span>
+                  </div>
+                </td>
                 <td>{{ row.metodo_pago || '-' }}</td>
                 <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
                 <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
@@ -1664,7 +1683,7 @@
 
         <section class="payment-modal-summary">
           <article class="payment-modal-chip">
-            <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha gasto' }}</span>
+            <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha transaccion' }}</span>
             <strong>{{ detailModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
           </article>
           <article class="payment-modal-chip payment-modal-chip-total">
@@ -1827,6 +1846,10 @@
         </header>
 
         <section class="payment-modal-summary">
+          <article class="payment-modal-chip">
+            <span>Fecha transaccion</span>
+            <strong>{{ paymentModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
+          </article>
           <article class="payment-modal-chip payment-modal-chip-total">
             <span>Monto total</span>
             <strong>${{ paymentModalTransaccion.monto | number: '1.2-2' }}</strong>

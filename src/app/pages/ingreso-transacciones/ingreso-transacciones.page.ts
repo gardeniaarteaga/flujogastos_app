@@ -98,6 +98,7 @@ interface TransactionFlowConfig {
 
 @Component({
   selector: 'app-ingreso-transacciones-page',
+  standalone: true,
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -108,7 +109,7 @@ interface TransactionFlowConfig {
     SessionStripComponent,
   ],
   templateUrl: './ingreso-transacciones.page.html',
-  styleUrl: './ingreso-transacciones.page.css',
+  styleUrls: ['./ingreso-transacciones.page.css'],
 })
 export class IngresoTransaccionesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -396,6 +397,7 @@ export class IngresoTransaccionesPage implements OnInit {
   saving = false;
   errorMessage = '';
   successMessage = '';
+  showMontoRequiredForParticipantMessage = false;
   private readonly openCuotasGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
   private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
@@ -876,6 +878,13 @@ export class IngresoTransaccionesPage implements OnInit {
       this.addTitularDetalle();
     }
 
+    if (!this.canAddSharedExpenseParticipant()) {
+      this.transaccionForm.controls.monto.markAsTouched();
+      this.showMontoRequiredForParticipantMessage = true;
+      this.focusSharedExpenseMontoWhenReady();
+      return;
+    }
+
     const dividirMontoInicial = this.titularDetalleGroup?.controls.dividir_monto.value ?? true;
     const modoCuotasInicial: ModoCuotas = dividirMontoInicial ? 'divididas' : 'fijas';
 
@@ -907,6 +916,7 @@ export class IngresoTransaccionesPage implements OnInit {
     });
 
     this.participantesDetalleArray.push(newGroup);
+    this.showMontoRequiredForParticipantMessage = false;
     this.applyDismissedTitularDefaultShare(newGroup);
     this.syncSharedExpenseCalculatedMonto();
     this.updateEstadoRegistroPreview();
@@ -1295,6 +1305,8 @@ export class IngresoTransaccionesPage implements OnInit {
       }
     }
 
+    this.syncParticipantMontoGuardHint();
+
     this.updateEstadoRegistroPreview();
 
     const input = targetEvent?.target as HTMLInputElement | null;
@@ -1316,11 +1328,13 @@ export class IngresoTransaccionesPage implements OnInit {
 
     if (this.isSharedExpenseTotalEditable) {
       this.syncSharedExpenseCalculatedMonto();
+      this.syncParticipantMontoGuardHint();
       this.updateEstadoRegistroPreview();
       return;
     }
 
     this.refreshParticipantesMontos();
+    this.syncParticipantMontoGuardHint();
   }
 
   private focusSharedExpenseMontoWhenReady(): void {
@@ -1828,6 +1842,7 @@ export class IngresoTransaccionesPage implements OnInit {
   private resetForm(): void {
     this.selectedFormaPago = null;
     this.titularManualOverride = false;
+    this.showMontoRequiredForParticipantMessage = false;
     this.participantesDetalleArray.clear();
     this.transaccionForm.reset({
       fecha_transaccion: this.formatDateDisplay(new Date()),
@@ -1852,6 +1867,24 @@ export class IngresoTransaccionesPage implements OnInit {
     this.onCategoriaChange();
     this.applyScreenModeRestrictions();
     this.updateEstadoRegistroPreview();
+  }
+
+  private canAddSharedExpenseParticipant(): boolean {
+    if (!this.isSharedExpenseMode) {
+      return true;
+    }
+
+    return this.normalizeDecimalValue(Number(this.transaccionForm.controls.monto.value ?? 0)) > 0;
+  }
+
+  private syncParticipantMontoGuardHint(): void {
+    if (!this.showMontoRequiredForParticipantMessage) {
+      return;
+    }
+
+    if (this.canAddSharedExpenseParticipant()) {
+      this.showMontoRequiredForParticipantMessage = false;
+    }
   }
 
   private resolveFlowConfig(): TransactionFlowConfig {
@@ -1919,6 +1952,7 @@ export class IngresoTransaccionesPage implements OnInit {
   onEstadoIngresoChange(): void {
     const estadoId = this.transaccionForm.controls.id_estado.value;
     this.syncEstadoTransaccionFromId(estadoId);
+    this.syncIngresoPagadoCuotasProgramacion();
     this.updateEstadoRegistroPreview();
   }
 
@@ -2653,6 +2687,15 @@ export class IngresoTransaccionesPage implements OnInit {
     const cuotasArray = this.getCuotasArray(group);
     const cuotasCount = cuotasArray.length;
 
+    if (this.isIncomeMode && this.isIngresoPagadoSelected) {
+      const todayIso = this.formatDateApi(new Date());
+
+      cuotasArray.controls.forEach((cuota) => {
+        cuota.controls.fecha_programada.setValue(todayIso, { emitEvent: false });
+      });
+      return;
+    }
+
     if (cuotasCount <= 1) {
       const defaultFechaProgramada = this.getSingleCuotaDefaultFechaProgramada();
 
@@ -2678,6 +2721,14 @@ export class IngresoTransaccionesPage implements OnInit {
         emitEvent: false,
       });
     });
+  }
+
+  private syncIngresoPagadoCuotasProgramacion(): void {
+    if (!this.isIncomeMode) {
+      return;
+    }
+
+    this.refreshProgramacionForAllGroups();
   }
 
   private buildFechasProgramadas(

@@ -50,7 +50,7 @@ type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
 type ModoCuotas = 'fijas' | 'divididas';
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
 const PRIORITY_WINDOW_DAYS = 7;
-const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 3;
+const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
 const ESTADOS_LISTADO_PERMITIDOS = new Set([
   'pagado',
   'pagada',
@@ -288,7 +288,7 @@ export class ListadoTransaccionesPage implements OnInit {
   readonly filtrosForm = this.fb.group({
     todos: [this.viewMode !== 'detalle'],
     soloHoy: [false],
-    mesActual: [false],
+    mesActual: [this.viewMode === 'detalle'],
     prioritarios: [false],
     diasPrioridad: [
       this.viewMode === 'detalle'
@@ -299,8 +299,8 @@ export class ListadoTransaccionesPage implements OnInit {
     enviadas: [false],
     compartidos: [false],
     pendienteRegistro: [false],
-    fechaDesde: ['', [this.dateDisplayValidator()]],
-    fechaHasta: ['', [this.dateDisplayValidator()]],
+    fechaDesde: [this.viewMode === 'detalle' ? this.formatDateDisplayFromApi(this.currentMonthStartValue) : '', [this.dateDisplayValidator()]],
+    fechaHasta: [this.viewMode === 'detalle' ? this.formatDateDisplayFromApi(this.currentMonthEndValue) : '', [this.dateDisplayValidator()]],
     estado: [this.viewMode === 'detalle' ? 'PENDIENTE' : null as string | null],
     tipoTransaccion: [null as 'credito' | 'debito' | null],
     idMetodoPago: [null as number | null],
@@ -661,6 +661,24 @@ export class ListadoTransaccionesPage implements OnInit {
         return true;
       })
       .sort((left, right) => this.compareDetalleRowsByFechaProgramada(left, right));
+  }
+
+  isDetalleVencido(detalle: ParticipanteDetalleListado): boolean {
+    if (detalle.id_estado === ESTADO_TRANSACCION_ANULADA_ID) {
+      return false;
+    }
+
+    if (Number(detalle.saldo_pendiente ?? 0) <= 0) {
+      return false;
+    }
+
+    const scheduledDate = this.parseIsoDateOnly(detalle.fecha_programada);
+
+    if (!scheduledDate) {
+      return false;
+    }
+
+    return scheduledDate < this.getDateOnlyValue(new Date());
   }
 
   get quickPayBulkSelectedRows(): DetalleTransaccionListadoRow[] {
@@ -3955,7 +3973,7 @@ export class ListadoTransaccionesPage implements OnInit {
         return false;
       }
 
-      return scheduledDate >= today && scheduledDate <= limitDate;
+      return scheduledDate <= limitDate;
     });
   }
 
@@ -3976,7 +3994,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return false;
     }
 
-    return scheduledDate >= today && scheduledDate <= limitDate;
+    return scheduledDate <= limitDate;
   }
 
   private compareDetalleRowsByFechaProgramada(
@@ -6835,10 +6853,11 @@ export class ListadoTransaccionesPage implements OnInit {
   private resetDefaultFilters(): void {
     const useTodayDefaults = false;
     const useAllListadoDefaults = this.viewMode !== 'detalle';
+    const useCurrentMonthDefaults = this.viewMode === 'detalle';
     this.filtrosForm.reset({
       todos: useAllListadoDefaults,
       soloHoy: useTodayDefaults,
-      mesActual: false,
+      mesActual: useCurrentMonthDefaults,
       prioritarios: false,
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -6847,8 +6866,12 @@ export class ListadoTransaccionesPage implements OnInit {
       enviadas: false,
       compartidos: false,
       pendienteRegistro: false,
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde: useCurrentMonthDefaults
+        ? this.formatDateDisplayFromApi(this.currentMonthStartValue)
+        : '',
+      fechaHasta: useCurrentMonthDefaults
+        ? this.formatDateDisplayFromApi(this.currentMonthEndValue)
+        : '',
       estado: this.viewMode === 'detalle' ? 'PENDIENTE' : null,
       tipoTransaccion: null,
       idMetodoPago: null,

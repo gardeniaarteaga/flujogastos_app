@@ -495,6 +495,18 @@
                   >
                     X
                   </button>
+                  <p
+                    *ngIf="
+                      isSharedExpenseMode &&
+                      participanteGroup.controls.es_titular.value &&
+                      (transaccionForm.controls.monto.value ?? 0) > sharedExpenseCalculatedTotal
+                    "
+                    class="participant-missing-amount"
+                    [class.participant-missing-amount--with-clear]="canRemoveTitularCuota(participanteGroup)"
+                  >
+                    Monto faltante:
+                    {{ ((transaccionForm.controls.monto.value ?? 0) - sharedExpenseCalculatedTotal) | number: '1.2-2' }}
+                  </p>
                   <div
                     class="participant-inline-controls"
                     *ngIf="participanteGroup.controls.es_titular.value"
@@ -818,6 +830,12 @@
                 <button type="button" class="secondary-button" (click)="addParticipanteDetalle()">
                   Agregar participante
                 </button>
+                <p
+                  *ngIf="showMontoRequiredForParticipantMessage"
+                  class="participant-add-warning"
+                >
+                  Ingrese monto.
+                </p>
               </div>
             </div>
           </section>
