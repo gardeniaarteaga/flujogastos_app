@@ -98,7 +98,6 @@ interface TransactionFlowConfig {
 
 @Component({
   selector: 'app-ingreso-transacciones-page',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -109,7 +108,7 @@ interface TransactionFlowConfig {
     SessionStripComponent,
   ],
   templateUrl: './ingreso-transacciones.page.html',
-  styleUrls: ['./ingreso-transacciones.page.css'],
+  styleUrl: './ingreso-transacciones.page.css',
 })
 export class IngresoTransaccionesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
