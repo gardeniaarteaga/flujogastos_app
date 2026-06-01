@@ -1,0 +1,394 @@
+<div class="dashboard-page analysis-page" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen financiero
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Configurar notificaciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Ingresos
+      </a>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Gastos
+      </a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Cuotas/Compartidos
+      </a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias">Categorias</a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Participantes
+          </a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias">Subcategorias</a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras">Entidades financieras</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad">Tipo de entidad</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto">Tipo de producto</a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Usuarios
+          </a>
+        </div>
+      </div>
+
+      <a class="nav-item active" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Reportes
+      </a>
+      <a class="nav-item" routerLink="/perfil">Mi perfil</a>
+    </nav>
+
+    <section class="sidebar-card">
+      <span class="sidebar-label">Ubicacion</span>
+      <strong>{{ userProfile.country || 'Sin pais definido' }}</strong>
+      <p>{{ userProfile.notificationsLabel }}</p>
+    </section>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <section class="hero-finance panel">
+      <div class="hero-copy">
+        <span class="hero-kicker">Reportes inteligentes</span>
+        <h2>Análisis Financiero mensual accionable.</h2>
+        <p>{{ analysis.summary }}</p>
+
+        <div class="hero-actions">
+          <button type="button" class="secondary-button" (click)="loadPage()" [disabled]="loading">
+            {{ loading ? 'Actualizando...' : 'Actualizar analisis' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-score" [ngClass]="'signal-' + analysis.trafficLight.tone">
+        <span class="hero-score-label">Semaforo financiero</span>
+        <strong>{{ analysis.trafficLight.tone === 'green' ? 'Verde' : analysis.trafficLight.tone === 'yellow' ? 'Amarillo' : 'Rojo' }}</strong>
+        <p>{{ analysis.trafficLight.label }}</p>
+        <div class="hero-score-meta">
+          <span>{{ analysis.monthLabel }}</span>
+          <span>Analisis por fecha programada/pago</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel filter-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Parametros</span>
+          <h3>Filtros del analisis</h3>
+        </div>
+        <span class="scope-pill">Mes y anio son obligatorios</span>
+      </div>
+
+      <p class="panel-copy">
+        Esta vista prioriza la fecha programada o fecha de pago y solo toma movimientos pagados, pendientes o con pago parcial. Los anulados no aparecen.
+      </p>
+
+      <form class="filters-grid" [formGroup]="filtrosForm">
+        <label class="field">
+          <span>Mes</span>
+          <select formControlName="month">
+            <option *ngFor="let item of monthOptions" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Anio</span>
+          <select formControlName="year">
+            <option *ngFor="let item of years" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+      </form>
+    </section>
+
+    <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
+      <strong>No se pudo generar el analisis.</strong>
+      <p>{{ errorMessage }}</p>
+    </section>
+
+    <section *ngIf="!loading && analysis.hasData; else loadingOrEmpty" class="analysis-body">
+      <section class="kpi-grid">
+        <article *ngFor="let card of analysis.kpis" class="kpi-card panel" [ngClass]="'tone-' + card.tone">
+          <span class="kpi-label">{{ card.label }}</span>
+          <strong>{{ formatCurrency(card.value) }}</strong>
+          <span class="kpi-detail">{{ card.detail }}</span>
+          <p>{{ card.helper }}</p>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Gasto por categoria</span>
+              <h3>Donde se va el dinero</h3>
+            </div>
+            <span class="score-chip">{{ getSelectedMonthName() }}</span>
+          </div>
+
+          <div class="donut-layout">
+            <div class="donut-chart" [style.background]="analysis.categoryDonutStyle">
+              <div class="donut-center">
+                <span>Total gasto</span>
+                <strong>{{ analysis.categoryDonutCenter }}</strong>
+              </div>
+            </div>
+
+            <div class="legend-list">
+              <div *ngFor="let item of analysis.topCategories" class="legend-row">
+                <span class="legend-dot" [style.background]="item.color"></span>
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ formatCurrency(item.amount) }} | {{ formatPercent(item.share) }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Distribucion</span>
+              <h3>Ingresos vs egresos</h3>
+            </div>
+            <span class="score-chip">{{ analysis.monthLabel }}</span>
+          </div>
+
+          <div class="distribution-bar" [style.background]="analysis.incomeExpenseBarStyle"></div>
+
+          <div class="distribution-grid">
+            <div class="distribution-card income">
+              <span>Ingresos</span>
+              <strong>{{ formatCurrency(analysis.totalIncome) }}</strong>
+            </div>
+            <div class="distribution-card expense">
+              <span>Egresos</span>
+              <strong>{{ formatCurrency(analysis.totalExpense) }}</strong>
+            </div>
+            <div class="distribution-card balance" [ngClass]="analysis.balance >= 0 ? 'positive' : 'negative'">
+              <span>Balance</span>
+              <strong>{{ formatCurrency(analysis.balance) }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel debt-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Semaforo</span>
+              <h3>{{ analysis.trafficLight.label }}</h3>
+            </div>
+            <span class="signal-pill" [ngClass]="'signal-' + analysis.trafficLight.tone">
+              {{ analysis.trafficLight.tone === 'green' ? 'Verde' : analysis.trafficLight.tone === 'yellow' ? 'Amarillo' : 'Rojo' }}
+            </span>
+          </div>
+          <p class="panel-copy">{{ analysis.trafficLight.description }}</p>
+
+          <div class="debt-highlight-grid">
+            <div class="metric-chip">
+              <span>Deuda mensual</span>
+              <strong>{{ formatCurrency(analysis.debtMonthly) }}</strong>
+            </div>
+            <div class="metric-chip">
+              <span>Intereses pendientes</span>
+              <strong>{{ formatCurrency(analysis.interestPending) }}</strong>
+            </div>
+            <div class="metric-chip">
+              <span>Deuda pendiente</span>
+              <strong>{{ formatCurrency(analysis.debtPending) }}</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="split-grid">
+        <article class="panel trend-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Tendencia mensual</span>
+              <h3>Evolucion de los ultimos 6 meses</h3>
+            </div>
+          </div>
+
+          <div class="trend-chart">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="0" [attr.y1]="analysis.trendChart.zeroLineY" x2="100" [attr.y2]="analysis.trendChart.zeroLineY" class="trend-zero"></line>
+              <polyline [attr.points]="analysis.trendChart.incomePoints" class="trend-line income"></polyline>
+              <polyline [attr.points]="analysis.trendChart.expensePoints" class="trend-line expense"></polyline>
+              <polyline [attr.points]="analysis.trendChart.balancePoints" class="trend-line balance"></polyline>
+            </svg>
+          </div>
+
+          <div class="trend-legend">
+            <span><i class="legend-dot income"></i> Ingresos</span>
+            <span><i class="legend-dot expense"></i> Egresos</span>
+            <span><i class="legend-dot balance"></i> Balance</span>
+          </div>
+
+          <div class="trend-grid">
+            <div *ngFor="let item of analysis.trend" class="trend-card">
+              <strong>{{ item.label }}</strong>
+              <span>Ingreso: {{ formatCurrency(item.income) }}</span>
+              <span>Egreso: {{ formatCurrency(item.expense) }}</span>
+              <span>Balance: {{ formatCurrency(item.balance) }}</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Top categorias</span>
+              <h3>Mayor concentracion de gasto</h3>
+            </div>
+          </div>
+
+          <div class="top-list">
+            <div *ngFor="let item of analysis.topCategories" class="top-row">
+              <div class="top-row-head">
+                <strong>{{ item.name }}</strong>
+                <span>{{ formatCurrency(item.amount) }}</span>
+              </div>
+              <div class="top-row-bar">
+                <span [style.width.%]="item.share * 100" [style.background]="item.color"></span>
+              </div>
+              <small>{{ formatPercent(item.share) }} del gasto total</small>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="split-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Deuda e intereses</span>
+              <h3>Estado por entidad financiera</h3>
+            </div>
+          </div>
+
+          <div *ngIf="analysis.debtEntities.length > 0; else emptyDebt" class="entity-debt-list">
+            <article *ngFor="let item of analysis.debtEntities" class="entity-debt-card" [ngClass]="'tone-' + item.tone">
+              <div class="entity-debt-header">
+                <strong>{{ item.name }}</strong>
+                <span>{{ formatCurrency(item.monthlyDue) }}</span>
+              </div>
+              <small>Deuda pendiente: {{ formatCurrency(item.pendingDebt) }}</small>
+              <small>Interes pendiente: {{ formatCurrency(item.interestPending) }}</small>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Analisis automatico</span>
+              <h3>Lectura inteligente del mes</h3>
+            </div>
+          </div>
+
+          <div class="insights-list">
+            <article *ngFor="let item of analysis.insights" class="insight-card" [ngClass]="'tone-' + item.tone">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.text }}</p>
+            </article>
+          </div>
+        </article>
+      </section>
+
+      <section class="split-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Preguntas clave</span>
+              <h3>Respuestas del sistema</h3>
+            </div>
+          </div>
+
+          <div class="qa-grid">
+            <article *ngFor="let item of analysis.answers" class="qa-card" [ngClass]="'tone-' + item.tone">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.text }}</p>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Recomendaciones</span>
+              <h3>Que corregir ahora</h3>
+            </div>
+          </div>
+
+          <div class="recommendations-list">
+            <article *ngFor="let item of analysis.recommendations" class="recommendation-card" [ngClass]="'tone-' + item.tone">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.text }}</p>
+            </article>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <ng-template #loadingOrEmpty>
+      <section class="panel state-panel">
+        <strong>{{ loading ? 'Procesando analisis financiero...' : 'Sin movimientos suficientes para el analisis.' }}</strong>
+        <p>{{ loading ? 'Estamos consolidando ingresos, gastos, deudas, pagos e intereses del periodo seleccionado.' : analysis.summary }}</p>
+      </section>
+    </ng-template>
+
+    <ng-template #emptyDebt>
+      <div class="chart-empty">
+        <strong>Sin deuda visible para este corte</strong>
+        <p>Con los filtros actuales no aparecen cuotas o intereses pendientes dentro del periodo analizado.</p>
+      </div>
+    </ng-template>
+  </main>
+</div>

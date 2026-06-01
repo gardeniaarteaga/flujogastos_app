@@ -52,6 +52,13 @@ export const routes: Routes = [
     path: 'resumen/notificaciones',
     component: ResumenNotificacionesPage,
   },
+  {
+    path: 'reportes/analisis-financiero',
+    loadComponent: () =>
+      import('./pages/analisis-financiero/analisis-financiero.page').then(
+        (module) => module.AnalisisFinancieroPage,
+      ),
+  },
   { path: 'categorias', component: CategoriasPage },
   { path: 'subcategorias', component: SubcategoriasPage },
   { path: 'formas-pago', component: FormasPagoPage },

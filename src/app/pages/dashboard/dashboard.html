@@ -131,6 +131,14 @@
         </div>
       </div>
 
+      <a
+        class="nav-item"
+        routerLink="/reportes/analisis-financiero"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Reportes
+      </a>
       <a class="nav-item" routerLink="/perfil">Mi perfil</a>
     </nav>
 
@@ -144,36 +152,42 @@
   <main class="content">
     <app-session-strip></app-session-strip>
 
-    <section class="hero-finance panel">
-      <div class="hero-copy">
-        <span class="hero-kicker">Dashboard inteligente</span>
-        <h2>Tu salud financiera en una sola vista accionable.</h2>
-        <p>{{ analytics.summary }}</p>
-
-        <div class="hero-actions">
-          <button type="button" class="secondary-button" (click)="loadDashboard()" [disabled]="loading">
-            {{ loading ? 'Actualizando...' : 'Actualizar analisis' }}
-          </button>
-          <a class="hero-link" routerLink="/transacciones/listado">Ir al detalle</a>
-        </div>
-      </div>
-
-      <div class="hero-score" [ngClass]="'tone-' + analytics.healthTone">
-        <span class="hero-score-label">Score financiero</span>
-        <strong>{{ analytics.healthScore }}</strong>
-        <p>{{ analytics.healthLabel }}</p>
-        <div class="hero-score-meta">
-          <span>{{ analytics.currentMonthLabel }}</span>
-          <span *ngIf="analytics.capacity.ratio !== null">
-            Deuda mensual: {{ formatPercent(analytics.capacity.ratio) }}
-          </span>
-        </div>
-      </div>
-    </section>
-
     <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
       <strong>No se pudo generar la reporteria.</strong>
       <p>{{ errorMessage }}</p>
+    </section>
+
+    <section *ngIf="loading" class="panel state-panel">
+      <strong>Actualizando dashboard del titular...</strong>
+      <p>Estoy consolidando los totales del mes y tus notificaciones configuradas.</p>
+    </section>
+
+    <section *ngIf="!loading" class="dashboard-body compact-dashboard">
+      <section class="panel dashboard-header-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">Dashboard limpio</span>
+            <h3>{{ analytics.currentMonthLabel }}</h3>
+          </div>
+          <button type="button" class="secondary-button" (click)="loadDashboard()" [disabled]="loading">
+            Actualizar
+          </button>
+        </div>
+        <p class="panel-copy">{{ analytics.summary }}</p>
+      </section>
+
+      <section class="kpi-grid compact-kpi-grid">
+        <article
+          *ngFor="let card of analytics.kpis"
+          class="kpi-card panel compact-kpi-card"
+          [ngClass]="'tone-' + card.tone"
+        >
+          <span class="kpi-label">{{ card.label }}</span>
+          <strong>{{ formatCurrency(card.value) }}</strong>
+          <span class="kpi-detail">{{ card.detail }}</span>
+          <p>{{ card.helper }}</p>
+        </article>
+      </section>
     </section>
 
     <section *ngIf="!loading" class="panel scheduled-notifications-panel">
@@ -224,428 +238,10 @@
       </div>
     </section>
 
-    <section *ngIf="!loading && analytics.hasData; else loadingOrEmpty" class="dashboard-body">
-      <section class="kpi-grid">
-        <article
-          *ngFor="let card of analytics.kpis"
-          class="kpi-card panel"
-          [ngClass]="'tone-' + card.tone"
-        >
-          <span class="kpi-label">{{ card.label }}</span>
-          <strong>{{ formatCurrency(card.value) }}</strong>
-          <span class="kpi-detail">{{ card.detail }}</span>
-          <p>{{ card.helper }}</p>
-        </article>
-      </section>
-
-      <section class="main-grid">
-        <article class="panel capacity-panel" [ngClass]="'tone-' + analytics.capacity.tone">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Capacidad de pago</span>
-              <h3>{{ analytics.capacity.headline }}</h3>
-            </div>
-            <span class="score-chip" [ngClass]="'tone-' + analytics.capacity.tone">
-              {{ formatPercent(analytics.capacity.ratio) }}
-            </span>
-          </div>
-
-          <p class="panel-copy">{{ analytics.capacity.description }}</p>
-
-          <div class="capacity-bar">
-            <span [style.width.%]="analytics.capacity.progress * 100"></span>
-          </div>
-
-          <div class="capacity-metrics">
-            <div>
-              <span>Ingresos del mes</span>
-              <strong>{{ formatCurrency(analytics.capacity.income) }}</strong>
-            </div>
-            <div>
-              <span>Cuotas del mes</span>
-              <strong>{{ formatCurrency(analytics.capacity.debtDue) }}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel donut-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Categorias</span>
-              <h3>{{ analytics.categoryDonut.title }}</h3>
-            </div>
-            <span class="score-chip tone-info">{{ analytics.currentMonthLabel }}</span>
-          </div>
-
-          <p class="panel-copy">{{ analytics.categoryDonut.subtitle }}</p>
-
-          <div *ngIf="!analytics.categoryDonut.empty; else emptyCategoryChart" class="donut-layout">
-            <div class="donut-shell">
-              <svg viewBox="0 0 100 100" class="donut-chart" aria-hidden="true">
-                <g transform="rotate(-90 50 50)">
-                  <circle cx="50" cy="50" r="38" class="donut-track"></circle>
-                  <circle
-                    *ngFor="let segment of analytics.categoryDonut.segments"
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    class="donut-segment"
-                    [attr.stroke]="segment.color"
-                    [attr.stroke-dasharray]="segment.dasharray"
-                    [attr.stroke-dashoffset]="segment.dashoffset"
-                  ></circle>
-                </g>
-              </svg>
-              <div class="donut-center">
-                <span>Total</span>
-                <strong>{{ analytics.categoryDonut.totalLabel }}</strong>
-              </div>
-            </div>
-
-            <div class="legend-list">
-              <div *ngFor="let item of analytics.categoryDonut.legend" class="legend-item">
-                <div class="legend-name">
-                  <span class="legend-dot" [style.background]="item.color"></span>
-                  <strong>{{ item.name }}</strong>
-                </div>
-                <span>{{ formatCurrency(item.amount) }}</span>
-                <small>{{ item.secondary }}</small>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel donut-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Subcategorias</span>
-              <h3>{{ analytics.subcategoryDonut.title }}</h3>
-            </div>
-            <span class="score-chip tone-neutral">Top 5</span>
-          </div>
-
-          <p class="panel-copy">{{ analytics.subcategoryDonut.subtitle }}</p>
-
-          <div *ngIf="!analytics.subcategoryDonut.empty; else emptySubcategoryChart" class="donut-layout">
-            <div class="donut-shell compact">
-              <svg viewBox="0 0 100 100" class="donut-chart" aria-hidden="true">
-                <g transform="rotate(-90 50 50)">
-                  <circle cx="50" cy="50" r="38" class="donut-track"></circle>
-                  <circle
-                    *ngFor="let segment of analytics.subcategoryDonut.segments"
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    class="donut-segment"
-                    [attr.stroke]="segment.color"
-                    [attr.stroke-dasharray]="segment.dasharray"
-                    [attr.stroke-dashoffset]="segment.dashoffset"
-                  ></circle>
-                </g>
-              </svg>
-              <div class="donut-center">
-                <span>Total</span>
-                <strong>{{ analytics.subcategoryDonut.totalLabel }}</strong>
-              </div>
-            </div>
-
-            <div class="legend-list">
-              <div *ngFor="let item of analytics.subcategoryDonut.legend" class="legend-item">
-                <div class="legend-name">
-                  <span class="legend-dot" [style.background]="item.color"></span>
-                  <strong>{{ item.name }}</strong>
-                </div>
-                <span>{{ formatCurrency(item.amount) }}</span>
-                <small>{{ item.secondary }}</small>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel trend-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="panel-kicker">Evolucion mensual</span>
-            <h3>Ingresos, gastos y balance</h3>
-          </div>
-          <span class="score-chip tone-good">Ultimos 6 meses</span>
-        </div>
-
-        <div class="trend-chart-wrap">
-          <svg viewBox="0 0 100 44" class="trend-chart" preserveAspectRatio="none" aria-hidden="true">
-            <line x1="0" x2="100" [attr.y1]="analytics.trendChart.zeroLineY" [attr.y2]="analytics.trendChart.zeroLineY" class="trend-zero"></line>
-            <polyline [attr.points]="analytics.trendChart.incomePoints" class="trend-line income"></polyline>
-            <polyline [attr.points]="analytics.trendChart.expensePoints" class="trend-line expense"></polyline>
-            <polyline [attr.points]="analytics.trendChart.balancePoints" class="trend-line balance"></polyline>
-          </svg>
-          <div class="trend-labels">
-            <span *ngFor="let month of analytics.trendChart.months">{{ month.label }}</span>
-          </div>
-        </div>
-
-        <div class="trend-legend">
-          <span><i class="legend-swatch income"></i>Ingresos</span>
-          <span><i class="legend-swatch expense"></i>Gastos</span>
-          <span><i class="legend-swatch balance"></i>Balance</span>
-        </div>
-      </section>
-
-      <section class="split-grid">
-        <article class="panel insights-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Preguntas clave</span>
-              <h3>Respuestas del sistema</h3>
-            </div>
-          </div>
-
-          <div class="insight-list">
-            <div
-              *ngFor="let insight of analytics.insights"
-              class="insight-card"
-              [ngClass]="'tone-' + insight.tone"
-            >
-              <strong>{{ insight.question }}</strong>
-              <p>{{ insight.answer }}</p>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel hormiga-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Gastos hormiga</span>
-              <h3>Movimientos pequenos repetitivos</h3>
-            </div>
-            <span class="score-chip tone-warning">{{ analytics.hormigas.length }} focos</span>
-          </div>
-
-          <div *ngIf="analytics.hormigas.length > 0; else noHormigas" class="hormiga-list">
-            <div *ngFor="let item of analytics.hormigas" class="hormiga-item">
-              <div>
-                <strong>{{ item.label }}</strong>
-                <p>{{ item.category }} | {{ item.count }} repeticiones</p>
-              </div>
-              <div class="hormiga-metric">
-                <span>{{ formatCurrency(item.total) }}</span>
-                <small>Promedio {{ formatCurrency(item.average) }}</small>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel debt-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="panel-kicker">Modulo de deuda</span>
-            <h3>Saldo pendiente, intereses y proyeccion</h3>
-          </div>
-          <span class="score-chip tone-warning">{{ analytics.debtSummary.pendingInstallments }} cuotas</span>
-        </div>
-
-        <div class="debt-summary-grid">
-          <article class="debt-summary-card">
-            <span>Saldo pendiente total</span>
-            <strong>{{ formatCurrency(analytics.debtSummary.totalDebt) }}</strong>
-            <small>Entidad con mayor deuda: {{ analytics.debtSummary.highestDebtEntity }}</small>
-          </article>
-          <article class="debt-summary-card">
-            <span>Intereses acumulados</span>
-            <strong>{{ formatCurrency(analytics.debtSummary.totalInterest) }}</strong>
-            <small>
-              Mayor carga de interes: {{ analytics.debtSummary.highestInterestEntity }}
-            </small>
-          </article>
-          <article class="debt-summary-card">
-            <span>Proyeccion de pago</span>
-            <strong>{{ analytics.debtSummary.projectedEndLabel }}</strong>
-            <small>Ultima fecha programada visible en cuotas pendientes</small>
-          </article>
-        </div>
-
-        <div class="table-wrap debt-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Entidad</th>
-                <th>Deuda</th>
-                <th>Interes pendiente</th>
-                <th>Cuotas pendientes</th>
-                <th>Fin proyectado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of analytics.debtEntities">
-                <td>{{ item.entityName }}</td>
-                <td>{{ formatCurrency(item.debt) }}</td>
-                <td>{{ formatCurrency(item.pendingInterest) }}</td>
-                <td>{{ item.pendingInstallments }}</td>
-                <td>{{ item.projectedEnd }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="split-grid bottom-grid">
-        <article class="panel recommendation-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Recomendaciones automaticas</span>
-              <h3>Educacion financiera basada en reglas</h3>
-            </div>
-          </div>
-
-          <div class="recommendation-list">
-            <div
-              *ngFor="let item of analytics.recommendations"
-              class="recommendation-card"
-              [ngClass]="'tone-' + item.tone"
-            >
-              <div class="recommendation-header">
-                <strong>{{ item.title }}</strong>
-                <span>{{ item.metric }}</span>
-              </div>
-              <p>{{ item.message }}</p>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel trend-table-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="panel-kicker">Analisis por mes</span>
-              <h3>Comparativo de los ultimos meses</h3>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th>Ingresos</th>
-                  <th>Gastos</th>
-                  <th>Balance</th>
-                  <th>Cuotas</th>
-                  <th>Capacidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let month of analytics.trendTable">
-                  <td>{{ month.label }}</td>
-                  <td>{{ formatCurrency(month.income) }}</td>
-                  <td>{{ formatCurrency(month.expense) }}</td>
-                  <td>{{ formatCurrency(month.balance) }}</td>
-                  <td>{{ formatCurrency(month.debtDue) }}</td>
-                  <td>{{ formatPercent(month.paymentCapacity) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel scheduled-transactions-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="panel-kicker">Detalle de transacciones</span>
-            <h3>Cuotas y movimientos con fecha programada</h3>
-          </div>
-          <span class="score-chip tone-info">{{ analytics.currentMonthLabel }}</span>
-        </div>
-
-        <div *ngIf="analytics.scheduledDetails.length > 0; else emptyScheduledDetails" class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha programada</th>
-                <th>Descripcion</th>
-                <th>Categoria</th>
-                <th>Forma de pago</th>
-                <th>Entidad</th>
-                <th>Total</th>
-                <th>Pagado</th>
-                <th>Pendiente</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of analytics.scheduledDetails">
-                <td>{{ formatFullDate(item.scheduledDate) }}</td>
-                <td>{{ item.description }}</td>
-                <td>
-                  {{ item.categoryName }}
-                  <span *ngIf="item.subcategoryName !== 'Sin subcategoria'">
-                    / {{ item.subcategoryName }}
-                  </span>
-                </td>
-                <td>{{ item.paymentMethodName }}</td>
-                <td>{{ item.entityName }}</td>
-                <td>{{ formatCurrency(item.amount) }}</td>
-                <td>{{ formatCurrency(item.amountPaid) }}</td>
-                <td>{{ formatCurrency(item.pending) }}</td>
-                <td>
-                  <span class="score-chip" [ngClass]="'tone-' + item.tone">
-                    {{ item.statusLabel }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-
-    <ng-template #loadingOrEmpty>
-      <section *ngIf="loading" class="panel state-panel">
-        <strong>Procesando reporteria financiera...</strong>
-        <p>Estoy consolidando transacciones, cuotas, intereses y tendencias del usuario actual.</p>
-      </section>
-
-      <section *ngIf="!loading && !analytics.hasData" class="panel state-panel">
-        <strong>Sin movimientos suficientes para el analisis.</strong>
-        <p>
-          Registra ingresos, gastos o deudas y vuelve a abrir esta vista para activar KPIs,
-          tendencias y recomendaciones.
-        </p>
-      </section>
-    </ng-template>
-
-    <ng-template #emptyCategoryChart>
-      <div class="chart-empty">
-        <strong>Sin gasto clasificado este mes</strong>
-        <p>Cuando existan movimientos del mes veras la concentracion del gasto por categoria.</p>
-      </div>
-    </ng-template>
-
-    <ng-template #emptySubcategoryChart>
-      <div class="chart-empty">
-        <strong>Sin subcategorias con movimiento</strong>
-        <p>El detalle fino aparecera automaticamente cuando existan registros suficientes.</p>
-      </div>
-    </ng-template>
-
-    <ng-template #noHormigas>
-      <div class="chart-empty">
-        <strong>No se detectan gastos hormiga relevantes</strong>
-        <p>De momento no hay un patron fuerte de consumos pequenos y repetitivos.</p>
-      </div>
-    </ng-template>
-
     <ng-template #emptyScheduledNotifications>
       <div class="chart-empty">
         <strong>No tienes recordatorios programados</strong>
         <p>Crea tus notificaciones de pago para verlas destacadas aqui en el dashboard.</p>
-      </div>
-    </ng-template>
-
-    <ng-template #emptyScheduledDetails>
-      <div class="chart-empty">
-        <strong>Sin transacciones programadas este mes</strong>
-        <p>Cuando existan cuotas o movimientos con fecha programada del mes actual apareceran aqui.</p>
       </div>
     </ng-template>
   </main>

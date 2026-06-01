@@ -14,6 +14,7 @@ import {
   ConfiguracionNotificacionPago,
   NotificacionesService,
 } from '../../shared/services/notificaciones.service';
+import { SweetAlertService } from '../../shared/services/sweet-alert.service';
 import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
@@ -241,6 +242,7 @@ export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
+  private readonly alerts = inject(SweetAlertService);
   private readonly apiUrl = apiUrl('transacciones');
   private readonly timeoutMs = 10000;
   private readonly currencyFormatter = new Intl.NumberFormat('es-SV', {
@@ -300,8 +302,7 @@ export class Dashboard implements OnInit {
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
       this.currentUserId = resolvedUserId > 0 ? resolvedUserId : this.currentUserId;
 
-      const [catalogos, transacciones, programadas] = await Promise.all([
-        this.catalogosService.loadCatalogos(true),
+      const [transacciones, programadas] = await Promise.all([
         firstValueFrom(
           this.http
             .get<TransaccionListado[]>(this.apiUrl, {
@@ -316,11 +317,7 @@ export class Dashboard implements OnInit {
         }),
       ]);
 
-      this.analytics = this.buildAnalytics(
-        Array.isArray(transacciones) ? transacciones : [],
-        catalogos.formasPago,
-        catalogos.entidadesFinancieras,
-      );
+      this.analytics = this.buildAnalytics(Array.isArray(transacciones) ? transacciones : []);
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
     } catch {
       this.analytics = this.createEmptyAnalytics();
@@ -375,8 +372,15 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await this.alerts.confirm(
+      'Finalizar notificacion programada',
       `Se finalizara la notificacion programada "${item.descripcion}".`,
+      'Si, finalizar',
+      {
+        icon: 'warning',
+        confirmButtonColor: '#7c3a72',
+        cancelButtonColor: '#d1d5db',
+      },
     );
 
     if (!confirmed) {
@@ -404,275 +408,168 @@ export class Dashboard implements OnInit {
 
   private buildAnalytics(
     transacciones: TransaccionListado[],
-    formasPago: CatalogoFormaPago[],
-    entidades: CatalogoEntidadFinanciera[],
   ): DashboardAnalytics {
-    const formsById = new Map(formasPago.map((item) => [item.id_forma, item]));
-    const entitiesById = new Map(entidades.map((item) => [item.id_entidad, item.nombre_entidad]));
-    const enriched = transacciones
-      .map((item) => this.enrichTransaction(item, formsById, entitiesById))
-      .filter((item) => item.date !== null || item.details.length > 0);
+    const currentMonth = this.getMonthStart(new Date());
+    const currentMonthKey = this.getMonthKey(currentMonth);
+    const currentMonthLabel = this.capitalizeText(this.monthFormatter.format(currentMonth));
 
-    if (enriched.length === 0) {
-      return this.createEmptyAnalytics();
-    }
-
-    const months = this.createRollingMonths(6);
-    const monthMap = new Map(
-      months.map((month) => [
-        month.key,
-        {
-          ...month,
-          income: 0,
-          expense: 0,
-          balance: 0,
-          debtDue: 0,
-          paymentCapacity: null,
-        },
-      ]),
+    const currentMonthIncome = this.roundMoney(
+      transacciones.reduce(
+        (sum, transaction) => sum + this.resolveTitularIncomeForMonth(transaction, currentMonthKey),
+        0,
+      ),
     );
-
-    for (const transaction of enriched) {
-      if (transaction.monthKey && monthMap.has(transaction.monthKey)) {
-        const bucket = monthMap.get(transaction.monthKey)!;
-
-        if (transaction.type === 'income') {
-          bucket.income += transaction.personalAmount;
-        } else {
-          bucket.expense += transaction.personalAmount;
-        }
-      }
-
-      for (const detail of transaction.details) {
-        const dueKey = detail.dueDate ? this.getMonthKey(detail.dueDate) : null;
-
-        if (!dueKey || !monthMap.has(dueKey)) {
-          continue;
-        }
-
-        monthMap.get(dueKey)!.debtDue += detail.scheduledTotal;
-      }
-    }
-
-    const trendMonths = months.map((month) => {
-      const bucket = monthMap.get(month.key)!;
-      const income = this.roundMoney(bucket.income);
-      const expense = this.roundMoney(bucket.expense);
-      const debtDue = this.roundMoney(bucket.debtDue);
-      const paymentCapacity = income > 0 ? debtDue / income : debtDue > 0 ? 1 : null;
-
-      return {
-        key: month.key,
-        label: month.label,
-        income,
-        expense,
-        balance: this.roundMoney(income - expense),
-        debtDue,
-        paymentCapacity,
-      };
-    });
-
-    const currentMonth = trendMonths[trendMonths.length - 1];
-    const currentMonthExpenses = enriched.filter(
-      (item) => item.type === 'expense' && item.monthKey === currentMonth.key,
+    const currentMonthExpense = this.roundMoney(
+      transacciones.reduce(
+        (sum, transaction) => sum + this.resolveTitularExpenseForMonth(transaction, currentMonthKey),
+        0,
+      ),
     );
-    const currentMonthIncome = currentMonth.income;
-    const currentMonthExpense = currentMonth.expense;
-    const currentMonthBalance = currentMonth.balance;
-    const currentMonthSavings = Math.max(0, currentMonthBalance);
-    const savingsRate = currentMonthIncome > 0 ? currentMonthSavings / currentMonthIncome : null;
-    const expenseRatio = currentMonthIncome > 0 ? currentMonthExpense / currentMonthIncome : null;
-
-    const totalDebt = this.roundMoney(
-      enriched
-        .filter((item) => item.type === 'expense')
-        .reduce((sum, item) => sum + item.personalDebt, 0),
-    );
-    const totalInterest = this.roundMoney(
-      enriched
-        .filter((item) => item.type === 'expense')
-        .reduce((sum, item) => sum + item.totalInterest, 0),
-    );
-    const pendingInterest = this.roundMoney(
-      enriched
-        .filter((item) => item.type === 'expense')
-        .reduce((sum, item) => sum + item.pendingInterest, 0),
-    );
-    const pendingInstallments = enriched
-      .filter((item) => item.type === 'expense')
-      .reduce((sum, item) => sum + item.pendingInstallments, 0);
-
-    const paymentCapacity = this.buildCapacityModel(currentMonthIncome, currentMonth.debtDue);
-    const topCategories = this.buildRanking(
-      currentMonthExpenses,
-      currentMonthExpense,
-      (item) => item.categoryName,
-      'categoria',
-    );
-    const topSubcategories = this.buildRanking(
-      currentMonthExpenses,
-      currentMonthExpense,
-      (item) => item.subcategoryName,
-      'subcategoria',
-    );
-    const categoryDonut = this.buildDonutChart(
-      'Gasto por categoria',
-      'Distribucion del gasto del mes para detectar concentracion de consumo.',
-      topCategories,
-      currentMonthExpense,
-    );
-    const subcategoryDonut = this.buildDonutChart(
-      'Gasto por subcategoria',
-      'Detalle fino para localizar habitos y gastos repetitivos.',
-      topSubcategories,
-      currentMonthExpense,
-    );
-    const hormigas = this.detectGastosHormiga(enriched, currentMonthExpense, currentMonthIncome);
-    const debtEntities = this.buildDebtEntities(enriched);
-    const projectedEndLabel = this.resolveProjectedEndLabel(enriched);
-    const highestDebtEntity = debtEntities[0]?.entityName ?? 'Sin deuda activa';
-    const highestInterestEntity =
-      debtEntities
-        .slice()
-        .sort((a, b) => b.pendingInterest - a.pendingInterest)[0]?.entityName ??
-      'Sin interes pendiente';
-    const trendText = this.buildTrendNarrative(trendMonths);
-    const healthScore = this.buildHealthScore(
-      expenseRatio,
-      savingsRate,
-      paymentCapacity.ratio,
-      pendingInterest,
-      totalDebt,
-    );
-    const healthLabel = this.resolveHealthLabel(healthScore);
-    const healthTone = this.resolveHealthTone(healthScore);
-    const recommendations = this.buildRecommendations(
-      {
-        income: currentMonthIncome,
-        expense: currentMonthExpense,
-        balance: currentMonthBalance,
-        savingsRate,
-        paymentCapacity: paymentCapacity.ratio,
-        pendingInterest,
-        totalDebt,
-      },
-      topCategories,
-      hormigas,
-    );
-    const insights = this.buildInsights(
-      {
-        topCategories,
-        currentMonthBalance,
-        currentMonthIncome,
-        paymentCapacity,
-        pendingInterest,
-        trendText,
-        recommendations,
-      },
-      currentMonthExpense,
-    );
-    const scheduledDetails = this.buildScheduledTransactionDetails(
-      enriched,
-      currentMonth.key,
-    );
+    const hasData = currentMonthIncome > 0 || currentMonthExpense > 0;
 
     return {
-      hasData: true,
-      currentMonthLabel: this.capitalizeText(this.monthFormatter.format(this.getMonthStart(new Date()))),
-      healthScore,
-      healthTone,
-      healthLabel,
-      summary: this.buildSummaryText(
-        currentMonthBalance,
-        paymentCapacity.ratio,
-        trendText,
-        pendingInterest,
-      ),
+      hasData,
+      currentMonthLabel,
+      healthScore: 0,
+      healthTone: 'neutral',
+      healthLabel: 'Resumen del titular',
+      summary: `Vista mensual del titular para ${currentMonthLabel}.`,
       kpis: [
         {
-          label: 'Ingresos del mes',
+          label: 'Total ingresos del mes',
           value: currentMonthIncome,
-          detail: this.buildDeltaLabel(currentMonth.income, trendMonths[trendMonths.length - 2]?.income ?? 0),
-          helper: 'Entradas registradas en el mes actual.',
+          detail: 'Solo titular',
+          helper: 'Suma de ingresos del mes visibles para el titular.',
           tone: 'good',
         },
         {
-          label: 'Gastos del mes',
+          label: 'Total gastos del mes',
           value: currentMonthExpense,
-          detail: topCategories[0]
-            ? `${topCategories[0].name} lidera con ${this.formatPercent(topCategories[0].share)}`
-            : 'Sin categorias con movimiento',
-          helper: 'Compromisos y consumos del mes.',
-          tone: expenseRatio !== null && expenseRatio > 0.85 ? 'warning' : 'info',
-        },
-        {
-          label: 'Balance mensual',
-          value: currentMonthBalance,
-          detail: trendText,
-          helper: 'Diferencia entre ingresos y gastos.',
-          tone: currentMonthBalance >= 0 ? 'good' : 'danger',
-        },
-        {
-          label: 'Ahorro',
-          value: currentMonthSavings,
-          detail:
-            savingsRate !== null
-              ? `${this.formatPercent(savingsRate)} del ingreso del mes`
-              : 'Sin ingresos suficientes para medir ahorro',
-          helper: 'Excedente disponible despues del gasto.',
-          tone: savingsRate !== null && savingsRate >= 0.1 ? 'good' : 'warning',
-        },
-        {
-          label: 'Deuda total',
-          value: totalDebt,
-          detail:
-            totalDebt > 0
-              ? `${pendingInstallments} cuotas pendientes`
-              : 'Sin saldo pendiente relevante',
-          helper: 'Saldo pendiente asociado a compras o pagos diferidos.',
-          tone: totalDebt > 0 ? 'warning' : 'good',
-        },
-        {
-          label: 'Intereses acumulados',
-          value: totalInterest,
-          detail:
-            pendingInterest > 0
-              ? `${this.formatCurrency(pendingInterest)} pendientes por pagar`
-              : 'Sin interes pendiente visible',
-          helper: 'Interes pagado y pendiente sobre deudas activas.',
-          tone: pendingInterest > 0 ? 'warning' : 'neutral',
-        },
-        {
-          label: 'Capacidad de pago',
-          value: currentMonth.debtDue,
-          detail:
-            paymentCapacity.ratio !== null
-              ? `${this.formatPercent(paymentCapacity.ratio)} de los ingresos del mes`
-              : 'No hay ingresos o cuotas del mes para medir',
-          helper: 'Cuotas del mes frente a ingreso actual.',
-          tone: paymentCapacity.tone,
+          detail: 'Solo titular',
+          helper: 'Suma de gastos del mes visibles para el titular.',
+          tone: currentMonthExpense > 0 ? 'warning' : 'neutral',
         },
       ],
-      capacity: paymentCapacity,
-      categoryDonut,
-      subcategoryDonut,
-      trendChart: this.buildTrendChart(trendMonths),
-      topCategories,
-      hormigas,
-      insights,
-      debtSummary: {
-        totalDebt,
-        totalInterest,
-        pendingInstallments,
-        projectedEndLabel,
-        highestDebtEntity,
-        highestInterestEntity,
+      capacity: {
+        ratio: null,
+        tone: 'neutral',
+        headline: 'No aplica',
+        description: '',
+        income: 0,
+        debtDue: 0,
+        progress: 0,
       },
-      debtEntities,
-      recommendations,
-      trendTable: trendMonths,
-      scheduledDetails,
+      categoryDonut: {
+        title: '',
+        subtitle: '',
+        total: 0,
+        totalLabel: '',
+        empty: true,
+        segments: [],
+        legend: [],
+      },
+      subcategoryDonut: {
+        title: '',
+        subtitle: '',
+        total: 0,
+        totalLabel: '',
+        empty: true,
+        segments: [],
+        legend: [],
+      },
+      trendChart: {
+        months: [],
+        incomePoints: '',
+        expensePoints: '',
+        balancePoints: '',
+        zeroLineY: 0,
+      },
+      topCategories: [],
+      hormigas: [],
+      insights: [],
+      debtSummary: {
+        totalDebt: 0,
+        totalInterest: 0,
+        pendingInstallments: 0,
+        projectedEndLabel: '',
+        highestDebtEntity: '',
+        highestInterestEntity: '',
+      },
+      debtEntities: [],
+      recommendations: [],
+      trendTable: [],
+      scheduledDetails: [],
     };
+  }
+
+  private resolveTitularIncomeForMonth(
+    transaction: TransaccionListado,
+    monthKey: string,
+  ): number {
+    if (transaction.id_tipo_transaccion !== 2) {
+      return 0;
+    }
+
+    const titularDetails = this.getTitularDetails(transaction);
+
+    if (titularDetails.length === 0) {
+      const date = this.parseDateOnly(transaction.fecha);
+      return date && this.getMonthKey(date) === monthKey
+        ? this.roundMoney(Math.max(0, this.normalizeAmount(transaction.monto)))
+        : 0;
+    }
+
+    return this.roundMoney(
+      titularDetails.reduce((sum, detail) => {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          return sum;
+        }
+
+        return sum + Math.max(0, this.normalizeAmount(detail.monto));
+      }, 0),
+    );
+  }
+
+  private resolveTitularExpenseForMonth(
+    transaction: TransaccionListado,
+    monthKey: string,
+  ): number {
+    if (transaction.id_tipo_transaccion === 2) {
+      return 0;
+    }
+
+    const titularDetails = this.getTitularDetails(transaction);
+
+    return this.roundMoney(
+      titularDetails.reduce((sum, detail) => {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          return sum;
+        }
+
+        return (
+          sum +
+          Math.max(0, this.normalizeAmount(detail.monto)) +
+          Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
+          Math.max(0, this.normalizeAmount(detail.interes_pendiente))
+        );
+      }, 0),
+    );
+  }
+
+  private getTitularDetails(transaction: TransaccionListado): ParticipanteDetalleListado[] {
+    const details = Array.isArray(transaction.participantes_detalle)
+      ? transaction.participantes_detalle
+      : [];
+
+    return details.filter((detail) => detail.es_titular);
   }
 
   private enrichTransaction(
@@ -1680,10 +1577,24 @@ export class Dashboard implements OnInit {
       currentMonthLabel: this.capitalizeText(this.monthFormatter.format(this.getMonthStart(new Date()))),
       healthScore: 0,
       healthTone: 'neutral',
-      healthLabel: 'Sin datos suficientes',
-      summary:
-        'Todavia no hay movimientos suficientes para construir la reporteria financiera inteligente.',
-      kpis: [],
+      healthLabel: 'Resumen del titular',
+      summary: 'Dashboard simplificado con notificaciones y totales mensuales del titular.',
+      kpis: [
+        {
+          label: 'Total ingresos del mes',
+          value: 0,
+          detail: 'Solo titular',
+          helper: 'Suma de ingresos del mes visibles para el titular.',
+          tone: 'good',
+        },
+        {
+          label: 'Total gastos del mes',
+          value: 0,
+          detail: 'Solo titular',
+          helper: 'Suma de gastos del mes visibles para el titular.',
+          tone: 'neutral',
+        },
+      ],
       capacity: {
         ratio: null,
         tone: 'neutral',

@@ -15,6 +15,15 @@
   margin-top: 1rem;
 }
 
+.compact-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-header-panel {
+  margin-top: 1rem;
+}
+
 .scheduled-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -189,6 +198,12 @@
   gap: 0.9rem;
 }
 
+.kpi-grid.compact-kpi-grid {
+  grid-template-columns: repeat(2, minmax(280px, 360px));
+  justify-content: start;
+  max-width: none;
+}
+
 .kpi-card {
   display: grid;
   gap: 0.55rem;
@@ -216,6 +231,35 @@
   margin: 0;
   color: #64748b;
   font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.compact-kpi-card {
+  gap: 0.7rem;
+  min-height: 220px;
+  padding: 1.35rem;
+  align-content: start;
+}
+
+.compact-kpi-card strong {
+  font-size: clamp(2.1rem, 3vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.compact-kpi-card .kpi-label {
+  max-width: 14ch;
+  color: #0f766e;
+}
+
+.compact-kpi-card .kpi-detail {
+  font-size: 1rem;
+  color: #172033;
+}
+
+.compact-kpi-card p {
+  max-width: 22ch;
+  font-size: 0.98rem;
   line-height: 1.55;
 }
 
@@ -574,6 +618,12 @@
 
 @media (max-width: 1220px) {
   .scheduled-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .kpi-grid.compact-kpi-grid {
     grid-template-columns: 1fr;
   }
 }
