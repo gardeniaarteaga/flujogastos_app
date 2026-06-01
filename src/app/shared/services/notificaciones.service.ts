@@ -179,6 +179,7 @@ export class NotificacionesService {
       ? response
           .map((item) => this.normalizeConfiguracion(item, periodicidadMap))
           .filter((item): item is ConfiguracionNotificacionPago => item !== null)
+          .filter((item) => this.isConfiguracionVisible(item))
       : [];
 
     return configuraciones.sort((a, b) => {
@@ -339,6 +340,26 @@ export class NotificacionesService {
     }
 
     return normalized;
+  }
+
+  private isConfiguracionVisible(configuracion: ConfiguracionNotificacionPago): boolean {
+    if (!configuracion.estado) {
+      return false;
+    }
+
+    const fechaFin = new Date(`${configuracion.fecha_fin}T00:00:00`);
+
+    if (Number.isNaN(fechaFin.getTime())) {
+      return true;
+    }
+
+    const limiteVisible = new Date(fechaFin);
+    limiteVisible.setDate(limiteVisible.getDate() + 15);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return today.getTime() <= limiteVisible.getTime();
   }
 
   private normalizeConfiguracion(

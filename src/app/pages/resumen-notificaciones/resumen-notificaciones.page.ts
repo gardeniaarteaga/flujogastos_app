@@ -31,7 +31,7 @@ const DISPLAY_DATE_PATTERN = /^\d{2}\/\d{2}\/\d{4}$/;
 const QUINCENAL_FALLBACK: PeriodicidadCatalogo = {
   id_periodicidad: 4,
   nombre_periodicidad: 'Quincenal',
-  descripcion: 'Se ejecutara dos veces al mes: el dia 15 y el ultimo dia del mes.',
+  descripcion: 'Se ejecutara dos veces al mes: el dia 15 y 30 de cada mes.',
   codigo: 'quincenal',
   estado: true,
 };
@@ -526,7 +526,7 @@ export class ResumenNotificacionesPage implements OnInit {
     }
 
     if (this.isQuincenalPeriodicidad(periodicidad)) {
-      return 'Se ejecuta el dia 15 y el ultimo dia de cada mes.';
+      return 'Se ejecuta el dia 15 y 30 de cada mes.';
     }
 
     return periodicidad.descripcion || 'Sin descripcion disponible.';
@@ -534,7 +534,7 @@ export class ResumenNotificacionesPage implements OnInit {
 
   getFrecuenciaLabel(configuracion: ConfiguracionNotificacionPago): string {
     if (this.isQuincenalPeriodicidad(configuracion.periodicidad, configuracion.id_periodicidad)) {
-      return '15 y ultimo dia del mes';
+      return '15 y 30 de cada mes';
     }
 
     return `Dia ${configuracion.dia_pago_programado}`;
