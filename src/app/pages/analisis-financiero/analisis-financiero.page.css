@@ -303,7 +303,9 @@
 .recommendations-list,
 .entity-debt-list,
 .top-list,
-.qa-grid {
+.qa-grid,
+.category-breakdown-list,
+.subcategory-breakdown-list {
   display: grid;
   gap: 0.75rem;
 }
@@ -313,7 +315,9 @@
 .insight-card,
 .recommendation-card,
 .qa-card,
-.trend-card {
+.trend-card,
+.category-breakdown-card,
+.subcategory-breakdown-row {
   padding: 0.95rem 1rem;
   border: 1px solid #e2e8f0;
   border-radius: 1rem;
@@ -322,9 +326,38 @@
 
 .legend-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
+}
+
+.legend-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.legend-copy strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-metrics {
+  display: grid;
+  justify-items: end;
+  gap: 0.12rem;
+  text-align: right;
+  min-width: 5.8rem;
+}
+
+.legend-metrics strong {
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.legend-metrics small {
+  font-weight: 700;
 }
 
 .legend-dot {
@@ -339,14 +372,19 @@
 .recommendation-card strong,
 .qa-card strong,
 .top-row strong,
-.trend-card strong {
+.trend-card strong,
+.category-breakdown-card strong,
+.subcategory-breakdown-row strong {
   color: #172033;
 }
 
 .legend-row small,
 .entity-debt-card small,
 .top-row small,
-.trend-card span {
+.trend-card span,
+.category-breakdown-card small,
+.subcategory-breakdown-row small,
+.category-breakdown-summary {
   color: #64748b;
 }
 
@@ -504,6 +542,66 @@
   gap: 0.35rem;
 }
 
+.category-breakdown-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.category-breakdown-card {
+  display: grid;
+  gap: 0.85rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.category-breakdown-head,
+.subcategory-breakdown-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.category-breakdown-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.category-breakdown-title strong,
+.subcategory-breakdown-copy strong {
+  display: block;
+}
+
+.category-breakdown-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #172033;
+}
+
+.category-breakdown-summary {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.subcategory-breakdown-list {
+  gap: 0.6rem;
+}
+
+.subcategory-breakdown-row {
+  padding: 0.8rem 0.9rem;
+  background: #ffffff;
+}
+
+.subcategory-breakdown-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.subcategory-breakdown-row span {
+  font-weight: 800;
+  color: #172033;
+}
+
 .entity-debt-header {
   display: flex;
   align-items: center;
@@ -556,7 +654,8 @@
 
   .main-grid,
   .split-grid,
-  .trend-grid {
+  .trend-grid,
+  .category-breakdown-list {
     grid-template-columns: 1fr;
   }
 }
@@ -572,6 +671,18 @@
   .donut-chart {
     width: min(220px, 100%);
     margin: 0 auto;
+  }
+
+  .legend-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .legend-metrics {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+    min-width: 0;
   }
 }
 

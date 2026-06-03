@@ -131,6 +131,24 @@ interface CategoryStat {
   color: string;
 }
 
+interface SubcategoryBreakdownStat {
+  name: string;
+  amount: number;
+  count: number;
+  shareOfCategory: number;
+  shareOfTotal: number;
+}
+
+interface CategoryBreakdownItem {
+  name: string;
+  amount: number;
+  share: number;
+  count: number;
+  color: string;
+  summary: string;
+  subcategories: SubcategoryBreakdownStat[];
+}
+
 interface TrendPoint {
   key: string;
   label: string;
@@ -175,6 +193,7 @@ interface AnalysisViewModel {
   kpis: KpiCard[];
   topCategories: CategoryStat[];
   topSubcategories: CategoryStat[];
+  categoryBreakdowns: CategoryBreakdownItem[];
   categoryDonutStyle: string;
   categoryDonutCenter: string;
   incomeExpenseBarStyle: string;
@@ -276,6 +295,36 @@ export class AnalisisFinancieroPage implements OnInit {
 
   get isAdminSession(): boolean {
     return isAdminUser();
+  }
+
+  get currentUserParticipante(): CatalogoParticipante | null {
+    const candidateNames = [
+      this.userProfile.fullName,
+      this.userProfile.username,
+    ]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map((value) => this.normalizeText(value));
+
+    const linkedParticipante =
+      this.participantes.find(
+        (participante) => participante.id_usuario_titular === this.currentUserId,
+      ) ?? null;
+
+    if (linkedParticipante) {
+      return linkedParticipante;
+    }
+
+    return (
+      this.participantes.find(
+        (participante) =>
+          participante.id_usuario === this.currentUserId &&
+          candidateNames.includes(this.normalizeText(participante.nombre_participante)),
+      ) ??
+      this.participantes.find(
+        (participante) => participante.id_usuario === this.currentUserId,
+      ) ??
+      null
+    );
   }
 
   ngOnInit(): void {
@@ -401,9 +450,7 @@ export class AnalisisFinancieroPage implements OnInit {
         transaction.nombre_estado_registro?.trim() ||
         'Sin estado';
       const description = transaction.descripcion?.trim() || 'Sin descripcion';
-      const detailRows = Array.isArray(transaction.participantes_detalle)
-        ? transaction.participantes_detalle
-        : [];
+      const detailRows = this.getParticipantesDetalleForAnalysis(transaction);
 
       if (detailRows.length === 0) {
         return [];
@@ -548,6 +595,38 @@ export class AnalisisFinancieroPage implements OnInit {
     this.updateSubcategoryOptions(this.filtrosForm.controls.categoryId.value ?? '');
   }
 
+  private getParticipantesDetalleForAnalysis(
+    transaccion: Pick<TransaccionListado, 'es_propietario' | 'participantes_detalle'> | null | undefined,
+  ): ParticipanteDetalleListado[] {
+    const detalles = Array.isArray(transaccion?.participantes_detalle)
+      ? transaccion.participantes_detalle
+      : [];
+
+    if (transaccion?.es_propietario) {
+      return detalles;
+    }
+
+    const detallesDelUsuario = detalles.filter((detalle) =>
+      this.isDetalleDelUsuarioLogueado(detalle, false),
+    );
+
+    return detallesDelUsuario.length > 0 ? detallesDelUsuario : detalles;
+  }
+
+  private isDetalleDelUsuarioLogueado(
+    detalle: ParticipanteDetalleListado,
+    transaccionEsPropietario = false,
+  ): boolean {
+    const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
+
+    return (
+      detalle.id_usuario_relacionado === this.currentUserId ||
+      (currentUserParticipanteId !== null &&
+        detalle.id_participante === currentUserParticipanteId) ||
+      (transaccionEsPropietario && detalle.es_titular)
+    );
+  }
+
   private updateSubcategoryOptions(categoryId: string): void {
     const numericCategoryId = Number(categoryId);
     this.subcategoryOptions = this.subcategorias
@@ -602,6 +681,7 @@ export class AnalisisFinancieroPage implements OnInit {
     const hormigaIndicator = this.detectGastosHormiga(expenseRecords, totalExpense);
     const topCategories = this.buildCategoryStats(expenseRecords, totalExpense, 'category');
     const topSubcategories = this.buildCategoryStats(expenseRecords, totalExpense, 'subcategory');
+    const categoryBreakdowns = this.buildCategoryBreakdowns(expenseRecords, totalExpense);
     const debtEntities = this.buildDebtEntities(expenseRecords);
     const trend = this.buildTrend(trendRecords, monthDate);
     const trafficLight = this.buildTrafficLight(
@@ -716,6 +796,7 @@ export class AnalisisFinancieroPage implements OnInit {
       ],
       topCategories,
       topSubcategories,
+      categoryBreakdowns,
       categoryDonutStyle: this.buildConicGradient(topCategories),
       categoryDonutCenter: totalExpense > 0 ? this.formatCurrency(totalExpense) : this.formatCurrency(0),
       incomeExpenseBarStyle: this.buildIncomeExpenseBar(totalIncome, totalExpense),
@@ -817,6 +898,73 @@ export class AnalisisFinancieroPage implements OnInit {
       }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 6);
+  }
+
+  private buildCategoryBreakdowns(
+    records: AnalysisRecord[],
+    totalAmount: number,
+  ): CategoryBreakdownItem[] {
+    const groups = new Map<
+      string,
+      {
+        name: string;
+        amount: number;
+        count: number;
+        subcategories: Map<string, { name: string; amount: number; count: number }>;
+      }
+    >();
+
+    for (const record of records) {
+      const categoryKey = `${record.categoryId}::${record.categoryName}`;
+      const subcategoryKey = `${record.subcategoryId ?? 'none'}::${record.subcategoryName}`;
+      const currentCategory = groups.get(categoryKey) ?? {
+        name: record.categoryName,
+        amount: 0,
+        count: 0,
+        subcategories: new Map<string, { name: string; amount: number; count: number }>(),
+      };
+
+      currentCategory.amount += record.amount;
+      currentCategory.count += 1;
+
+      const currentSubcategory = currentCategory.subcategories.get(subcategoryKey) ?? {
+        name: record.subcategoryName,
+        amount: 0,
+        count: 0,
+      };
+      currentSubcategory.amount += record.amount;
+      currentSubcategory.count += 1;
+      currentCategory.subcategories.set(subcategoryKey, currentSubcategory);
+      groups.set(categoryKey, currentCategory);
+    }
+
+    return Array.from(groups.values())
+      .sort((left, right) => right.amount - left.amount)
+      .slice(0, 5)
+      .map((category, index) => {
+        const amount = this.roundMoney(category.amount);
+        const share = totalAmount > 0 ? category.amount / totalAmount : 0;
+        const subcategories = Array.from(category.subcategories.values())
+          .sort((left, right) => right.amount - left.amount)
+          .slice(0, 4)
+          .map((subcategory) => ({
+            name: subcategory.name,
+            amount: this.roundMoney(subcategory.amount),
+            count: subcategory.count,
+            shareOfCategory: amount > 0 ? subcategory.amount / amount : 0,
+            shareOfTotal: totalAmount > 0 ? subcategory.amount / totalAmount : 0,
+          }));
+
+        return {
+          name: category.name,
+          amount,
+          share,
+          count: category.count,
+          color: this.chartColors[index % this.chartColors.length],
+          summary: this.buildCategoryBreakdownSummary(category.name, subcategories),
+          subcategories,
+        };
+      });
   }
 
   private buildTrend(records: AnalysisRecord[], endMonth: Date): TrendPoint[] {
@@ -1150,6 +1298,41 @@ export class AnalisisFinancieroPage implements OnInit {
     return recommendations.slice(0, 5);
   }
 
+  private buildCategoryBreakdownSummary(
+    categoryName: string,
+    subcategories: SubcategoryBreakdownStat[],
+  ): string {
+    const topSubcategory = subcategories[0] ?? null;
+    const secondSubcategory = subcategories[1] ?? null;
+    const normalizedCategory = this.normalizeText(categoryName);
+
+    if (!topSubcategory) {
+      return `${categoryName} no tiene subcategorias visibles en el periodo analizado.`;
+    }
+
+    if (
+      normalizedCategory.includes('alimentacion') ||
+      normalizedCategory.includes('alimento') ||
+      normalizedCategory.includes('comida')
+    ) {
+      if (secondSubcategory) {
+        return `En ${categoryName}, ${topSubcategory.name} lidera con ${this.formatPercent(topSubcategory.shareOfCategory)} de la categoria; luego sigue ${secondSubcategory.name}.`;
+      }
+
+      return `En ${categoryName}, ${topSubcategory.name} explica ${this.formatPercent(topSubcategory.shareOfCategory)} del gasto de la categoria.`;
+    }
+
+    if (topSubcategory.shareOfCategory >= 0.6) {
+      return `${topSubcategory.name} concentra ${this.formatPercent(topSubcategory.shareOfCategory)} del gasto de ${categoryName}.`;
+    }
+
+    if (secondSubcategory) {
+      return `${categoryName} se reparte sobre todo entre ${topSubcategory.name} y ${secondSubcategory.name}.`;
+    }
+
+    return `${topSubcategory.name} es la principal salida dentro de ${categoryName}.`;
+  }
+
   private buildDebtEntities(records: AnalysisRecord[]): DebtEntityItem[] {
     const groups = new Map<string, DebtEntityItem>();
 
@@ -1284,6 +1467,7 @@ export class AnalisisFinancieroPage implements OnInit {
       kpis: [],
       topCategories: [],
       topSubcategories: [],
+      categoryBreakdowns: [],
       categoryDonutStyle: 'conic-gradient(#dbe4f0 0 100%)',
       categoryDonutCenter: this.formatCurrency(0),
       incomeExpenseBarStyle: 'linear-gradient(90deg, #dbe4f0 0 100%)',

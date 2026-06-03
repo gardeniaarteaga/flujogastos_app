@@ -182,9 +182,13 @@
             <div class="legend-list">
               <div *ngFor="let item of analysis.topCategories" class="legend-row">
                 <span class="legend-dot" [style.background]="item.color"></span>
-                <div>
+                <div class="legend-copy">
                   <strong>{{ item.name }}</strong>
-                  <small>{{ formatCurrency(item.amount) }} | {{ formatPercent(item.share) }}</small>
+                  <small>{{ item.count }} movimientos</small>
+                </div>
+                <div class="legend-metrics">
+                  <strong>{{ formatCurrency(item.amount) }}</strong>
+                  <small>{{ formatPercent(item.share) }}</small>
                 </div>
               </div>
             </div>
@@ -302,6 +306,49 @@
             </div>
           </div>
         </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">Categoria y subcategoria</span>
+            <h3>Que se esta gastando dentro de cada rubro</h3>
+          </div>
+          <span class="score-chip">{{ analysis.monthLabel }}</span>
+        </div>
+
+        <p class="panel-copy">
+          Este detalle baja de categoria a subcategoria para detectar en que parte exacta se concentra el gasto, por ejemplo en Alimentacion, Transporte y demas.
+        </p>
+
+        <div class="category-breakdown-list">
+          <article *ngFor="let item of analysis.categoryBreakdowns" class="category-breakdown-card">
+            <div class="category-breakdown-head">
+              <div class="category-breakdown-title">
+                <span class="legend-dot" [style.background]="item.color"></span>
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.count }} movimientos | {{ formatPercent(item.share) }} del gasto total</small>
+                </div>
+              </div>
+              <span class="category-breakdown-amount">{{ formatCurrency(item.amount) }}</span>
+            </div>
+
+            <p class="category-breakdown-summary">{{ item.summary }}</p>
+
+            <div class="subcategory-breakdown-list">
+              <div *ngFor="let subitem of item.subcategories" class="subcategory-breakdown-row">
+                <div class="subcategory-breakdown-copy">
+                  <strong>{{ subitem.name }}</strong>
+                  <small>
+                    {{ formatPercent(subitem.shareOfCategory) }} de {{ item.name }} | {{ formatPercent(subitem.shareOfTotal) }} del gasto total
+                  </small>
+                </div>
+                <span>{{ formatCurrency(subitem.amount) }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="split-grid">
