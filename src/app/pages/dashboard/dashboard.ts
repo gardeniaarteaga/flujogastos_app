@@ -410,7 +410,17 @@ export class Dashboard implements OnInit {
         0,
       ),
     );
-    const hasData = currentMonthIncome > 0 || currentMonthExpense > 0;
+    const currentMonthSharedExpenseAssigned = this.roundMoney(
+      transacciones.reduce(
+        (sum, transaction) =>
+          sum + this.resolveSharedExpenseAssignedForMonth(transaction, currentMonthKey),
+        0,
+      ),
+    );
+    const hasData =
+      currentMonthIncome > 0 ||
+      currentMonthExpense > 0 ||
+      currentMonthSharedExpenseAssigned > 0;
 
     return {
       hasData,
@@ -433,6 +443,13 @@ export class Dashboard implements OnInit {
           detail: 'Solo titular',
           helper: 'Suma de gastos del mes visibles para el titular.',
           tone: currentMonthExpense > 0 ? 'warning' : 'neutral',
+        },
+        {
+          label: 'Gastos compartidos a mi nombre',
+          value: currentMonthSharedExpenseAssigned,
+          detail: 'Registrados por otros',
+          helper: 'Monto del mes asignado al usuario actual en gastos compartidos.',
+          tone: currentMonthSharedExpenseAssigned > 0 ? 'info' : 'neutral',
         },
       ],
       capacity: {
@@ -555,6 +572,49 @@ export class Dashboard implements OnInit {
       : [];
 
     return details.filter((detail) => detail.es_titular);
+  }
+
+  private resolveSharedExpenseAssignedForMonth(
+    transaction: TransaccionListado,
+    monthKey: string,
+  ): number {
+    if (transaction.id_tipo_transaccion === 2 || transaction.es_propietario || this.currentUserId <= 0) {
+      return 0;
+    }
+
+    const assignedDetails = this.getCurrentUserAssignedSharedDetails(transaction);
+
+    return this.roundMoney(
+      assignedDetails.reduce((sum, detail) => {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          return sum;
+        }
+
+        return (
+          sum +
+          Math.max(0, this.normalizeAmount(detail.monto)) +
+          Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
+          Math.max(0, this.normalizeAmount(detail.interes_pendiente))
+        );
+      }, 0),
+    );
+  }
+
+  private getCurrentUserAssignedSharedDetails(
+    transaction: TransaccionListado,
+  ): ParticipanteDetalleListado[] {
+    const details = Array.isArray(transaction.participantes_detalle)
+      ? transaction.participantes_detalle
+      : [];
+
+    return details.filter(
+      (detail) =>
+        !detail.es_titular && detail.id_usuario_relacionado === this.currentUserId,
+    );
   }
 
   private enrichTransaction(
@@ -1577,6 +1637,13 @@ export class Dashboard implements OnInit {
           value: 0,
           detail: 'Solo titular',
           helper: 'Suma de gastos del mes visibles para el titular.',
+          tone: 'neutral',
+        },
+        {
+          label: 'Gastos compartidos a mi nombre',
+          value: 0,
+          detail: 'Registrados por otros',
+          helper: 'Monto del mes asignado al usuario actual en gastos compartidos.',
           tone: 'neutral',
         },
       ],

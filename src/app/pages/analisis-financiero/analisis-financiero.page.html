@@ -106,13 +106,7 @@
       </div>
 
       <div class="hero-score" [ngClass]="'signal-' + analysis.trafficLight.tone">
-        <span class="hero-score-label">Semaforo financiero</span>
         <strong>{{ analysis.trafficLight.tone === 'green' ? 'Verde' : analysis.trafficLight.tone === 'yellow' ? 'Amarillo' : 'Rojo' }}</strong>
-        <p>{{ analysis.trafficLight.label }}</p>
-        <div class="hero-score-meta">
-          <span>{{ analysis.monthLabel }}</span>
-          <span>Analisis por fecha programada/pago</span>
-        </div>
       </div>
     </section>
 

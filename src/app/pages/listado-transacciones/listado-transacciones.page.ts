@@ -51,17 +51,8 @@ type ModoCuotas = 'fijas' | 'divididas';
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
 const PRIORITY_WINDOW_DAYS = 7;
 const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
-const ESTADOS_LISTADO_PERMITIDOS = new Set([
-  'pagado',
-  'pagada',
-  'pendiente',
-  'pago parcial',
-]);
-const ESTADOS_FILTRO_DISPONIBLES = new Set([
-  ...ESTADOS_LISTADO_PERMITIDOS,
-  'anulada',
-  'anulado',
-]);
+const ESTADOS_LISTADO_PERMITIDOS = new Set(['pagado', 'pendiente', 'anulado']);
+const ESTADOS_FILTRO_DISPONIBLES = new Set([...ESTADOS_LISTADO_PERMITIDOS]);
 
 interface CuotaPayload {
   monto: number;
@@ -518,13 +509,13 @@ export class ListadoTransaccionesPage implements OnInit {
     const filtros = this.filtrosForm.getRawValue();
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
-    const estadoFiltro = this.normalizeText(filtros.estado ?? '');
+    const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
     const mostrarTodas = !!filtros.todos;
 
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
-      const estadoTransaccion = this.normalizeText(transaccion.nombre_estado ?? '');
+      const estadoTransaccion = this.getNormalizedEstadoListado(transaccion.nombre_estado ?? '');
       const estadoCoincideFiltro = !!estadoFiltro && estadoTransaccion === estadoFiltro;
       const descripcionTransaccion = this.normalizeText(transaccion.descripcion ?? '');
 
@@ -549,7 +540,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
       if (
         filtros.pendientePago &&
-        !['pendiente', 'pago parcial'].includes(estadoTransaccion)
+        estadoTransaccion !== 'pendiente'
       ) {
         return false;
       }
@@ -622,7 +613,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   get filteredDetalleTransacciones(): DetalleTransaccionListadoRow[] {
     const filtros = this.filtrosForm.getRawValue();
-    const estadoFiltro = this.normalizeText(filtros.estado ?? '');
+    const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
     const tipoTransaccionFiltro =
       (this.normalizeText(filtros.tipoTransaccion ?? '') as 'credito' | 'debito' | '') || null;
     const prioridadActiva = !!filtros.prioritarios;
@@ -632,7 +623,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     return this.buildDetalleTransaccionRows()
       .filter((row) => {
-        const estadoDetalle = this.normalizeText(row.detalle.nombre_estado ?? '');
+        const estadoDetalle = this.getNormalizedEstadoListado(row.detalle.nombre_estado ?? '');
         const estadoCoincideFiltro = !!estadoFiltro && estadoDetalle === estadoFiltro;
         const fechaProgramada = this.normalizeDateOnly(row.detalle.fecha_programada);
         const descripcionTransaccion = this.normalizeText(row.descripcion ?? '');
@@ -867,15 +858,19 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   get transaccionesPagadasCount(): number {
-    return this.filteredTransacciones.filter((item) => item.nombre_estado === 'PAGADO').length;
+    return this.filteredTransacciones.filter(
+      (item) => this.getNormalizedEstadoListado(item.nombre_estado) === 'pagado',
+    ).length;
   }
 
   get transaccionesPagoParcialCount(): number {
-    return this.filteredTransacciones.filter((item) => item.nombre_estado === 'PAGO PARCIAL').length;
+    return 0;
   }
 
   get transaccionesPendientesCount(): number {
-    return this.filteredTransacciones.filter((item) => item.nombre_estado === 'PENDIENTE').length;
+    return this.filteredTransacciones.filter(
+      (item) => this.getNormalizedEstadoListado(item.nombre_estado) === 'pendiente',
+    ).length;
   }
 
   get transaccionesPendientesRegistroCount(): number {
@@ -927,6 +922,18 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.estadosTransaccion.filter((estado) =>
       this.isEstadoDisponibleEnFiltro(estado.nombre_estado),
     );
+  }
+
+  get estadosPagoEdicionDisponibles(): CatalogoEstadoTransaccion[] {
+    return this.estadosTransaccion.filter((estado) => {
+      const nombreEstado = estado.nombre_estado.trim().toUpperCase();
+      return (
+        nombreEstado === 'PENDIENTE' ||
+        nombreEstado === 'PAGADO' ||
+        nombreEstado === 'ANULADO' ||
+        nombreEstado === 'ANULADA'
+      );
+    });
   }
 
   get usarParticipantesControl(): FormControl<boolean | null> {
@@ -1783,7 +1790,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   isAnuladaTransaccion(transaccion: TransaccionListado): boolean {
-    return this.normalizeText(transaccion.nombre_estado ?? '') === 'anulada';
+    return this.getNormalizedEstadoListado(transaccion.nombre_estado ?? '') === 'anulado';
   }
 
   async anularTransaccion(
@@ -1798,7 +1805,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     const confirmed = await this.alerts.confirm(
       'Confirmar anulacion',
-      `Se anulara la transaccion ${this.getTransaccionAnularLabel(transaccion)}.`,
+      `Se anulara la transaccion ${this.getTransaccionAnularLabel(transaccion)}. Todas las cuotas quedaran ANULADO y se limpiaran los pagos aplicados.`,
       'Si, anular',
       {
         icon: 'warning',
@@ -1863,9 +1870,9 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     const confirmed = await this.alerts.confirm(
-      'Confirmar reactivacion',
-      `Se reactivara la transaccion "${transaccion.nombre_forma_pago || `#${transaccion.id_transaccion}`}".`,
-      'Si, reactivar',
+      'Confirmar cambio a pendiente',
+      `La transaccion "${transaccion.nombre_forma_pago || `#${transaccion.id_transaccion}`}" volvera a PENDIENTE. Todas las cuotas se reactivaran y se limpiaran los pagos aplicados.`,
+      'Si, dejar pendiente',
       {
         icon: 'question',
         confirmButtonColor: '#1f7a46',
@@ -1904,15 +1911,15 @@ export class ListadoTransaccionesPage implements OnInit {
         this.closePaymentModal();
       }
 
-      this.successMessage = 'Transaccion reactivada correctamente.';
-      await this.alerts.success('Transaccion reactivada', this.successMessage);
+      this.successMessage = 'Transaccion actualizada a pendiente correctamente.';
+      await this.alerts.success('Transaccion en pendiente', this.successMessage);
       await this.loadTransacciones();
     } catch (error) {
       this.errorMessage = this.getErrorMessage(
         error,
-        'No se pudo reactivar la transaccion.',
+        'No se pudo dejar la transaccion en pendiente.',
       );
-      await this.alerts.error('No se pudo reactivar', this.errorMessage);
+      await this.alerts.error('No se pudo actualizar', this.errorMessage);
     } finally {
       this.completingId = null;
     }
@@ -2881,6 +2888,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private resolveExpenseEstadoNameForEdit(): string {
+    if (this.selectedTransaccion && this.isAnuladaTransaccion(this.selectedTransaccion)) {
+      return 'ANULADO';
+    }
+
     if (!this.hasAppliedPagosInEditor) {
       return this.isImmediatePaymentSelectedForEdit ? 'PAGADO' : 'PENDIENTE';
     }
@@ -2893,18 +2904,18 @@ export class ListadoTransaccionesPage implements OnInit {
       (detalle) => detalle.montoPagadoTotalCentavos > 0,
     );
 
-    if (hayPendientes && hayPagados) {
-      return 'PAGO PARCIAL';
-    }
-
-    if (hayPagados || (this.isImmediatePaymentSelectedForEdit && !hayPendientes)) {
+    if (!hayPendientes && (hayPagados || this.isImmediatePaymentSelectedForEdit)) {
       return 'PAGADO';
     }
 
-    return this.isImmediatePaymentSelectedForEdit ? 'PAGADO' : 'PENDIENTE';
+    return 'PENDIENTE';
   }
 
   private resolveIncomeEstadoNameForEdit(): string {
+    if (this.selectedTransaccion && this.isAnuladaTransaccion(this.selectedTransaccion)) {
+      return 'ANULADO';
+    }
+
     const detalles = this.buildDetallesEstadoSnapshotForEdit();
 
     if (detalles.length === 0) {
@@ -2915,18 +2926,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return 'PAGADO';
     }
 
-    const today = this.normalizeDateOnly(this.today);
-    const hayFechaProgramadaVencida = detalles.some((detalle) => {
-      const fechaProgramada = this.normalizeDateOnly(detalle.fecha_programada);
-      return Boolean(fechaProgramada) && fechaProgramada < today;
-    });
-    const hayPagosAplicados = detalles.some(
-      (detalle) => detalle.montoPagadoTotalCentavos > 0,
-    );
-
-    return hayFechaProgramadaVencida || hayPagosAplicados
-      ? 'PAGO PARCIAL'
-      : 'PENDIENTE';
+    return 'PENDIENTE';
   }
 
   private buildDetallesEstadoSnapshotForEdit(): Array<{
@@ -3032,6 +3032,10 @@ export class ListadoTransaccionesPage implements OnInit {
         'Cuotas inconsistentes',
         'La suma de cuotas del titular y de cada participante debe cubrir exactamente su monto.',
       );
+      return;
+    }
+
+    if (!(await this.confirmEstadoMasivoChangeIfNeeded())) {
       return;
     }
 
@@ -3852,20 +3856,14 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getEstadoClass(nombreEstado: string | null | undefined): string {
-    const estado = this.normalizeText(nombreEstado ?? '');
+    const estado = this.getNormalizedEstadoListado(nombreEstado ?? '');
 
     switch (estado) {
       case 'pendiente':
         return 'status-pill-pendiente';
-      case 'pago parcial':
-        return 'status-pill-parcial';
-      case 'anulada':
       case 'anulado':
-      case 'cancelada':
-      case 'cancelado':
         return 'status-pill-anulada';
       case 'pagado':
-      case 'completado':
         return 'status-pill-completado';
       case 'sin registro':
         return 'status-pill-sin-registro';
@@ -5275,11 +5273,123 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private isEstadoVisibleEnListado(nombreEstado: string | null | undefined): boolean {
-    return ESTADOS_LISTADO_PERMITIDOS.has(this.normalizeText(nombreEstado ?? ''));
+    return ESTADOS_LISTADO_PERMITIDOS.has(this.getNormalizedEstadoListado(nombreEstado ?? ''));
   }
 
   private isEstadoDisponibleEnFiltro(nombreEstado: string | null | undefined): boolean {
-    return ESTADOS_FILTRO_DISPONIBLES.has(this.normalizeText(nombreEstado ?? ''));
+    return ESTADOS_FILTRO_DISPONIBLES.has(this.getNormalizedEstadoListado(nombreEstado ?? ''));
+  }
+
+  getEstadoDisplayLabel(nombreEstado: string | null | undefined): string {
+    const estado = this.getNormalizedEstadoListado(nombreEstado ?? '');
+
+    switch (estado) {
+      case 'anulado':
+        return 'ANULADO';
+      case 'pagado':
+        return 'PAGADO';
+      case 'pendiente':
+        return 'PENDIENTE';
+      default:
+        return nombreEstado?.trim() || 'Sin estado';
+    }
+  }
+
+  private getNormalizedEstadoListado(nombreEstado: string | null | undefined): string {
+    const estado = this.normalizeText(nombreEstado ?? '');
+
+    switch (estado) {
+      case 'anulada':
+      case 'anulado':
+      case 'cancelada':
+      case 'cancelado':
+        return 'anulado';
+      case 'pagado':
+      case 'pagada':
+      case 'completado':
+      case 'completada':
+        return 'pagado';
+      case 'pendiente':
+      case 'pago parcial':
+        return 'pendiente';
+      default:
+        return estado;
+    }
+  }
+
+  private getEstadoCatalogoById(estadoId: number | null | undefined): CatalogoEstadoTransaccion | null {
+    if (estadoId === null || estadoId === undefined) {
+      return null;
+    }
+
+    return this.estadosTransaccion.find((estado) => estado.id_estado === estadoId) ?? null;
+  }
+
+  private getManagedEstadoNameById(estadoId: number | null | undefined): string | null {
+    if (estadoId === ESTADO_TRANSACCION_ANULADA_ID) {
+      return 'ANULADO';
+    }
+
+    const estado = this.getEstadoCatalogoById(estadoId);
+    const normalizedEstado = this.getNormalizedEstadoListado(estado?.nombre_estado ?? '');
+
+    switch (normalizedEstado) {
+      case 'anulado':
+        return 'ANULADO';
+      case 'pagado':
+        return 'PAGADO';
+      case 'pendiente':
+        return 'PENDIENTE';
+      default:
+        return null;
+    }
+  }
+
+  private async confirmEstadoMasivoChangeIfNeeded(): Promise<boolean> {
+    if (!this.isEditing || !this.selectedTransaccion) {
+      return true;
+    }
+
+    const estadoActual = this.getManagedEstadoNameById(this.selectedTransaccion.id_estado);
+    const estadoSiguiente = this.getManagedEstadoNameById(this.transaccionForm.controls.id_estado.value);
+
+    if (!estadoSiguiente || estadoActual === estadoSiguiente) {
+      return true;
+    }
+
+    if (estadoSiguiente === 'ANULADO') {
+      return this.alerts.confirm(
+        'Confirmar anulacion',
+        'Esta accion anulara la transaccion completa, dejara todas las cuotas como ANULADO y limpiara todos los pagos aplicados. Deseas continuar?',
+        'Si, anular todo',
+        {
+          icon: 'warning',
+          confirmButtonColor: '#dc2626',
+        },
+      );
+    }
+
+    if (estadoSiguiente === 'PAGADO') {
+      return this.alerts.confirm(
+        'Confirmar pago total',
+        'Esta accion marcara todas las cuotas como PAGADO y liquidara todos los saldos pendientes. Deseas continuar?',
+        'Si, pagar todo',
+        {
+          icon: 'question',
+          confirmButtonColor: '#1f7a46',
+        },
+      );
+    }
+
+    return this.alerts.confirm(
+      'Confirmar cambio a pendiente',
+      'Esta accion pondra toda la transaccion en PENDIENTE, reactivara todas las cuotas y limpiara los pagos aplicados. Deseas continuar?',
+      'Si, dejar pendiente',
+      {
+        icon: 'warning',
+        confirmButtonColor: '#d97706',
+      },
+    );
   }
 
   private isFixedCuotasMode(group: ParticipanteDetalleForm): boolean {

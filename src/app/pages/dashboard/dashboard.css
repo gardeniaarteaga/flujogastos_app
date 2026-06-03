@@ -251,8 +251,8 @@
 }
 
 .kpi-grid.compact-kpi-grid {
-  grid-template-columns: repeat(2, minmax(280px, 360px));
-  justify-content: start;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  justify-content: stretch;
   max-width: none;
 }
 
@@ -672,6 +672,10 @@
   .quick-links-strip,
   .scheduled-grid {
     grid-template-columns: 1fr;
+  }
+
+  .kpi-grid.compact-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 }
 

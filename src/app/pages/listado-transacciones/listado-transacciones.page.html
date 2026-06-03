@@ -359,7 +359,7 @@
 
               <label class="checkbox-row" for="pendientePago">
                 <input id="pendientePago" type="checkbox" formControlName="pendientePago" />
-                <span>Pendiente / pago parcial</span>
+                <span>Pendiente</span>
               </label>
 
               <label class="checkbox-row" for="enviadas">
@@ -613,7 +613,7 @@
                     class="status-pill"
                     [ngClass]="getEstadoClass(transaccion.nombre_estado || 'Sin estado')"
                   >
-                    {{ transaccion.nombre_estado || 'Sin estado' }}
+                    {{ getEstadoDisplayLabel(transaccion.nombre_estado) }}
                   </span>
                 </td>
                 <td style="text-align: center; vertical-align: middle;">
@@ -863,7 +863,7 @@
                     class="status-pill"
                     [ngClass]="getEstadoClass(row.detalle.nombre_estado || 'Sin estado')"
                   >
-                    {{ row.detalle.nombre_estado || 'Sin estado' }}
+                    {{ getEstadoDisplayLabel(row.detalle.nombre_estado) }}
                   </span>
                 </td>
                 <td>{{ row.nombre_mostrado }}</td>
@@ -946,7 +946,7 @@
           </div>
           <div class="header-actions">
             <span class="pill">
-              {{ selectedTransaccion.nombre_estado || 'Sin estado' }}
+              {{ getEstadoDisplayLabel(selectedTransaccion.nombre_estado) }}
             </span>
             <button
               type="button"
@@ -1002,10 +1002,10 @@
 
             <div class="field">
               <label for="edit_id_estado">Estado del pago</label>
-              <select id="edit_id_estado" formControlName="id_estado" [disabled]="hasAppliedPagosInEditor">
+              <select id="edit_id_estado" formControlName="id_estado">
                 <option [ngValue]="null">Seleccione un estado</option>
-                <option *ngFor="let estado of estadosTransaccion" [ngValue]="estado.id_estado">
-                  {{ estado.nombre_estado }}
+                <option *ngFor="let estado of estadosPagoEdicionDisponibles" [ngValue]="estado.id_estado">
+                  {{ getEstadoDisplayLabel(estado.nombre_estado) }}
                 </option>
               </select>
             </div>
@@ -1748,7 +1748,7 @@
           </article>
           <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
             <span>Estado pago</span>
-            <strong>{{ detailModalTransaccion.nombre_estado || '-' }}</strong>
+            <strong>{{ getEstadoDisplayLabel(detailModalTransaccion.nombre_estado) }}</strong>
           </article>
         </section>
 
@@ -1789,12 +1789,12 @@
                 <td>${{ detalle.monto_pagado | number: '1.2-2' }}</td>
                 <td>${{ detalle.saldo_pendiente | number: '1.2-2' }}</td>
                 <td>
-                  <span
-                    class="status-pill"
-                    [ngClass]="getEstadoClass(detalle.nombre_estado || 'Sin estado')"
-                  >
-                    {{ detalle.nombre_estado || 'Sin estado' }}
-                  </span>
+                    <span
+                      class="status-pill"
+                      [ngClass]="getEstadoClass(detalle.nombre_estado || 'Sin estado')"
+                    >
+                      {{ getEstadoDisplayLabel(detalle.nombre_estado) }}
+                    </span>
                 </td>
               </tr>
             </tbody>
@@ -1886,7 +1886,7 @@
           </article>
           <article class="payment-modal-chip">
             <span>Estado</span>
-            <strong>{{ paymentModalTransaccion.nombre_estado || 'Sin estado' }}</strong>
+            <strong>{{ getEstadoDisplayLabel(paymentModalTransaccion.nombre_estado) }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Metodo</span>

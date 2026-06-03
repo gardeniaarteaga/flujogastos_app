@@ -96,6 +96,11 @@ interface TransactionFlowConfig {
   successMessage: string;
 }
 
+interface TransaccionDescripcionAutocompleteItem {
+  id_tipo_transaccion: TipoTransaccionId;
+  descripcion: string | null;
+}
+
 @Component({
   selector: 'app-ingreso-transacciones-page',
   imports: [
@@ -247,7 +252,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get estadosIngresoDisponibles(): CatalogoEstadoTransaccion[] {
-    if (!this.isIncomeMode) {
+    if (!this.usesLimitedEstadoPagoOptions) {
       return this.estadosTransaccion;
     }
 
@@ -262,17 +267,27 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get shouldShowIngresoPagadoCuotasHint(): boolean {
-    return this.isIncomeMode && this.isIngresoPagadoSelected && this.hasConfiguredMultipleIncomeCuotas();
+    return (
+      this.usesLimitedEstadoPagoOptions &&
+      this.isIngresoPagadoSelected &&
+      this.hasConfiguredMultipleEstadoPagoCuotas()
+    );
   }
 
   get ingresoEstadoHint(): string {
-    if (!this.isIncomeMode) {
+    if (!this.usesLimitedEstadoPagoOptions) {
       return '';
     }
 
+    if (this.isIncomeMode) {
+      return this.isIngresoPagadoSelected
+        ? 'Si lo guardas como PAGADO, todas las cuotas nacen pagadas.'
+        : 'Si lo guardas como PENDIENTE, las cuotas seguiran pendientes hasta que registres su pago desde Listado o Pago Rapido.';
+    }
+
     return this.isIngresoPagadoSelected
-      ? 'Si lo guardas como PAGADO, todas las cuotas nacen pagadas.'
-      : 'Si lo guardas como PENDIENTE, las cuotas seguiran pendientes hasta que registres su pago desde Listado o Pago Rapido.';
+      ? 'Si lo guardas como PAGADO, todas las cuotas del gasto compartido quedaran pagadas.'
+      : 'Si lo guardas como PENDIENTE, las cuotas del gasto compartido seguiran pendientes hasta que registres su pago desde Listado o Pago Rapido.';
   }
 
   get requiresDeferredPaymentSetup(): boolean {
@@ -340,13 +355,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   shouldShowTitularCuotaUnicaPagadaOption(group: ParticipanteDetalleForm): boolean {
-    return Boolean(
-      this.isSharedExpenseMode &&
-      group.controls.es_titular.value &&
-      Number(group.controls.cantidad_cuotas.value ?? 1) === 1 &&
-      this.getCuotasArray(group).length === 1 &&
-      this.toCents(this.getGroupMontoTarget(group)) > 0,
-    );
+    return false;
   }
 
   getModoCuotasLabel(group: ParticipanteDetalleForm): string {
@@ -415,6 +424,10 @@ export class IngresoTransaccionesPage implements OnInit {
   categorias: CatalogoCategoria[] = [];
   subcategorias: CatalogoSubcategoria[] = [];
   estadosTransaccion: CatalogoEstadoTransaccion[] = [];
+  descripcionAutocompleteOptions: string[] = [];
+  descripcionAutocompleteFilteredOptions: string[] = [];
+  isDescripcionAutocompleteOpen = false;
+  private isDescripcionAutocompleteFocused = false;
 
   readonly transaccionForm = this.fb.group({
     fecha_transaccion: [
@@ -463,8 +476,15 @@ export class IngresoTransaccionesPage implements OnInit {
         this.updateEstadoRegistroPreview();
       });
 
+    this.transaccionForm.controls.descripcion.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((descripcion) => {
+        this.refreshDescripcionAutocomplete(descripcion);
+      });
+
     this.applyScreenModeRestrictions();
     void this.loadCatalogos(true);
+    void this.loadDescripcionAutocompleteOptions();
   }
 
   toggleMaintenanceMenu(): void {
@@ -473,6 +493,29 @@ export class IngresoTransaccionesPage implements OnInit {
 
   toggleTransactionsMenu(): void {
     this.transactionsOpen = !this.transactionsOpen;
+  }
+
+  onDescripcionFocus(): void {
+    this.isDescripcionAutocompleteFocused = true;
+    this.refreshDescripcionAutocomplete(this.transaccionForm.controls.descripcion.value ?? '');
+  }
+
+  onDescripcionBlur(): void {
+    this.isDescripcionAutocompleteFocused = false;
+
+    window.setTimeout(() => {
+      if (!this.isDescripcionAutocompleteFocused) {
+        this.isDescripcionAutocompleteOpen = false;
+        this.cdr.detectChanges();
+      }
+    }, 120);
+  }
+
+  selectDescripcionSuggestion(descripcion: string, event: Event): void {
+    event.preventDefault();
+    this.transaccionForm.controls.descripcion.setValue(descripcion);
+    this.isDescripcionAutocompleteOpen = false;
+    this.cdr.detectChanges();
   }
 
   get usarParticipantesControl(): FormControl<boolean | null> {
@@ -796,6 +839,53 @@ export class IngresoTransaccionesPage implements OnInit {
         'No se pudieron cargar los catalogos base para ingreso de transacciones.';
     } finally {
       this.loading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async loadDescripcionAutocompleteOptions(): Promise<void> {
+    try {
+      const transacciones = await firstValueFrom(
+        this.http
+          .get<TransaccionDescripcionAutocompleteItem[]>(this.apiUrl, {
+            params: { id_usuario: this.currentUserId },
+          })
+          .pipe(timeout(10000)),
+      );
+
+      const frequencyByDescripcion = new Map<string, number>();
+
+      for (const transaccion of transacciones) {
+        if (transaccion.id_tipo_transaccion !== this.flowConfig.defaultTipoTransaccionId) {
+          continue;
+        }
+
+        const descripcion = transaccion.descripcion?.trim();
+
+        if (!descripcion) {
+          continue;
+        }
+
+        frequencyByDescripcion.set(
+          descripcion,
+          (frequencyByDescripcion.get(descripcion) ?? 0) + 1,
+        );
+      }
+
+      this.descripcionAutocompleteOptions = Array.from(frequencyByDescripcion.entries())
+        .sort((first, second) => {
+          if (second[1] !== first[1]) {
+            return second[1] - first[1];
+          }
+
+          return first[0].localeCompare(second[0], 'es');
+        })
+        .map(([descripcion]) => descripcion)
+        .slice(0, 150);
+    } catch {
+      this.descripcionAutocompleteOptions = [];
+    } finally {
+      this.refreshDescripcionAutocomplete(this.transaccionForm.controls.descripcion.value ?? '');
       this.cdr.detectChanges();
     }
   }
@@ -1235,6 +1325,7 @@ export class IngresoTransaccionesPage implements OnInit {
       );
 
       this.successMessage = this.flowConfig.successMessage;
+      this.registerDescripcionAutocompleteOption(payload.descripcion);
       await this.alerts.success('Transaccion guardada', this.successMessage);
       this.resetForm();
     } catch (error) {
@@ -1868,6 +1959,54 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateEstadoRegistroPreview();
   }
 
+  private registerDescripcionAutocompleteOption(
+    descripcion: string | null | undefined,
+  ): void {
+    const normalizedDescripcion = descripcion?.trim();
+
+    if (!normalizedDescripcion) {
+      return;
+    }
+
+    const alreadyExists = this.descripcionAutocompleteOptions.some(
+      (item) => item.localeCompare(normalizedDescripcion, 'es', { sensitivity: 'accent' }) === 0,
+    );
+
+    if (alreadyExists) {
+      return;
+    }
+
+    this.descripcionAutocompleteOptions = [
+      normalizedDescripcion,
+      ...this.descripcionAutocompleteOptions,
+    ].slice(0, 150);
+    this.refreshDescripcionAutocomplete(this.transaccionForm.controls.descripcion.value ?? '');
+  }
+
+  private refreshDescripcionAutocomplete(descripcion: string | null | undefined): void {
+    const normalizedDescripcion = this.normalizeText(descripcion ?? '');
+
+    if (!normalizedDescripcion) {
+      this.descripcionAutocompleteFilteredOptions = [];
+      this.isDescripcionAutocompleteOpen = false;
+      return;
+    }
+
+    this.descripcionAutocompleteFilteredOptions = this.descripcionAutocompleteOptions
+      .filter((item) => {
+        const normalizedItem = this.normalizeText(item);
+        return (
+          normalizedItem.includes(normalizedDescripcion) &&
+          normalizedItem !== normalizedDescripcion
+        );
+      })
+      .slice(0, 8);
+
+    this.isDescripcionAutocompleteOpen =
+      this.isDescripcionAutocompleteFocused &&
+      this.descripcionAutocompleteFilteredOptions.length > 0;
+  }
+
   private canAddSharedExpenseParticipant(): boolean {
     if (!this.isSharedExpenseMode) {
       return true;
@@ -1893,7 +2032,7 @@ export class IngresoTransaccionesPage implements OnInit {
         sectionLabel: 'Ingresos',
         pageTitle: 'Ingreso de Entradas',
         formTitle: 'Registrar ingreso',
-        submitLabel: 'Guardar ingreso',
+        submitLabel: 'Guardar',
         successMessage: 'Ingreso guardado correctamente.',
       };
     }
@@ -1904,7 +2043,7 @@ export class IngresoTransaccionesPage implements OnInit {
         sectionLabel: 'Cuotas/Compartidos',
         pageTitle: 'Ingreso de Gastos Compartidos',
         formTitle: 'Registrar gasto compartido',
-        submitLabel: 'Guardar gasto compartido',
+        submitLabel: 'Guardar',
         successMessage: 'Gasto compartido guardado correctamente.',
       };
     }
@@ -1914,7 +2053,7 @@ export class IngresoTransaccionesPage implements OnInit {
       sectionLabel: 'Gastos',
       pageTitle: 'Ingreso de Gastos Individuales',
       formTitle: 'Registrar gasto individual',
-      submitLabel: 'Guardar gasto individual',
+      submitLabel: 'Guardar',
       successMessage: 'Gasto individual guardado correctamente.',
     };
   }
@@ -1971,7 +2110,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private getEstadosDisponiblesParaSeleccion(): CatalogoEstadoTransaccion[] {
-    return this.isIncomeMode ? this.estadosIngresoDisponibles : this.estadosTransaccion;
+    return this.usesLimitedEstadoPagoOptions ? this.estadosIngresoDisponibles : this.estadosTransaccion;
   }
 
   private applyExpenseFormaPagoRules(): void {
@@ -2042,14 +2181,38 @@ export class IngresoTransaccionesPage implements OnInit {
     );
   }
 
+  private get usesLimitedEstadoPagoOptions(): boolean {
+    return this.isIncomeMode || this.isSharedExpenseMode;
+  }
+
+  private hasConfiguredMultipleSharedExpenseCuotas(): boolean {
+    if (!this.isSharedExpenseMode) {
+      return false;
+    }
+
+    return this.participantesDetalleArray.controls.some(
+      (group) => Number(group.controls.cantidad_cuotas.value ?? 1) > 1,
+    );
+  }
+
+  private hasConfiguredMultipleEstadoPagoCuotas(): boolean {
+    return this.isIncomeMode
+      ? this.hasConfiguredMultipleIncomeCuotas()
+      : this.hasConfiguredMultipleSharedExpenseCuotas();
+  }
+
   private async confirmIngresoPagadoConCuotasIfNeeded(): Promise<boolean> {
     if (!this.shouldShowIngresoPagadoCuotasHint) {
       return true;
     }
 
+    const message = this.isIncomeMode
+      ? 'Este ingreso se guardara como PAGADO, por lo que todas sus cuotas naceran pagadas. Deseas continuar?'
+      : 'Este gasto compartido se guardara como PAGADO, por lo que todas sus cuotas naceran pagadas. Deseas continuar?';
+
     return this.alerts.confirm(
       'Confirmar estado pagado',
-      'Este ingreso se guardara como PAGADO, por lo que todas sus cuotas naceran pagadas. Deseas continuar?',
+      message,
       'Aceptar',
       {
         icon: 'warning',
@@ -3066,26 +3229,16 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseEstadoForTitularCuotaUnica(): void {
-    if (!this.isSharedExpenseMode) {
-      return;
-    }
-
-    this.setEstadoTransaccionByName(this.resolveSharedExpenseEstadoName());
+    return;
   }
 
   private resolveSharedExpenseEstadoName(): string {
-    const titularGroup = this.titularDetalleGroup;
-    const shouldUsePartialStatus = Boolean(
-      titularGroup &&
-      this.shouldShowTitularCuotaUnicaPagadaOption(titularGroup) &&
-      this.titularCuotaUnicaPagadaControl.value,
-    );
-    const estadoPreferido = shouldUsePartialStatus ? 'PAGO PARCIAL' : 'PENDIENTE';
-    const estadoDisponible = this.getEstadosDisponiblesParaSeleccion().some(
-      (item) => item.nombre_estado.trim().toUpperCase() === estadoPreferido,
+    const estadoActual = this.transaccionForm.controls.estado_transaccion.value?.trim().toUpperCase();
+    const estadoDisponible = this.estadosIngresoDisponibles.some(
+      (item) => item.nombre_estado.trim().toUpperCase() === estadoActual,
     );
 
-    return estadoDisponible ? estadoPreferido : this.getDefaultStatusName();
+    return estadoDisponible ? (estadoActual ?? this.getDefaultStatusName()) : this.getDefaultStatusName();
   }
 
   private resolveEstadoRegistroPreview(): string {

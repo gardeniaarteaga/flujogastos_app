@@ -193,13 +193,30 @@
 
               <div class="field field-span-2">
                 <label for="descripcion">{{ isIncomeMode ? 'Descripcion del Ingreso' : 'Descripcion/Comercio' }}</label>
-                <input
-                  id="descripcion"
-                  type="text"
-                  maxlength="250"
-                  formControlName="descripcion"
-                  [placeholder]="isIncomeMode ? 'Ej. Salario' : 'Ej. Pago de internet abril'"
-                />
+                <div class="autocomplete-shell">
+                  <input
+                    id="descripcion"
+                    type="text"
+                    maxlength="250"
+                    formControlName="descripcion"
+                    autocomplete="off"
+                    aria-autocomplete="list"
+                    [attr.aria-expanded]="isDescripcionAutocompleteOpen"
+                    [placeholder]="isIncomeMode ? 'Ej. Salario' : 'Ej. Pago de internet abril'"
+                    (focus)="onDescripcionFocus()"
+                    (blur)="onDescripcionBlur()"
+                  />
+                  <div *ngIf="isDescripcionAutocompleteOpen" class="autocomplete-panel" role="listbox" aria-label="Sugerencias de descripcion">
+                    <button
+                      *ngFor="let descripcion of descripcionAutocompleteFilteredOptions"
+                      type="button"
+                      class="autocomplete-option"
+                      (mousedown)="selectDescripcionSuggestion(descripcion, $event)"
+                    >
+                      {{ descripcion }}
+                    </button>
+                  </div>
+                </div>
                 <small *ngIf="transaccionForm.controls.descripcion.touched && transaccionForm.controls.descripcion.errors?.['required']">
                   La descripcion/comercio es obligatoria.
                 </small>
@@ -678,21 +695,6 @@
                         (paste)="onMontoPaste($event)"
                         (blur)="normalizeCuotaMontoInput(participanteGroup, 0)"
                       />
-                    </div>
-
-                    <div
-                      *ngIf="shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"
-                      class="field participant-inline-check-field"
-                      [formGroup]="transaccionForm"
-                    >
-                      <label class="participant-inline-check-label" for="titular_cuota_unica_pagada">
-                        <input
-                          id="titular_cuota_unica_pagada"
-                          type="checkbox"
-                          formControlName="titular_cuota_unica_pagada"
-                        />
-                        <span>Marcar como pagada</span>
-                      </label>
                     </div>
 
                     <div class="participant-actions">
