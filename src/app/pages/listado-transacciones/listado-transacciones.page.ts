@@ -2348,9 +2348,9 @@ export class ListadoTransaccionesPage implements OnInit {
 
     const confirmed = await this.alerts.confirm(
       'Confirmar pago total',
-      this.isDetalleViewMode
-        ? 'Se pagaran solo las cuotas pendientes del usuario logueado. Deseas continuar?'
-        : 'Se pagaran todas las cuotas pendientes del titular y de los participantes. Deseas continuar?',
+      this.paymentModalTransaccion?.es_propietario
+        ? 'Se pagaran todas las cuotas pendientes del titular y de los participantes. Deseas continuar?'
+        : 'Se pagaran solo las cuotas pendientes del usuario logueado. Deseas continuar?',
       'Aceptar',
       {
         icon: 'warning',
@@ -2378,9 +2378,9 @@ export class ListadoTransaccionesPage implements OnInit {
     try {
       await this.applyPagosToCurrentTransaction(
         { pagos },
-        this.isDetalleViewMode
-          ? 'Se pagaron todas las cuotas pendientes del usuario logueado.'
-          : 'Se pagaron todas las cuotas pendientes del titular y participantes.',
+        this.paymentModalTransaccion?.es_propietario
+          ? 'Se pagaron todas las cuotas pendientes del titular y participantes.'
+          : 'Se pagaron todas las cuotas pendientes del usuario logueado.',
         'No se pudo aplicar el pago total de la transaccion.',
       );
     } catch (error) {
@@ -2395,7 +2395,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private getFullPagoTransaccionControls(): PagoDetalleForm[] {
-    if (!this.isDetalleViewMode) {
+    if (this.paymentModalTransaccion?.es_propietario) {
       return this.pagosDetalleControls;
     }
 
