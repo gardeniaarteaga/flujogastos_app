@@ -196,8 +196,14 @@
       <section class="kpi-grid compact-kpi-grid">
         <article
           *ngFor="let card of analytics.kpis"
-          class="kpi-card panel compact-kpi-card"
+          class="kpi-card panel compact-kpi-card kpi-card-interactive"
           [ngClass]="'tone-' + card.tone"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="'Ver detalle de ' + card.label"
+          (click)="openTransactionsSummaryModal(card)"
+          (keydown.enter)="openTransactionsSummaryModal(card)"
+          (keydown.space)="openTransactionsSummaryModal(card); $event.preventDefault()"
         >
           <span class="kpi-label">{{ card.label }}</span>
           <strong>{{ formatCurrency(card.value) }}</strong>
@@ -247,5 +253,69 @@
         <p>Crea tus notificaciones de pago para verlas destacadas aqui en el dashboard.</p>
       </div>
     </ng-template>
+
+    <section
+      *ngIf="dashboardTransactionsModalOpen"
+      class="dashboard-modal-backdrop"
+      (click)="closeTransactionsSummaryModal()"
+    >
+      <article
+        class="dashboard-modal panel"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="dashboardTransactionsModalTitle"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="dashboard-modal-header">
+          <div>
+            <span class="panel-kicker">Detalle mensual</span>
+            <h3>{{ dashboardTransactionsModalTitle }}</h3>
+            <p>{{ dashboardTransactionsModalSubtitle }}</p>
+          </div>
+          <button
+            type="button"
+            class="secondary-button dashboard-modal-close"
+            aria-label="Cerrar detalle"
+            (click)="closeTransactionsSummaryModal()"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div *ngIf="dashboardTransactionsModalRows.length > 0; else emptyDashboardTransactions" class="dashboard-modal-table-wrap">
+          <table class="dashboard-modal-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Descripcion</th>
+                <th>Categoria</th>
+                <th>Subcategoria</th>
+                <th>Forma de pago</th>
+                <th *ngIf="dashboardTransactionsModalShowSender">Enviado por</th>
+                <th class="amount-column">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of dashboardTransactionsModalRows">
+                <td>{{ row.dateLabel }}</td>
+                <td>{{ row.description }}</td>
+                <td>{{ row.categoryName }}</td>
+                <td>{{ row.subcategoryName }}</td>
+                <td>{{ row.paymentMethodName }}</td>
+                <td *ngIf="dashboardTransactionsModalShowSender">{{ row.senderName || 'Sin remitente' }}</td>
+                <td class="amount-column">{{ formatCurrency(row.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyDashboardTransactions>
+          <div class="chart-empty">
+            <strong>Sin transacciones para mostrar</strong>
+            <p>No hay movimientos del mes que alimenten este total.</p>
+          </div>
+        </ng-template>
+      </article>
+    </section>
   </main>
 </div>

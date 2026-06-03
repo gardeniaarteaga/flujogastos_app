@@ -315,6 +315,69 @@
   line-height: 1.55;
 }
 
+.kpi-card-interactive {
+  cursor: pointer;
+}
+
+.dashboard-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.dashboard-modal {
+  width: min(1100px, 100%);
+  max-height: 90dvh;
+  display: grid;
+  gap: 1rem;
+  overflow: auto;
+}
+
+.dashboard-modal-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dashboard-modal-close {
+  align-self: flex-start;
+}
+
+.dashboard-modal-table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+
+.dashboard-modal-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.dashboard-modal-table th,
+.dashboard-modal-table td {
+  padding: 0.85rem 0.95rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.dashboard-modal-table th {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.amount-column {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr) minmax(320px, 0.95fr);

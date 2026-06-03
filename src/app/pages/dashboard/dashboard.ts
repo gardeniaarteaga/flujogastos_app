@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
@@ -53,11 +53,13 @@ interface TransaccionListado {
   saldo_pendiente: number;
   id_tipo_transaccion: number;
   id_metodo_pago: number;
+  nombre_forma_pago?: string | null;
   id_categoria: number;
   nombre_categoria: string | null;
   id_subcategoria: number | null;
   nombre_subcategoria: string | null;
   descripcion: string | null;
+  titular?: string | null;
   participantes_detalle: ParticipanteDetalleListado[];
 }
 
@@ -91,11 +93,30 @@ interface EnrichedTransaction {
 }
 
 interface DashboardKpi {
+  key: 'income' | 'expense' | 'shared';
   label: string;
   value: number;
   detail: string;
   helper: string;
   tone: DashboardTone;
+}
+
+interface DashboardTransactionModalRow {
+  date: Date | null;
+  dateLabel: string;
+  description: string;
+  categoryName: string;
+  subcategoryName: string;
+  paymentMethodName: string;
+  amount: number;
+  senderName: string | null;
+}
+
+interface DashboardTransactionModalData {
+  title: string;
+  subtitle: string;
+  rows: DashboardTransactionModalRow[];
+  showSender: boolean;
 }
 
 interface QuickAccessItem {
@@ -246,6 +267,7 @@ interface DashboardAnalytics {
 })
 export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
   private readonly apiUrl = apiUrl('transacciones');
@@ -308,6 +330,17 @@ export class Dashboard implements OnInit {
   currentUserId = getCurrentUserId();
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
+  transactions: TransaccionListado[] = [];
+  dashboardTransactionsModalOpen = false;
+  dashboardTransactionsModalTitle = '';
+  dashboardTransactionsModalSubtitle = '';
+  dashboardTransactionsModalRows: DashboardTransactionModalRow[] = [];
+  dashboardTransactionsModalShowSender = false;
+  dashboardTransactionsModalData: Record<'income' | 'expense' | 'shared', DashboardTransactionModalData> = {
+    income: { title: '', subtitle: '', rows: [], showSender: false },
+    expense: { title: '', subtitle: '', rows: [], showSender: false },
+    shared: { title: '', subtitle: '', rows: [], showSender: true },
+  };
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -345,15 +378,20 @@ export class Dashboard implements OnInit {
         }),
       ]);
 
-      this.analytics = this.buildAnalytics(Array.isArray(transacciones) ? transacciones : []);
+      this.transactions = Array.isArray(transacciones) ? transacciones : [];
+      this.analytics = this.buildAnalytics(this.transactions);
+      this.prepareDashboardTransactionsModalData();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
     } catch {
+      this.transactions = [];
       this.analytics = this.createEmptyAnalytics();
+      this.prepareDashboardTransactionsModalData();
       this.scheduledNotifications = [];
       this.errorMessage =
         'No se pudo construir la reporteria financiera con la informacion disponible.';
     } finally {
       this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -389,6 +427,28 @@ export class Dashboard implements OnInit {
 
   formatScheduledDateLabel(configuracion: ScheduledNotificationView): string {
     return `${configuracion.nextDateLabel} | ${configuracion.relativeLabel}`;
+  }
+
+  openTransactionsSummaryModal(kpi: DashboardKpi): void {
+    const modalData = this.dashboardTransactionsModalData[kpi.key];
+
+    this.dashboardTransactionsModalTitle = modalData.title;
+    this.dashboardTransactionsModalSubtitle = modalData.subtitle;
+    this.dashboardTransactionsModalRows = modalData.rows;
+    this.dashboardTransactionsModalShowSender = modalData.showSender;
+
+    this.dashboardTransactionsModalOpen = true;
+  }
+
+  closeTransactionsSummaryModal(): void {
+    this.dashboardTransactionsModalOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.dashboardTransactionsModalOpen) {
+      this.closeTransactionsSummaryModal();
+    }
   }
 
   private buildAnalytics(
@@ -431,6 +491,7 @@ export class Dashboard implements OnInit {
       summary: `Vista mensual del titular para ${currentMonthLabel}.`,
       kpis: [
         {
+          key: 'income',
           label: 'Total ingresos del mes',
           value: currentMonthIncome,
           detail: 'Solo titular',
@@ -438,6 +499,7 @@ export class Dashboard implements OnInit {
           tone: 'good',
         },
         {
+          key: 'expense',
           label: 'Total gastos del mes',
           value: currentMonthExpense,
           detail: 'Solo titular',
@@ -445,6 +507,7 @@ export class Dashboard implements OnInit {
           tone: currentMonthExpense > 0 ? 'warning' : 'neutral',
         },
         {
+          key: 'shared',
           label: 'Gastos compartidos a mi nombre',
           value: currentMonthSharedExpenseAssigned,
           detail: 'Registrados por otros',
@@ -615,6 +678,173 @@ export class Dashboard implements OnInit {
       (detail) =>
         !detail.es_titular && detail.id_usuario_relacionado === this.currentUserId,
     );
+  }
+
+  private buildIncomeModalRows(monthKey: string): DashboardTransactionModalRow[] {
+    const rows: DashboardTransactionModalRow[] = [];
+
+    for (const transaction of this.transactions) {
+      if (transaction.id_tipo_transaccion !== 2) {
+        continue;
+      }
+
+      const titularDetails = this.getTitularDetails(transaction);
+
+      if (titularDetails.length === 0) {
+        const transactionDate = this.parseDateOnly(transaction.fecha);
+
+        if (!transactionDate || this.getMonthKey(transactionDate) !== monthKey) {
+          continue;
+        }
+
+        rows.push(this.createDashboardTransactionModalRow(transaction, transactionDate, transaction.monto));
+        continue;
+      }
+
+      for (const detail of titularDetails) {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          continue;
+        }
+
+        rows.push(
+          this.createDashboardTransactionModalRow(
+            transaction,
+            detailDate,
+            Math.max(0, this.normalizeAmount(detail.monto)),
+          ),
+        );
+      }
+    }
+
+    return this.sortDashboardTransactionModalRows(rows);
+  }
+
+  private buildExpenseModalRows(monthKey: string): DashboardTransactionModalRow[] {
+    const rows: DashboardTransactionModalRow[] = [];
+
+    for (const transaction of this.transactions) {
+      if (transaction.id_tipo_transaccion === 2) {
+        continue;
+      }
+
+      for (const detail of this.getTitularDetails(transaction)) {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          continue;
+        }
+
+        rows.push(
+          this.createDashboardTransactionModalRow(
+            transaction,
+            detailDate,
+            Math.max(0, this.normalizeAmount(detail.monto)) +
+              Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
+              Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
+          ),
+        );
+      }
+    }
+
+    return this.sortDashboardTransactionModalRows(rows);
+  }
+
+  private buildSharedExpenseModalRows(monthKey: string): DashboardTransactionModalRow[] {
+    const rows: DashboardTransactionModalRow[] = [];
+
+    for (const transaction of this.transactions) {
+      if (transaction.id_tipo_transaccion === 2 || transaction.es_propietario || this.currentUserId <= 0) {
+        continue;
+      }
+
+      for (const detail of this.getCurrentUserAssignedSharedDetails(transaction)) {
+        const detailDate =
+          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha);
+
+        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+          continue;
+        }
+
+        rows.push(
+          this.createDashboardTransactionModalRow(
+            transaction,
+            detailDate,
+            Math.max(0, this.normalizeAmount(detail.monto)) +
+              Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
+              Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
+            transaction.titular?.trim() || 'Sin remitente',
+          ),
+        );
+      }
+    }
+
+    return this.sortDashboardTransactionModalRows(rows);
+  }
+
+  private createDashboardTransactionModalRow(
+    transaction: TransaccionListado,
+    detailDate: Date | null,
+    amount: number,
+    senderName: string | null = null,
+  ): DashboardTransactionModalRow {
+    return {
+      date: detailDate,
+      dateLabel: detailDate ? this.fullDateFormatter.format(detailDate) : 'Sin fecha definida',
+      description: transaction.descripcion?.trim() || 'Sin detalle',
+      categoryName: transaction.nombre_categoria?.trim() || 'Sin categoria',
+      subcategoryName: transaction.nombre_subcategoria?.trim() || 'Sin subcategoria',
+      paymentMethodName: transaction.nombre_forma_pago?.trim() || 'Sin forma de pago',
+      amount: this.roundMoney(Math.max(0, this.normalizeAmount(amount))),
+      senderName,
+    };
+  }
+
+  private sortDashboardTransactionModalRows(
+    rows: DashboardTransactionModalRow[],
+  ): DashboardTransactionModalRow[] {
+    return [...rows].sort((left, right) => {
+      const leftTime = left.date?.getTime() ?? 0;
+      const rightTime = right.date?.getTime() ?? 0;
+
+      if (rightTime !== leftTime) {
+        return rightTime - leftTime;
+      }
+
+      return left.description.localeCompare(right.description, 'es');
+    });
+  }
+
+  private prepareDashboardTransactionsModalData(): void {
+    const currentMonthKey = this.getMonthKey(this.getMonthStart(new Date()));
+    const monthLabel = this.analytics.currentMonthLabel;
+
+    this.dashboardTransactionsModalData = {
+      income: {
+        title: 'Ingresos del mes',
+        subtitle: `Detalle mensual de ingresos para ${monthLabel}.`,
+        rows: this.buildIncomeModalRows(currentMonthKey),
+        showSender: false,
+      },
+      expense: {
+        title: 'Gastos del mes',
+        subtitle: `Detalle mensual de gastos para ${monthLabel}.`,
+        rows: this.buildExpenseModalRows(currentMonthKey),
+        showSender: false,
+      },
+      shared: {
+        title: 'Gastos compartidos a mi nombre',
+        subtitle: `Detalle mensual asignado al usuario actual para ${monthLabel}.`,
+        rows: this.buildSharedExpenseModalRows(currentMonthKey),
+        showSender: true,
+      },
+    };
   }
 
   private enrichTransaction(
@@ -1626,6 +1856,7 @@ export class Dashboard implements OnInit {
       summary: 'Dashboard simplificado con notificaciones y totales mensuales del titular.',
       kpis: [
         {
+          key: 'income',
           label: 'Total ingresos del mes',
           value: 0,
           detail: 'Solo titular',
@@ -1633,6 +1864,7 @@ export class Dashboard implements OnInit {
           tone: 'good',
         },
         {
+          key: 'expense',
           label: 'Total gastos del mes',
           value: 0,
           detail: 'Solo titular',
@@ -1640,6 +1872,7 @@ export class Dashboard implements OnInit {
           tone: 'neutral',
         },
         {
+          key: 'shared',
           label: 'Gastos compartidos a mi nombre',
           value: 0,
           detail: 'Registrados por otros',
