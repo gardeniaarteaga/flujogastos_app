@@ -158,114 +158,8 @@
         </div>
 
         <form [formGroup]="filtrosForm" class="filters-panel" novalidate>
-          <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones" class="filters-grid quick-pay-filters-grid">
-            <div class="field quick-pay-state-field">
-              <label for="estadoDetalle">Estado</label>
-              <select id="estadoDetalle" formControlName="estado">
-                <option [ngValue]="null">Todos</option>
-                <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
-                  {{ estado.nombre_estado }}
-                </option>
-              </select>
-            </div>
-
-            <div class="field quick-pay-type-field">
-              <label for="tipoTransaccionDetalle">Tipo</label>
-              <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
-                <option [ngValue]="null">Todos</option>
-                <option value="credito">Credito</option>
-                <option value="debito">Debito</option>
-              </select>
-            </div>
-
-            <div class="field quick-pay-participant-field">
-              <label for="participanteDetalle">Participantes</label>
-              <select id="participanteDetalle" formControlName="idParticipante">
-                <option [ngValue]="null">Todos</option>
-                <option
-                  *ngFor="let participante of quickPayParticipantesFiltro"
-                  [ngValue]="participante.id_participante"
-                >
-                  {{ getParticipanteDisplayName(participante) }}
-                </option>
-              </select>
-            </div>
-
-            <div class="field" style="display:grid;gap:.35rem;">
-              <label>Fecha programada</label>
-              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;">
-                <div class="date-entry">
-                  <input
-                    id="fechaDesdeDetalle"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="10"
-                    placeholder="Desde"
-                    formControlName="fechaDesde"
-                    (input)="onFiltroFechaInput('fechaDesde', $event)"
-                    (paste)="onFiltroFechaPaste('fechaDesde', $event)"
-                    (blur)="onFiltroFechaBlur('fechaDesde')"
-                  />
-                  <button
-                    type="button"
-                    class="date-picker-button"
-                    (click)="openNativeDatePicker(fechaDesdeDetalleCalendarPicker)"
-                    aria-label="Abrir calendario inicial"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                      />
-                    </svg>
-                  </button>
-                  <input
-                    #fechaDesdeDetalleCalendarPicker
-                    class="date-picker-native"
-                    type="date"
-                    [value]="fechaDesdeCalendarioValue"
-                    (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
-                    tabindex="-1"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div class="date-entry">
-                  <input
-                    id="fechaHastaDetalle"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="10"
-                    placeholder="Hasta"
-                    formControlName="fechaHasta"
-                    (input)="onFiltroFechaInput('fechaHasta', $event)"
-                    (paste)="onFiltroFechaPaste('fechaHasta', $event)"
-                    (blur)="onFiltroFechaBlur('fechaHasta')"
-                  />
-                  <button
-                    type="button"
-                    class="date-picker-button"
-                    (click)="openNativeDatePicker(fechaHastaDetalleCalendarPicker)"
-                    aria-label="Abrir calendario final"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                      />
-                    </svg>
-                  </button>
-                  <input
-                    #fechaHastaDetalleCalendarPicker
-                    class="date-picker-native"
-                    type="date"
-                    [value]="fechaHastaCalendarioValue"
-                    (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
-                    tabindex="-1"
-                    aria-hidden="true"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="quick-pay-summary-layout">
+          <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones">
+            <div class="quick-pay-summary-layout quick-pay-summary-layout-standalone">
               <div class="quick-pay-summary-grid" *ngIf="quickPayFilteredSubtotalSummary as quickPaySummary">
                 <div class="quick-pay-summary-card quick-pay-summary-card-pending">
                   <span class="stat-label">Pendiente</span>
@@ -280,49 +174,169 @@
                   <strong>${{ quickPaySummary.ingresos | number: '1.2-2' }}</strong>
                 </div>
               </div>
+            </div>
 
-              <div class="field quick-pay-checkbox-field">
-                <label class="checkbox-row quick-pay-checkbox-row" for="mesActualDetalle">
-                  <input
-                    id="mesActualDetalle"
-                    type="checkbox"
-                    formControlName="mesActual"
-                    (change)="onMesActualToggle($event)"
-                  />
-                  <span>Mes actual</span>
-                </label>
-                <label class="checkbox-row quick-pay-checkbox-row" for="enviadasDetalle">
-                  <input
-                    id="enviadasDetalle"
-                    type="checkbox"
-                    formControlName="enviadas"
-                    (change)="onEnviadasToggle($event)"
-                  />
-                  <span>Enviados</span>
-                </label>
-                <label class="checkbox-row quick-pay-checkbox-row" for="compartidosDetalle">
-                  <input
-                    id="compartidosDetalle"
-                    type="checkbox"
-                    formControlName="compartidos"
-                    (change)="onCompartidosToggle($event)"
-                  />
-                  <span>Compartidos</span>
-                </label>
+            <div class="filter-toggle-group filter-toggle-group-compact quick-pay-toggle-group">
+              <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
+                <input
+                  id="mesActualDetalle"
+                  type="checkbox"
+                  formControlName="mesActual"
+                  (change)="onMesActualToggle($event)"
+                />
+                <span>Mes actual</span>
+              </label>
+
+              <label class="checkbox-row checkbox-row-compact" for="enviadasDetalle">
+                <input
+                  id="enviadasDetalle"
+                  type="checkbox"
+                  formControlName="enviadas"
+                  (change)="onEnviadasToggle($event)"
+                />
+                <span>Recibidos</span>
+              </label>
+
+              <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
+                <input
+                  id="compartidosDetalle"
+                  type="checkbox"
+                  formControlName="compartidos"
+                  (change)="onCompartidosToggle($event)"
+                />
+                <span>Compartidos</span>
+              </label>
+
+              <button
+                type="button"
+                class="secondary-button compact-button"
+                (click)="toggleAdvancedFilters()"
+              >
+                {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
+              </button>
+            </div>
+
+            <div class="filters-grid">
+              <div class="field quick-pay-state-field">
+                <label for="estadoDetalle">Estado</label>
+                <select id="estadoDetalle" formControlName="estado">
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
+                    {{ estado.nombre_estado }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="field quick-pay-participant-field">
+                <label for="participanteDetalle">Participantes</label>
+                <select id="participanteDetalle" formControlName="idParticipante">
+                  <option [ngValue]="null">Todos</option>
+                  <option
+                    *ngFor="let participante of quickPayParticipantesFiltro"
+                    [ngValue]="participante.id_participante"
+                  >
+                    {{ getParticipanteDisplayName(participante) }}
+                  </option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <div *ngIf="isDetalleViewMode" class="filters-search-row">
-            <div class="field">
-              <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
-              <input
-                id="busquedaDescripcionDetalle"
-                type="text"
-                formControlName="busquedaDescripcion"
-                maxlength="250"
-                placeholder="Escribe parte de la descripcion..."
-              />
+            <div class="filters-search-row">
+              <div class="field">
+                <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
+                <input
+                  id="busquedaDescripcionDetalle"
+                  type="text"
+                  formControlName="busquedaDescripcion"
+                  maxlength="250"
+                  placeholder="Escribe parte de la descripcion..."
+                />
+              </div>
+            </div>
+
+            <div *ngIf="showAdvancedFilters" class="filters-grid quick-pay-advanced-grid">
+              <div class="field quick-pay-type-field">
+                <label for="tipoTransaccionDetalle">Tipo</label>
+                <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
+                  <option [ngValue]="null">Todos</option>
+                  <option value="credito">Credito</option>
+                  <option value="debito">Debito</option>
+                </select>
+              </div>
+
+              <div class="field quick-pay-date-field">
+                <label>Fecha programada</label>
+                <div class="quick-pay-date-range">
+                  <div class="date-entry">
+                    <input
+                      id="fechaDesdeDetalle"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="10"
+                      placeholder="Desde"
+                      formControlName="fechaDesde"
+                      (input)="onFiltroFechaInput('fechaDesde', $event)"
+                      (paste)="onFiltroFechaPaste('fechaDesde', $event)"
+                      (blur)="onFiltroFechaBlur('fechaDesde')"
+                    />
+                    <button
+                      type="button"
+                      class="date-picker-button"
+                      (click)="openNativeDatePicker(fechaDesdeDetalleCalendarPicker)"
+                      aria-label="Abrir calendario inicial"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                        />
+                      </svg>
+                    </button>
+                    <input
+                      #fechaDesdeDetalleCalendarPicker
+                      class="date-picker-native"
+                      type="date"
+                      [value]="fechaDesdeCalendarioValue"
+                      (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div class="date-entry">
+                    <input
+                      id="fechaHastaDetalle"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="10"
+                      placeholder="Hasta"
+                      formControlName="fechaHasta"
+                      (input)="onFiltroFechaInput('fechaHasta', $event)"
+                      (paste)="onFiltroFechaPaste('fechaHasta', $event)"
+                      (blur)="onFiltroFechaBlur('fechaHasta')"
+                    />
+                    <button
+                      type="button"
+                      class="date-picker-button"
+                      (click)="openNativeDatePicker(fechaHastaDetalleCalendarPicker)"
+                      aria-label="Abrir calendario final"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                        />
+                      </svg>
+                    </button>
+                    <input
+                      #fechaHastaDetalleCalendarPicker
+                      class="date-picker-native"
+                      type="date"
+                      [value]="fechaHastaCalendarioValue"
+                      (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
+                      tabindex="-1"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -350,7 +364,7 @@
 
               <label class="checkbox-row" for="enviadas">
                 <input id="enviadas" type="checkbox" formControlName="enviadas" />
-                <span>Enviadas</span>
+                <span>Recibidas</span>
               </label>
 
               <button
@@ -553,14 +567,14 @@
                       style="display: inline-flex; width: fit-content; align-items: center; gap: 0.4rem; padding: 0.2rem 0.58rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap;"
                       [style.background]="transaccion.es_propietario ? '#e9f9ef' : '#f1e8ff'"
                       [style.color]="transaccion.es_propietario ? '#18794e' : '#7a3db8'"
-                      [attr.title]="transaccion.es_propietario ? 'Gasto ingresado por ti' : 'Gasto enviado por otro usuario'"
-                      [attr.aria-label]="transaccion.es_propietario ? 'Gasto propio' : 'Gasto enviado por otro usuario'"
+                      [attr.title]="transaccion.es_propietario ? 'Gasto ingresado por ti' : 'Gasto recibido de otro miembro'"
+                      [attr.aria-label]="transaccion.es_propietario ? 'Gasto propio' : 'Gasto recibido de otro miembro'"
                     >
                       <span
                         style="width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; flex: 0 0 auto;"
                         aria-hidden="true"
                       ></span>
-                      {{ transaccion.es_propietario ? 'Propio' : 'Enviado' }}
+                      {{ transaccion.es_propietario ? 'Propio' : 'Recibido' }}
                     </span>
                   </div>
                 </td>
@@ -803,14 +817,14 @@
                     <span
                       *ngIf="!row.transaccion.es_propietario"
                       style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
-                      title="Transaccion enviada por otro usuario"
-                      aria-label="Transaccion enviada por otro usuario"
+                      title="Transaccion recibida de otro miembro"
+                      aria-label="Transaccion recibida de otro miembro"
                     >
                       <span
                         style="width:.45rem;height:.45rem;border-radius:50%;background:currentColor;flex:0 0 auto;"
                         aria-hidden="true"
                       ></span>
-                      Enviado
+                      Recibido
                     </span>
                   </div>
                 </td>

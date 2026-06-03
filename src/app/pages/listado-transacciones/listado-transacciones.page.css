@@ -20,8 +20,8 @@
 .filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 .filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
-.quick-pay-filters-grid { grid-template-columns:minmax(118px,136px) minmax(128px,146px) minmax(118px,136px) minmax(148px,170px) minmax(320px,380px) minmax(0,1fr); align-items:end; gap:.8rem; }
 .quick-pay-summary-layout { grid-column:5/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.8rem; min-width:0; }
+.quick-pay-summary-layout-standalone { grid-column:auto; grid-template-columns:minmax(0,1fr); margin-bottom:.15rem; }
 .quick-pay-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:.75rem; min-width:0; }
 .quick-pay-summary-card { min-width:0; padding:.7rem .85rem; border:1px solid #dce6f2; border-radius:.85rem; background:#f4f8ff; }
 .quick-pay-summary-card strong { display:block; color:var(--color-heading); font-size:clamp(1.08rem,1.6vw,1.35rem); line-height:1.1; }
@@ -34,8 +34,10 @@
 .quick-pay-days-field input.is-disabled { opacity:.6; cursor:not-allowed; }
 .quick-pay-state-field select, .quick-pay-type-field select { width:100%; min-width:0; max-width:100%; padding-right:2.2rem; }
 .quick-pay-participant-field select { width:100%; min-width:0; max-width:100%; }
-.quick-pay-checkbox-field { display:grid; gap:.55rem; justify-items:start; justify-self:end; align-self:end; margin:0; min-width:max-content; }
-.quick-pay-checkbox-row { min-height:2.65rem; margin:0; }
+.quick-pay-toggle-group { align-items:center; gap:.6rem; }
+.quick-pay-advanced-grid { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; }
+.quick-pay-date-field { display:grid; gap:.35rem; }
+.quick-pay-date-range { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.45rem; }
 .filter-toggle-group { display:flex; gap:.75rem; flex-wrap:wrap; }
 .filter-toggle-group-compact { align-items:center; gap:.6rem; }
 
@@ -368,7 +370,6 @@
   transform: translateX(-50%);
 }
 
-@media (max-width:1380px){.quick-pay-filters-grid{grid-template-columns:repeat(4,minmax(0,1fr));}.quick-pay-summary-layout{grid-column:1/-1;}}
 @media (max-width: 900px) {
   .stats-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -382,7 +383,7 @@
     grid-template-columns: 1fr;
   }
 
-  .quick-pay-filters-grid {
+  .quick-pay-advanced-grid {
     grid-template-columns: 1fr;
   }
 
@@ -393,6 +394,10 @@
 
   .quick-pay-summary-layout {
     grid-column: auto;
+  }
+
+  .quick-pay-date-range {
+    grid-template-columns: 1fr;
   }
 
   .cuotas-list-head {
