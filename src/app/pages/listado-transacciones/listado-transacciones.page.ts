@@ -305,6 +305,8 @@ export class ListadoTransaccionesPage implements OnInit {
     tipoTransaccion: [null as 'credito' | 'debito' | null],
     idMetodoPago: [null as number | null],
     idParticipante: [null as number | null],
+    idCategoria: [null as number | null],
+    idSubcategoria: [null as number | null],
     busquedaDescripcion: [''],
   });
 
@@ -414,6 +416,12 @@ export class ListadoTransaccionesPage implements OnInit {
         if (!this.filtrosForm.controls.compartidos.value || participanteId !== null) {
           this.sharedParticipantFilterAutoReset = false;
         }
+      });
+
+    this.filtrosForm.controls.idCategoria.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.syncFiltroSubcategoriaSelection();
       });
 
     this.transaccionForm.controls.id_tipo_transaccion.valueChanges
@@ -575,6 +583,17 @@ export class ListadoTransaccionesPage implements OnInit {
         !this.getParticipantesDetalleSafe(transaccion).some(
           (detalle) => detalle.id_participante === filtros.idParticipante,
         )
+      ) {
+        return false;
+      }
+
+      if (filtros.idCategoria !== null && transaccion.id_categoria !== filtros.idCategoria) {
+        return false;
+      }
+
+      if (
+        filtros.idSubcategoria !== null &&
+        transaccion.id_subcategoria !== filtros.idSubcategoria
       ) {
         return false;
       }
@@ -1282,6 +1301,14 @@ export class ListadoTransaccionesPage implements OnInit {
       .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
   }
 
+  get filteredSubcategoriasFiltro(): CatalogoSubcategoria[] {
+    const categoriaId = this.filtrosForm.controls.idCategoria.value;
+
+    return this.subcategorias
+      .filter((item) => categoriaId === null || item.id_categoria === categoriaId)
+      .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
+  }
+
   async loadInitialData(): Promise<void> {
     await this.loadCatalogos(true);
     const resolvedUserId = await this.catalogosService.syncCurrentUserId();
@@ -1317,6 +1344,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.estadosTransaccion = catalogos.estadosTransaccion.filter(
         (item) => item.estado === 'ACTIVO' && item.flag?.trim().toUpperCase() === 'T',
       );
+      this.syncFiltroSubcategoriaSelection();
       this.syncQuickPayParticipantFilterDefault();
       this.onFormaPagoChange();
       this.onCategoriaChange();
@@ -2308,7 +2336,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return false;
     }
 
-    return this.pagosDetalleControls.some(
+    return this.getFullPagoTransaccionControls().some(
       (cuota) => this.toCents(cuota.controls.saldo_pendiente.value) > 0,
     );
   }
@@ -2320,7 +2348,9 @@ export class ListadoTransaccionesPage implements OnInit {
 
     const confirmed = await this.alerts.confirm(
       'Confirmar pago total',
-      'Se pagaran todas las cuotas pendientes del titular y de los participantes. Deseas continuar?',
+      this.isDetalleViewMode
+        ? 'Se pagaran solo las cuotas pendientes del usuario logueado. Deseas continuar?'
+        : 'Se pagaran todas las cuotas pendientes del titular y de los participantes. Deseas continuar?',
       'Aceptar',
       {
         icon: 'warning',
@@ -2332,7 +2362,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const pagos = this.pagosDetalleControls
+    const pagos = this.getFullPagoTransaccionControls()
       .filter((cuota) => this.toCents(cuota.controls.saldo_pendiente.value) > 0)
       .map((cuota) => ({
         id_detalle: cuota.controls.id_detalle.value,
@@ -2348,7 +2378,9 @@ export class ListadoTransaccionesPage implements OnInit {
     try {
       await this.applyPagosToCurrentTransaction(
         { pagos },
-        'Se pagaron todas las cuotas pendientes del titular y participantes.',
+        this.isDetalleViewMode
+          ? 'Se pagaron todas las cuotas pendientes del usuario logueado.'
+          : 'Se pagaron todas las cuotas pendientes del titular y participantes.',
         'No se pudo aplicar el pago total de la transaccion.',
       );
     } catch (error) {
@@ -2360,6 +2392,32 @@ export class ListadoTransaccionesPage implements OnInit {
     } finally {
       this.applyingFullPayment = false;
     }
+  }
+
+  private getFullPagoTransaccionControls(): PagoDetalleForm[] {
+    if (!this.isDetalleViewMode) {
+      return this.pagosDetalleControls;
+    }
+
+    return this.pagosDetalleControls.filter((cuota) =>
+      this.isPagoDetalleDelUsuarioLogueado(cuota),
+    );
+  }
+
+  private isPagoDetalleDelUsuarioLogueado(cuota: PagoDetalleForm): boolean {
+    const detalle =
+      this.getParticipantesDetalleSafe(this.paymentModalTransaccion).find(
+        (item) => item.id === cuota.controls.id_detalle.value,
+      ) ?? null;
+
+    if (!detalle) {
+      return false;
+    }
+
+    return this.isDetalleDelUsuarioLogueado(
+      detalle,
+      this.paymentModalTransaccion?.es_propietario ?? false,
+    );
   }
 
   private clearSelection(clearMessages = true): void {
@@ -6876,6 +6934,8 @@ export class ListadoTransaccionesPage implements OnInit {
       tipoTransaccion: null,
       idMetodoPago: null,
       idParticipante: this.getDefaultQuickPayParticipanteFilterId(),
+      idCategoria: null,
+      idSubcategoria: null,
       busquedaDescripcion: '',
     });
     this.syncQuickPayPriorityControlState(this.filtrosForm.controls.prioritarios.value);
@@ -7109,6 +7169,8 @@ export class ListadoTransaccionesPage implements OnInit {
         estado: null,
         idMetodoPago: null,
         idParticipante: null,
+        idCategoria: null,
+        idSubcategoria: null,
         busquedaDescripcion: '',
       },
       { emitEvent: true },
@@ -7136,7 +7198,9 @@ export class ListadoTransaccionesPage implements OnInit {
       !this.normalizeText(filtros.estado ?? '') &&
       !this.normalizeText(filtros.busquedaDescripcion ?? '') &&
       filtros.idMetodoPago === null &&
-      filtros.idParticipante === null;
+      filtros.idParticipante === null &&
+      filtros.idCategoria === null &&
+      filtros.idSubcategoria === null;
 
     if (isShowingAll) {
       return;
@@ -7247,10 +7311,28 @@ export class ListadoTransaccionesPage implements OnInit {
         tipoTransaccion: null,
         idMetodoPago: null,
         idParticipante: null,
+        idCategoria: null,
+        idSubcategoria: null,
         busquedaDescripcion: '',
       },
       { emitEvent: true },
     );
+  }
+
+  private syncFiltroSubcategoriaSelection(): void {
+    const subcategoriaId = this.filtrosForm.controls.idSubcategoria.value;
+
+    if (subcategoriaId === null) {
+      return;
+    }
+
+    if (
+      !this.filteredSubcategoriasFiltro.some(
+        (item) => item.id_subcategoria === subcategoriaId,
+      )
+    ) {
+      this.filtrosForm.controls.idSubcategoria.setValue(null, { emitEvent: false });
+    }
   }
 
   private isIngresoDetalleRow(
