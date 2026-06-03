@@ -14,7 +14,6 @@ import {
   ConfiguracionNotificacionPago,
   NotificacionesService,
 } from '../../shared/services/notificaciones.service';
-import { SweetAlertService } from '../../shared/services/sweet-alert.service';
 import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
@@ -97,6 +96,13 @@ interface DashboardKpi {
   detail: string;
   helper: string;
   tone: DashboardTone;
+}
+
+interface QuickAccessItem {
+  label: string;
+  helper: string;
+  route: string;
+  accent: 'violet' | 'amber' | 'teal';
 }
 
 interface RankingItem {
@@ -242,7 +248,6 @@ export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
-  private readonly alerts = inject(SweetAlertService);
   private readonly apiUrl = apiUrl('transacciones');
   private readonly timeoutMs = 10000;
   private readonly currencyFormatter = new Intl.NumberFormat('es-SV', {
@@ -272,6 +277,26 @@ export class Dashboard implements OnInit {
     numeric: 'auto',
   });
   private readonly chartColors = ['#2563eb', '#f97316', '#e11d48', '#0f766e', '#8b5cf6'];
+  private readonly quickAccessCatalog: QuickAccessItem[] = [
+    {
+      label: 'Formas de pago',
+      helper: 'Metodos y cuentas',
+      route: '/formas-pago',
+      accent: 'violet',
+    },
+    {
+      label: 'Categorias',
+      helper: 'Ordena tus gastos',
+      route: '/categorias',
+      accent: 'amber',
+    },
+    {
+      label: 'Participantes',
+      helper: 'Miembros y cuotas',
+      route: '/participantes',
+      accent: 'teal',
+    },
+  ];
 
   loading = false;
   errorMessage = '';
@@ -283,10 +308,13 @@ export class Dashboard implements OnInit {
   currentUserId = getCurrentUserId();
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
-  finalizingScheduledNotificationIds = new Set<number>();
 
   get isAdminSession(): boolean {
     return isAdminUser();
+  }
+
+  get dashboardQuickAccessItems(): QuickAccessItem[] {
+    return this.quickAccessCatalog;
   }
 
   ngOnInit(): void {
@@ -361,49 +389,6 @@ export class Dashboard implements OnInit {
 
   formatScheduledDateLabel(configuracion: ScheduledNotificationView): string {
     return `${configuracion.nextDateLabel} | ${configuracion.relativeLabel}`;
-  }
-
-  isFinalizingScheduledNotification(idNotificacionProgramada: number): boolean {
-    return this.finalizingScheduledNotificationIds.has(idNotificacionProgramada);
-  }
-
-  async finalizeScheduledNotification(item: ScheduledNotificationView): Promise<void> {
-    if (this.finalizingScheduledNotificationIds.has(item.id_notificacion_programada)) {
-      return;
-    }
-
-    const confirmed = await this.alerts.confirm(
-      'Finalizar notificacion programada',
-      `Se finalizara la notificacion programada "${item.descripcion}".`,
-      'Si, finalizar',
-      {
-        icon: 'warning',
-        confirmButtonColor: '#7c3a72',
-        cancelButtonColor: '#d1d5db',
-      },
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    this.scheduledNotificationsError = '';
-    this.finalizingScheduledNotificationIds.add(item.id_notificacion_programada);
-
-    try {
-      await this.notificacionesService.finalizeConfiguracionPago(
-        item.id_notificacion_programada,
-      );
-      this.scheduledNotifications = this.scheduledNotifications.filter(
-        (scheduledItem) =>
-          scheduledItem.id_notificacion_programada !== item.id_notificacion_programada,
-      );
-    } catch {
-      this.scheduledNotificationsError =
-        'No se pudo finalizar la notificacion programada. Intenta nuevamente.';
-    } finally {
-      this.finalizingScheduledNotificationIds.delete(item.id_notificacion_programada);
-    }
   }
 
   private buildAnalytics(

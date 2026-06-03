@@ -361,6 +361,7 @@ export class ListadoTransaccionesPage implements OnInit {
   quickPayParticipantesFiltro: CatalogoParticipante[] = [];
   categorias: CatalogoCategoria[] = [];
   subcategorias: CatalogoSubcategoria[] = [];
+  filteredSubcategoriasFiltro: CatalogoSubcategoria[] = [];
   estadosTransaccion: CatalogoEstadoTransaccion[] = [];
 
   readonly transaccionForm = this.fb.group({
@@ -421,6 +422,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.filtrosForm.controls.idCategoria.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
+        this.refreshFilteredSubcategoriasFiltro();
         this.syncFiltroSubcategoriaSelection();
       });
 
@@ -1301,14 +1303,6 @@ export class ListadoTransaccionesPage implements OnInit {
       .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
   }
 
-  get filteredSubcategoriasFiltro(): CatalogoSubcategoria[] {
-    const categoriaId = this.filtrosForm.controls.idCategoria.value;
-
-    return this.subcategorias
-      .filter((item) => categoriaId === null || item.id_categoria === categoriaId)
-      .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
-  }
-
   async loadInitialData(): Promise<void> {
     await this.loadCatalogos(true);
     const resolvedUserId = await this.catalogosService.syncCurrentUserId();
@@ -1341,6 +1335,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.subcategorias = catalogos.subcategorias.filter(
         (item) => item.estado,
       );
+      this.refreshFilteredSubcategoriasFiltro();
       this.estadosTransaccion = catalogos.estadosTransaccion.filter(
         (item) => item.estado === 'ACTIVO' && item.flag?.trim().toUpperCase() === 'T',
       );
@@ -7317,6 +7312,14 @@ export class ListadoTransaccionesPage implements OnInit {
       },
       { emitEvent: true },
     );
+  }
+
+  private refreshFilteredSubcategoriasFiltro(): void {
+    const categoriaId = this.filtrosForm.controls.idCategoria.value;
+
+    this.filteredSubcategoriasFiltro = this.subcategorias
+      .filter((item) => categoriaId === null || item.id_categoria === categoriaId)
+      .sort((a, b) => a.nombre_subcategoria.localeCompare(b.nombre_subcategoria));
   }
 
   private syncFiltroSubcategoriaSelection(): void {

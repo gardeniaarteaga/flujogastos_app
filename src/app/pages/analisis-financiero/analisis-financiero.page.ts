@@ -285,7 +285,7 @@ export class AnalisisFinancieroPage implements OnInit {
   participantOptions: SelectOption[] = [];
   entityOptions: SelectOption[] = [];
   stateOptions: SelectOption[] = [];
-  analysis = this.createEmptyAnalysis();
+  analysis: AnalysisViewModel = this.createEmptyAnalysis();
 
   private categorias: CatalogoCategoria[] = [];
   private subcategorias: CatalogoSubcategoria[] = [];
@@ -417,6 +417,10 @@ export class AnalisisFinancieroPage implements OnInit {
     }
 
     return this.percentFormatter.format(value);
+  }
+
+  get categoryBreakdowns(): CategoryBreakdownItem[] {
+    return this.analysis.categoryBreakdowns ?? [];
   }
 
   getSelectedMonthName(): string {
