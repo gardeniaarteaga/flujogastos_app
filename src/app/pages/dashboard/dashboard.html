@@ -168,11 +168,40 @@
           <div>
             <h3>{{ analytics.currentMonthLabel }}</h3>
           </div>
-          <button type="button" class="secondary-button" (click)="loadDashboard()" [disabled]="loading">
-            Actualizar
-          </button>
+          <div class="dashboard-header-actions">
+            <div class="dashboard-period-filter" aria-label="Seleccionar periodo del dashboard">
+              <label class="dashboard-period-field">
+                <span>Mes</span>
+                <select
+                  #monthSelect
+                  [value]="selectedMonth"
+                  (change)="onSelectedMonthChange(monthSelect.value)"
+                >
+                  <option *ngFor="let month of monthOptions" [value]="month.value">
+                    {{ month.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="dashboard-period-field">
+                <span>Año</span>
+                <select
+                  #yearSelect
+                  [value]="selectedYear"
+                  (change)="onSelectedYearChange(yearSelect.value)"
+                >
+                  <option *ngFor="let year of availableYears" [value]="year">
+                    {{ year }}
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            <button type="button" class="secondary-button" (click)="loadDashboard()" [disabled]="loading">
+              Actualizar
+            </button>
+          </div>
         </div>
-        <p class="panel-copy">{{ analytics.summary }}</p>
       </section>
 
       <section class="quick-links-panel" aria-label="Rutas rapidas de mantenimiento">

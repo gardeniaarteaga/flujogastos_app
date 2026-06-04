@@ -87,7 +87,10 @@ export class SessionStripComponent implements OnInit, OnDestroy {
     }
 
     this.notificationsOpen = false;
-    await this.router.navigate(['/transacciones/listado']);
+    await this.router.navigate(
+      this.resolveNotificationRoute(notification),
+      this.resolveNotificationNavigationExtras(notification),
+    );
   }
 
   async markNotificationAsRead(notification: NotificacionItem): Promise<void> {
@@ -219,5 +222,48 @@ export class SessionStripComponent implements OnInit, OnDestroy {
           : `Tienes ${this.unreadNotifications} notificaciones nuevas`;
 
     saveUserProfile(this.userProfile);
+  }
+
+  private resolveNotificationRoute(notification: NotificacionItem): string[] {
+    if (this.isSharedPaymentNotification(notification) && notification.id_transaccion) {
+      return ['/resumen/detalle-transacciones'];
+    }
+
+    return ['/transacciones/listado'];
+  }
+
+  private resolveNotificationNavigationExtras(notification: NotificacionItem): {
+    queryParams?: Record<string, string | number>;
+  } {
+    if (this.isSharedPaymentNotification(notification) && notification.id_transaccion) {
+      return {
+        queryParams: {
+          openPayment: 1,
+          transactionId: notification.id_transaccion,
+        },
+      };
+    }
+
+    return {};
+  }
+
+  private isSharedPaymentNotification(notification: NotificacionItem): boolean {
+    if (!notification.id_transaccion) {
+      return false;
+    }
+
+    const searchableText = this.normalizeNotificationText(
+      `${notification.tipo} ${notification.titulo} ${notification.mensaje}`,
+    );
+
+    return searchableText.includes('compartid');
+  }
+
+  private normalizeNotificationText(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 }

@@ -283,6 +283,9 @@ export class Dashboard implements OnInit {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   });
+  private readonly monthNameFormatter = new Intl.DateTimeFormat('es-SV', {
+    month: 'long',
+  });
   private readonly monthFormatter = new Intl.DateTimeFormat('es-SV', {
     month: 'long',
     year: 'numeric',
@@ -328,6 +331,13 @@ export class Dashboard implements OnInit {
   maintenanceOpen = false;
   readonly userProfile = loadUserProfile();
   currentUserId = getCurrentUserId();
+  selectedMonth = this.getToday().getMonth() + 1;
+  selectedYear = this.getToday().getFullYear();
+  availableYears: number[] = [this.selectedYear];
+  readonly monthOptions = Array.from({ length: 12 }, (_, index) => ({
+    value: index + 1,
+    label: this.capitalizeText(this.monthNameFormatter.format(new Date(2024, index, 1))),
+  }));
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
   transactions: TransaccionListado[] = [];
@@ -379,11 +389,12 @@ export class Dashboard implements OnInit {
       ]);
 
       this.transactions = Array.isArray(transacciones) ? transacciones : [];
-      this.analytics = this.buildAnalytics(this.transactions);
-      this.prepareDashboardTransactionsModalData();
+      this.availableYears = this.buildAvailableYears(this.transactions);
+      this.refreshDashboardSummary();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
     } catch {
       this.transactions = [];
+      this.availableYears = this.buildAvailableYears([]);
       this.analytics = this.createEmptyAnalytics();
       this.prepareDashboardTransactionsModalData();
       this.scheduledNotifications = [];
@@ -429,6 +440,28 @@ export class Dashboard implements OnInit {
     return `${configuracion.nextDateLabel} | ${configuracion.relativeLabel}`;
   }
 
+  onSelectedMonthChange(value: string): void {
+    const nextMonth = Number(value);
+
+    if (!Number.isInteger(nextMonth) || nextMonth < 1 || nextMonth > 12 || nextMonth === this.selectedMonth) {
+      return;
+    }
+
+    this.selectedMonth = nextMonth;
+    this.refreshDashboardSummary();
+  }
+
+  onSelectedYearChange(value: string): void {
+    const nextYear = Number(value);
+
+    if (!Number.isInteger(nextYear) || nextYear === this.selectedYear) {
+      return;
+    }
+
+    this.selectedYear = nextYear;
+    this.refreshDashboardSummary();
+  }
+
   openTransactionsSummaryModal(kpi: DashboardKpi): void {
     const modalData = this.dashboardTransactionsModalData[kpi.key];
 
@@ -453,10 +486,10 @@ export class Dashboard implements OnInit {
 
   private buildAnalytics(
     transacciones: TransaccionListado[],
+    selectedMonthStart: Date = this.getSelectedMonthStart(),
   ): DashboardAnalytics {
-    const currentMonth = this.getMonthStart(new Date());
-    const currentMonthKey = this.getMonthKey(currentMonth);
-    const currentMonthLabel = this.capitalizeText(this.monthFormatter.format(currentMonth));
+    const currentMonthKey = this.getMonthKey(selectedMonthStart);
+    const currentMonthLabel = this.capitalizeText(this.monthFormatter.format(selectedMonthStart));
 
     const currentMonthIncome = this.roundMoney(
       transacciones.reduce(
@@ -822,7 +855,7 @@ export class Dashboard implements OnInit {
   }
 
   private prepareDashboardTransactionsModalData(): void {
-    const currentMonthKey = this.getMonthKey(this.getMonthStart(new Date()));
+    const currentMonthKey = this.getMonthKey(this.getSelectedMonthStart());
     const monthLabel = this.analytics.currentMonthLabel;
 
     this.dashboardTransactionsModalData = {
@@ -1831,7 +1864,7 @@ export class Dashboard implements OnInit {
   }
 
   private createRollingMonths(size: number): Array<{ key: string; label: string }> {
-    const end = this.getMonthStart(new Date());
+    const end = this.getSelectedMonthStart();
     const months: Array<{ key: string; label: string }> = [];
 
     for (let index = size - 1; index >= 0; index -= 1) {
@@ -1849,11 +1882,11 @@ export class Dashboard implements OnInit {
   private createEmptyAnalytics(): DashboardAnalytics {
     return {
       hasData: false,
-      currentMonthLabel: this.capitalizeText(this.monthFormatter.format(this.getMonthStart(new Date()))),
+      currentMonthLabel: this.capitalizeText(this.monthFormatter.format(this.getSelectedMonthStart())),
       healthScore: 0,
       healthTone: 'neutral',
       healthLabel: 'Resumen del titular',
-      summary: 'Dashboard simplificado con notificaciones y totales mensuales del titular.',
+      summary: `Vista mensual del titular para ${this.capitalizeText(this.monthFormatter.format(this.getSelectedMonthStart()))}.`,
       kpis: [
         {
           key: 'income',
@@ -1944,6 +1977,10 @@ export class Dashboard implements OnInit {
     return new Date(date.getFullYear(), date.getMonth(), 1);
   }
 
+  private getSelectedMonthStart(): Date {
+    return new Date(this.selectedYear, this.selectedMonth - 1, 1);
+  }
+
   private getToday(): Date {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1951,6 +1988,34 @@ export class Dashboard implements OnInit {
 
   private getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private buildAvailableYears(transacciones: TransaccionListado[]): number[] {
+    const years = new Set<number>([this.getToday().getFullYear(), this.selectedYear]);
+
+    for (const transaction of transacciones) {
+      const transactionDate = this.parseDateOnly(transaction.fecha);
+      if (transactionDate) {
+        years.add(transactionDate.getFullYear());
+      }
+
+      for (const detail of Array.isArray(transaction.participantes_detalle)
+        ? transaction.participantes_detalle
+        : []) {
+        const detailDate = this.parseDateOnly(detail.fecha_programada);
+        if (detailDate) {
+          years.add(detailDate.getFullYear());
+        }
+      }
+    }
+
+    return [...years].sort((left, right) => right - left);
+  }
+
+  private refreshDashboardSummary(): void {
+    this.analytics = this.buildAnalytics(this.transactions, this.getSelectedMonthStart());
+    this.prepareDashboardTransactionsModalData();
+    this.cdr.detectChanges();
   }
 
   private formatIsoDate(date: Date | null): string {

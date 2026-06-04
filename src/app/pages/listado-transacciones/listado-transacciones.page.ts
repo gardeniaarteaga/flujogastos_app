@@ -341,6 +341,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly pendingDismissedTitularFullShareGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
+  private autoOpenPaymentHandledKey: string | null = null;
   readonly listadoPageSize = 10;
   readonly cuotasPageSize = 12;
 
@@ -7011,6 +7012,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private async loadPageForTodayInternal(): Promise<void> {
     this.resetDefaultFilters();
     await this.loadInitialData();
+    await this.processAutoOpenPaymentRequest();
   }
 
   private resetDefaultFilters(): void {
@@ -7485,5 +7487,52 @@ export class ListadoTransaccionesPage implements OnInit {
       url === '/resumen/detalle-transacciones' ||
       url.startsWith('/resumen/detalle-transacciones?')
     );
+  }
+
+  private async processAutoOpenPaymentRequest(): Promise<void> {
+    const openPaymentFlag = this.route.snapshot.queryParamMap.get('openPayment');
+    const transactionIdParam = this.route.snapshot.queryParamMap.get('transactionId');
+
+    if (openPaymentFlag !== '1' || !transactionIdParam) {
+      this.autoOpenPaymentHandledKey = null;
+      return;
+    }
+
+    const transactionId = Number(transactionIdParam);
+    const requestKey = `${openPaymentFlag}:${transactionIdParam}`;
+
+    if (!Number.isInteger(transactionId) || transactionId < 1) {
+      await this.clearAutoOpenPaymentRequestFromUrl();
+      this.autoOpenPaymentHandledKey = null;
+      return;
+    }
+
+    if (this.autoOpenPaymentHandledKey === requestKey) {
+      return;
+    }
+
+    const transaccion = this.transacciones.find((item) => item.id_transaccion === transactionId);
+
+    if (!transaccion) {
+      await this.clearAutoOpenPaymentRequestFromUrl();
+      this.autoOpenPaymentHandledKey = null;
+      return;
+    }
+
+    this.autoOpenPaymentHandledKey = requestKey;
+    await this.openPaymentModal(transaccion);
+    await this.clearAutoOpenPaymentRequestFromUrl();
+  }
+
+  private async clearAutoOpenPaymentRequestFromUrl(): Promise<void> {
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        openPayment: null,
+        transactionId: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 }
