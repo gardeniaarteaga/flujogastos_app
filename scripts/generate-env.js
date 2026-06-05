@@ -6,10 +6,16 @@ const apiBaseUrl =
   process.env.NG_APP_API_BASE_URL ||
   'http://localhost:3001/api';
 
-const envPath = join(__dirname, '..', 'public', 'env.js');
 const content = `window.__APP_CONFIG__ = {
   apiBaseUrl: ${JSON.stringify(apiBaseUrl)},
 };
 `;
 
-writeFileSync(envPath, content);
+const envTargets = [
+  join(__dirname, '..', 'public', 'env.js'),
+  join(__dirname, '..', 'projects', 'pago-rapido-android', 'public', 'env.js'),
+];
+
+for (const envPath of envTargets) {
+  writeFileSync(envPath, content);
+}

@@ -1,0 +1,136 @@
+<div class="login-page">
+  <section class="login-shell">
+    <article class="login-hero">
+      <div class="hero-copy">
+        <div class="hero-badge">Flujo de Gastos</div>
+        <h1>Entra a tu tablero financiero y toma mejores decisiones cada mes.</h1>
+        <p>
+          El acceso ahora comunica mejor el enfoque del producto: ingresos, gastos, deuda, ahorro
+          y salud financiera en una sola experiencia.
+        </p>
+      </div>
+
+      <div class="hero-grid">
+        <figure class="hero-spotlight">
+          <div class="finance-scene" aria-hidden="true">
+            <div class="scene-card scene-chart">
+              <div class="scene-chart-copy">
+                <span>Flujo</span>
+                <strong>Ingresos vs gastos</strong>
+              </div>
+              <div class="scene-bars">
+                <span class="bar income"></span>
+                <span class="bar expense"></span>
+                <span class="bar debt"></span>
+                <span class="bar savings"></span>
+              </div>
+            </div>
+
+            <div class="scene-card scene-donut">
+              <div class="mini-donut"></div>
+              <div>
+                <span>Categorias</span>
+                <strong>Consumo principal</strong>
+                <small>Hogar 34%</small>
+              </div>
+            </div>
+          </div>
+          <figcaption>
+            <span>Panorama financiero</span>
+            <strong>Visualiza balance, concentracion de gasto y comportamiento mensual desde el inicio.</strong>
+          </figcaption>
+        </figure>
+
+        <div class="hero-metrics">
+          <div class="hero-metric">
+            <span class="metric-label">Control del mes</span>
+            <strong>Ingresos, gastos y ahorro</strong>
+            <p>Empieza el dia viendo como se mueve tu balance y si el gasto del mes ya presiona tus ingresos.</p>
+          </div>
+          <div class="hero-metric">
+            <span class="metric-label">Deuda inteligente</span>
+            <strong>Cuotas, intereses y riesgo</strong>
+            <p>El sistema ayuda a identificar si tus pagos mensuales todavia caben dentro de una capacidad saludable.</p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="login-card">
+      <h2>{{ pendingUsuario ? 'Cambiar contrasena' : 'Iniciar sesion' }}</h2>
+      <p class="section-copy">
+        {{ pendingUsuario ? 'Tu usuario requiere una nueva contrasena antes de continuar.' : 'Ingresa con tu usuario para abrir tu espacio de trabajo.' }}
+      </p>
+
+      <form *ngIf="!pendingUsuario; else passwordChangeStep" [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+        <label for="email">Correo electronico</label>
+        <input id="email" type="email" formControlName="email" placeholder="correo@empresa.com" />
+        <small *ngIf="loginForm.controls.email.touched && loginForm.controls.email.errors?.['required']">
+          El correo es obligatorio.
+        </small>
+        <small *ngIf="loginForm.controls.email.touched && loginForm.controls.email.errors?.['email']">
+          Ingresa un correo valido.
+        </small>
+
+        <label for="password">Contrasena</label>
+        <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
+        <small *ngIf="loginForm.controls.password.touched && loginForm.controls.password.errors?.['required']">
+          La contrasena es obligatoria.
+        </small>
+        <small *ngIf="loginForm.controls.password.touched && loginForm.controls.password.errors?.['minlength']">
+          La contrasena debe tener al menos 6 caracteres.
+        </small>
+
+        <small *ngIf="errorMessage" class="error-text">{{ errorMessage }}</small>
+        <small *ngIf="successMessage" class="success-text">{{ successMessage }}</small>
+
+        <button type="submit" class="submit-button" [disabled]="loading">
+          {{ loading ? 'Ingresando...' : 'Ingresar' }}
+        </button>
+      </form>
+
+      <ng-template #passwordChangeStep>
+        <form [formGroup]="passwordChangeForm" (ngSubmit)="onPasswordChangeSubmit()" novalidate>
+          <div class="forced-password-note">
+            <strong>{{ pendingUsuario?.username }}</strong>
+            <span>Necesitas cambiar tu contrasena para continuar.</span>
+          </div>
+
+          <label for="newPassword">Nueva contrasena</label>
+          <input id="newPassword" type="password" formControlName="newPassword" placeholder="Minimo 6 caracteres" />
+          <small *ngIf="passwordChangeForm.controls.newPassword.touched && passwordChangeForm.controls.newPassword.errors?.['required']">
+            La nueva contrasena es obligatoria.
+          </small>
+          <small *ngIf="passwordChangeForm.controls.newPassword.touched && passwordChangeForm.controls.newPassword.errors?.['minlength']">
+            La nueva contrasena debe tener al menos 6 caracteres.
+          </small>
+
+          <label for="confirmPassword">Confirmar contrasena</label>
+          <input id="confirmPassword" type="password" formControlName="confirmPassword" placeholder="Repite la nueva contrasena" />
+          <small *ngIf="passwordChangeForm.controls.confirmPassword.touched && passwordChangeForm.controls.confirmPassword.errors?.['required']">
+            Debes confirmar la contrasena.
+          </small>
+          <small *ngIf="passwordChangeForm.controls.confirmPassword.touched && passwordChangeForm.controls.confirmPassword.errors?.['minlength']">
+            La confirmacion debe tener al menos 6 caracteres.
+          </small>
+
+          <small *ngIf="errorMessage" class="error-text">{{ errorMessage }}</small>
+          <small *ngIf="successMessage" class="success-text">{{ successMessage }}</small>
+
+          <button type="submit" class="submit-button" [disabled]="loading">
+            {{ loading ? 'Actualizando...' : 'Guardar nueva contrasena' }}
+          </button>
+          <button type="button" class="secondary-action-button" [disabled]="loading" (click)="returnToLogin()">
+            Volver al login
+          </button>
+        </form>
+      </ng-template>
+
+      <div class="card-footer">
+        <span>
+          {{ pendingUsuario ? 'Despues de actualizar la contrasena entraras al sistema con tu nuevo acceso.' : 'Ingresa con un acceso existente para entrar al sistema.' }}
+        </span>
+      </div>
+    </article>
+  </section>
+</div>

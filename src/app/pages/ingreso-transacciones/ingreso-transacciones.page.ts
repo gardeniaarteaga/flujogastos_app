@@ -1096,7 +1096,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateEstadoRegistroPreview();
   }
 
-  onFormaPagoChange(): void {
+  onFormaPagoChange(forceSingleCuotaDefault = false): void {
     const formaPagoId = this.transaccionForm.controls.forma_pago.value;
     this.selectedFormaPago =
       this.formasPago.find((item) => item.id_forma === formaPagoId) ?? null;
@@ -1107,6 +1107,9 @@ export class IngresoTransaccionesPage implements OnInit {
         tipo_entidad: '',
       });
       this.applyExpenseFormaPagoRules();
+      if (forceSingleCuotaDefault) {
+        this.refreshProgramacionForAllGroups(true);
+      }
       return;
     }
 
@@ -1116,6 +1119,9 @@ export class IngresoTransaccionesPage implements OnInit {
         tipo_entidad: '',
       });
       this.applyExpenseFormaPagoRules();
+      if (forceSingleCuotaDefault) {
+        this.refreshProgramacionForAllGroups(true);
+      }
       this.focusSharedExpenseMontoWhenReady();
       return;
     }
@@ -1132,6 +1138,9 @@ export class IngresoTransaccionesPage implements OnInit {
       tipo_entidad: tipoEntidad?.descripcion ?? '',
     });
     this.applyExpenseFormaPagoRules();
+    if (forceSingleCuotaDefault) {
+      this.refreshProgramacionForAllGroups(true);
+    }
     this.focusSharedExpenseMontoWhenReady();
   }
 
@@ -1544,7 +1553,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.clearInvalidDateError();
     control.setValue(this.formatDateDisplayFromApi(normalizedValue), { emitEvent: false });
     control.updateValueAndValidity({ emitEvent: false });
-    this.refreshProgramacionForAllGroups();
+    this.refreshProgramacionForAllGroups(true);
     this.updateEstadoRegistroPreview();
   }
 
@@ -1570,7 +1579,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.transaccionForm.controls.fecha_transaccion.updateValueAndValidity({
       emitEvent: false,
     });
-    this.refreshProgramacionForAllGroups();
+    this.refreshProgramacionForAllGroups(true);
     this.updateEstadoRegistroPreview();
   }
 
@@ -2841,11 +2850,16 @@ export class IngresoTransaccionesPage implements OnInit {
     }
   }
 
-  private refreshProgramacionForAllGroups(): void {
-    this.participantesDetalleArray.controls.forEach((group) => this.refreshProgramacionCuotas(group));
+  private refreshProgramacionForAllGroups(forceSingleCuotaDefault = false): void {
+    this.participantesDetalleArray.controls.forEach((group) =>
+      this.refreshProgramacionCuotas(group, forceSingleCuotaDefault),
+    );
   }
 
-  private refreshProgramacionCuotas(group: ParticipanteDetalleForm): void {
+  private refreshProgramacionCuotas(
+    group: ParticipanteDetalleForm,
+    forceSingleCuotaDefault = false,
+  ): void {
     const cuotasArray = this.getCuotasArray(group);
     const cuotasCount = cuotasArray.length;
 
@@ -2863,7 +2877,9 @@ export class IngresoTransaccionesPage implements OnInit {
 
       cuotasArray.controls.forEach((cuota) =>
         cuota.controls.fecha_programada.setValue(
-          cuota.controls.fecha_programada.value ?? defaultFechaProgramada,
+          forceSingleCuotaDefault
+            ? defaultFechaProgramada
+            : (cuota.controls.fecha_programada.value ?? defaultFechaProgramada),
           { emitEvent: false },
         ),
       );
@@ -2932,7 +2948,23 @@ export class IngresoTransaccionesPage implements OnInit {
       this.normalizeDateInputValue(this.transaccionForm.controls.fecha_transaccion.value ?? '') ??
       this.formatDateApi(this.today);
 
-    return this.buildFechasQuincenales(fechaBase, 1)[0] ?? null;
+    return this.buildSingleCuotaFechaProgramada(fechaBase);
+  }
+
+  private buildSingleCuotaFechaProgramada(fechaBaseIso: string): string {
+    const diasGracia = Number(this.getCurrentFormaPago()?.dias_gracia);
+    const diasProgramados =
+      Number.isFinite(diasGracia) && diasGracia > 0
+        ? Math.max(0, Math.trunc(diasGracia) - 1)
+        : 7;
+
+    return this.formatDateApi(this.addDays(this.parseIsoDate(fechaBaseIso), diasProgramados));
+  }
+
+  private getCurrentFormaPago(): CatalogoFormaPago | null {
+    const formaPagoId = Number(this.transaccionForm.controls.forma_pago.value ?? 0);
+
+    return this.formasPago.find((item) => item.id_forma === formaPagoId) ?? this.selectedFormaPago;
   }
 
   private buildFechasDiaMes(
@@ -3026,6 +3058,13 @@ export class IngresoTransaccionesPage implements OnInit {
   private parseIsoDate(value: string): Date {
     const [year, month, day] = value.split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+
+    return result;
   }
 
   private getDefaultDiaProgramado(): number {

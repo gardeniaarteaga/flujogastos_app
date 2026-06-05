@@ -259,7 +259,7 @@
             <div class="field-grid field-grid-compact">
               <div class="field">
                 <label for="forma_pago">Forma de pago</label>
-                <select id="forma_pago" formControlName="forma_pago" (change)="onFormaPagoChange()">
+                <select id="forma_pago" formControlName="forma_pago" (change)="onFormaPagoChange(true)">
                   <option [ngValue]="null">Seleccione una forma de pago</option>
                   <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
                     {{ forma.nombre_forma }}

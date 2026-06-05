@@ -31,7 +31,6 @@ import {
 import { filter, firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
-import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
 import {
   CatalogoCategoria,
   CatalogoEntidadFinanciera,
@@ -43,7 +42,12 @@ import {
   CatalogosTransaccionService,
 } from '../../shared/services/catalogos-transaccion.service';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
-import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
+import {
+  clearUserProfile,
+  getCurrentUserId,
+  isAdminUser,
+  loadUserProfile,
+} from '../../shared/user-profile';
 
 type TipoTransaccionId = number;
 type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
@@ -222,23 +226,22 @@ interface QuickPaySubtotalSummary {
 type FiltroDateControlName = 'fechaDesde' | 'fechaHasta';
 
 @Component({
-  selector: 'app-listado-transacciones-page',
-    imports: [
-      FormsModule,
-      ReactiveFormsModule,
-      RouterLink,
-      RouterLinkActive,
-      NgIf,
+  selector: 'app-quick-pay-page',
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    NgIf,
     NgFor,
     NgClass,
     DatePipe,
     DecimalPipe,
-    SessionStripComponent,
+    RouterLink,
+    RouterLinkActive,
   ],
-  templateUrl: './listado-transacciones.page.html',
-  styleUrl: './listado-transacciones.page.css',
+  templateUrl: './quick-pay.page.html',
+  styleUrl: './quick-pay.page.css',
 })
-export class ListadoTransaccionesPage implements OnInit {
+export class QuickPayPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -249,8 +252,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly apiUrl = apiUrl('transacciones');
   private readonly interesesApiUrl = apiUrl('intereses', 'calcular');
-  readonly viewMode =
-    this.route.snapshot.data['viewMode'] === 'detalle' ? 'detalle' : 'transacciones';
+  readonly viewMode = 'detalle';
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly currentMonthStartValue = this.formatDateInput(this.getStartOfMonth(this.today));
@@ -500,6 +502,12 @@ export class ListadoTransaccionesPage implements OnInit {
 
   toggleTransactionsMenu(): void {
     this.transactionsOpen = !this.transactionsOpen;
+  }
+
+  async logout(): Promise<void> {
+    this.catalogosService.clearCache();
+    clearUserProfile();
+    await this.router.navigate(['/login']);
   }
 
   get isEditing(): boolean {
@@ -846,6 +854,14 @@ export class ListadoTransaccionesPage implements OnInit {
 
   get currentUserProfileValue() {
     return loadUserProfile();
+  }
+
+  get currentUserName(): string {
+    return this.currentUserProfileValue.fullName || this.currentUserProfileValue.username;
+  }
+
+  get currentUserEmail(): string {
+    return this.currentUserProfileValue.email || this.currentUserProfileValue.username;
   }
 
   get isImmediatePaymentSelectedForEdit(): boolean {
@@ -7523,12 +7539,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private isListadoTransaccionesRoute(url: string): boolean {
-    return (
-      url === '/transacciones/listado' ||
-      url.startsWith('/transacciones/listado?') ||
-      url === '/resumen/detalle-transacciones' ||
-      url.startsWith('/resumen/detalle-transacciones?')
-    );
+    return url === '/pago-rapido' || url.startsWith('/pago-rapido?');
   }
 
   private async processAutoOpenPaymentRequest(): Promise<void> {
