@@ -1,13 +1,14 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
+import { AnalisisFinancieroResolvedData } from './analisis-financiero.resolver';
 import {
   CatalogoCategoria,
   CatalogoEntidadFinanciera,
@@ -20,6 +21,16 @@ import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/use
 
 type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
 type TrafficLightTone = 'green' | 'yellow' | 'red';
+type AnalysisPeriodType = 'month' | 'quincena';
+type AnalysisQuincena = 'first' | 'second';
+
+interface AnalysisPeriodRange {
+  type: AnalysisPeriodType;
+  start: Date;
+  end: Date;
+  label: string;
+  descriptionLabel: string;
+}
 
 interface ParticipanteDetalleListado {
   id: number;
@@ -149,6 +160,18 @@ interface CategoryBreakdownItem {
   subcategories: SubcategoryBreakdownStat[];
 }
 
+interface CategoryAnalysisModalData {
+  title: string;
+  subtitle: string;
+  periodLabel: string;
+  totalExpense: number;
+  totalCategories: number;
+  totalSubcategories: number;
+  topCategoryName: string;
+  topSubcategoryName: string;
+  categoryBreakdowns: CategoryBreakdownItem[];
+}
+
 interface TrendPoint {
   key: string;
   label: string;
@@ -221,6 +244,7 @@ interface AnalysisViewModel {
 export class AnalisisFinancieroPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly apiUrl = apiUrl('transacciones');
@@ -259,11 +283,21 @@ export class AnalisisFinancieroPage implements OnInit {
     { value: '11', label: 'Noviembre' },
     { value: '12', label: 'Diciembre' },
   ];
+  readonly periodTypeOptions: Array<{ value: AnalysisPeriodType; label: string }> = [
+    { value: 'month', label: 'Mes' },
+    { value: 'quincena', label: 'Quincena' },
+  ];
+  readonly quincenaOptions: Array<{ value: AnalysisQuincena; label: string }> = [
+    { value: 'first', label: '1 - 15' },
+    { value: 'second', label: '16 - fin de mes' },
+  ];
 
   readonly userProfile = loadUserProfile();
   readonly filtrosForm = this.fb.group({
+    periodType: ['month' as AnalysisPeriodType],
     month: [String(new Date().getMonth() + 1)],
     year: [String(new Date().getFullYear())],
+    quincena: [this.getDefaultQuincena()],
     categoryId: [''],
     subcategoryId: [''],
     paymentMethodId: [''],
@@ -286,6 +320,8 @@ export class AnalisisFinancieroPage implements OnInit {
   entityOptions: SelectOption[] = [];
   stateOptions: SelectOption[] = [];
   analysis: AnalysisViewModel = this.createEmptyAnalysis();
+  categoryAnalysisModalOpen = false;
+  categoryAnalysisModalData: CategoryAnalysisModalData = this.createEmptyCategoryAnalysisModalData();
 
   private categorias: CatalogoCategoria[] = [];
   private subcategorias: CatalogoSubcategoria[] = [];
@@ -348,7 +384,16 @@ export class AnalisisFinancieroPage implements OnInit {
         this.rebuildAnalysis();
       });
 
-    void this.loadPage();
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
+      const resolvedData = (data['initialData'] as AnalisisFinancieroResolvedData | null) ?? null;
+
+      if (resolvedData) {
+        this.applyResolvedData(resolvedData);
+        return;
+      }
+
+      void this.loadPage();
+    });
   }
 
   async loadPage(): Promise<void> {
@@ -369,16 +414,11 @@ export class AnalisisFinancieroPage implements OnInit {
             .pipe(timeout(this.timeoutMs)),
         ),
       ]);
-
-      this.categorias = catalogos.categorias;
-      this.subcategorias = catalogos.subcategorias;
-      this.formasPago = catalogos.formasPago;
-      this.entidades = catalogos.entidadesFinancieras;
-      this.participantes = catalogos.participantes;
-      this.records = this.buildRecords(Array.isArray(transacciones) ? transacciones : []);
-
-      this.buildFilterOptions();
-      this.rebuildAnalysis();
+      this.applyResolvedData({
+        currentUserId: this.currentUserId,
+        catalogos,
+        transacciones,
+      });
     } catch {
       this.records = [];
       this.analysis = this.createEmptyAnalysis();
@@ -387,6 +427,25 @@ export class AnalisisFinancieroPage implements OnInit {
     } finally {
       this.loading = false;
     }
+  }
+
+  private applyResolvedData(data: AnalisisFinancieroResolvedData): void {
+    this.loading = false;
+    this.errorMessage = '';
+    this.currentUserId = data.currentUserId > 0 ? data.currentUserId : this.currentUserId;
+    this.categorias = data.catalogos.categorias;
+    this.subcategorias = data.catalogos.subcategorias;
+    this.formasPago = data.catalogos.formasPago;
+    this.entidades = data.catalogos.entidadesFinancieras;
+    this.participantes = data.catalogos.participantes;
+    this.records = this.buildRecords(
+      this.filterVisibleTransactions(
+        Array.isArray(data.transacciones) ? (data.transacciones as TransaccionListado[]) : [],
+      ),
+    );
+
+    this.buildFilterOptions();
+    this.rebuildAnalysis();
   }
 
   toggleMaintenanceMenu(): void {
@@ -423,9 +482,24 @@ export class AnalisisFinancieroPage implements OnInit {
     return this.analysis.categoryBreakdowns ?? [];
   }
 
-  getSelectedMonthName(): string {
-    const selectedMonth = Number(this.filtrosForm.controls.month.value ?? new Date().getMonth() + 1);
-    return this.monthOptions.find((item) => Number(item.value) === selectedMonth)?.label ?? 'Mes';
+  get selectedPeriodType(): AnalysisPeriodType {
+    return this.filtrosForm.controls.periodType.value === 'quincena' ? 'quincena' : 'month';
+  }
+
+  openCategoryAnalysisModal(): void {
+    this.syncCategoryAnalysisModal();
+    this.categoryAnalysisModalOpen = true;
+  }
+
+  closeCategoryAnalysisModal(): void {
+    this.categoryAnalysisModalOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.categoryAnalysisModalOpen) {
+      this.closeCategoryAnalysisModal();
+    }
   }
 
   private buildRecords(transacciones: TransaccionListado[]): AnalysisRecord[] {
@@ -600,14 +674,19 @@ export class AnalisisFinancieroPage implements OnInit {
   }
 
   private getParticipantesDetalleForAnalysis(
-    transaccion: Pick<TransaccionListado, 'es_propietario' | 'participantes_detalle'> | null | undefined,
+    transaccion: Pick<
+      TransaccionListado,
+      'es_propietario' | 'id_tipo_transaccion' | 'participantes_detalle'
+    > | null | undefined,
   ): ParticipanteDetalleListado[] {
     const detalles = Array.isArray(transaccion?.participantes_detalle)
       ? transaccion.participantes_detalle
       : [];
 
-    if (transaccion?.es_propietario) {
-      return detalles;
+    const detallesTitular = detalles.filter((detalle) => detalle.es_titular);
+
+    if (transaccion?.id_tipo_transaccion === 2 || transaccion?.es_propietario) {
+      return detallesTitular.length > 0 ? detallesTitular : detalles;
     }
 
     const detallesDelUsuario = detalles.filter((detalle) =>
@@ -644,21 +723,18 @@ export class AnalisisFinancieroPage implements OnInit {
   }
 
   private rebuildAnalysis(): void {
-    const selectedMonth = Number(this.filtrosForm.controls.month.value ?? new Date().getMonth() + 1);
-    const selectedYear = Number(this.filtrosForm.controls.year.value ?? new Date().getFullYear());
-    const monthDate = new Date(selectedYear, Math.max(0, selectedMonth - 1), 1);
-    const monthKey = this.getMonthKey(monthDate);
-
+    const selectedPeriod = this.getSelectedPeriodRange();
     const monthRecords = this.filterRecords(true);
     const trendRecords = this.filterRecords(false);
+    const periodNoun = selectedPeriod.type === 'quincena' ? 'quincena' : 'mes';
 
     if (monthRecords.length === 0) {
       this.analysis = {
         ...this.createEmptyAnalysis(),
-        monthLabel: this.capitalizeText(this.monthFormatter.format(monthDate)),
-        summary:
-          'No hay detalles pagados o pendientes de pago visibles para este mes.',
+        monthLabel: selectedPeriod.label,
+        summary: `No hay detalles pagados o pendientes de pago visibles para esta ${periodNoun}.`,
       };
+      this.syncCategoryAnalysisModal();
       return;
     }
 
@@ -687,7 +763,7 @@ export class AnalisisFinancieroPage implements OnInit {
     const topSubcategories = this.buildCategoryStats(expenseRecords, totalExpense, 'subcategory');
     const categoryBreakdowns = this.buildCategoryBreakdowns(expenseRecords, totalExpense);
     const debtEntities = this.buildDebtEntities(expenseRecords);
-    const trend = this.buildTrend(trendRecords, monthDate);
+    const trend = this.buildTrend(trendRecords, selectedPeriod);
     const trafficLight = this.buildTrafficLight(
       balance,
       debtRatio,
@@ -723,19 +799,26 @@ export class AnalisisFinancieroPage implements OnInit {
 
     this.analysis = {
       hasData: true,
-      monthLabel: this.capitalizeText(this.monthFormatter.format(monthDate)),
-      summary: this.buildSummary(balance, debtRatio, trend, interestRatio, topCategories[0]?.name ?? ''),
+      monthLabel: selectedPeriod.label,
+      summary: this.buildSummary(
+        balance,
+        debtRatio,
+        trend,
+        interestRatio,
+        topCategories[0]?.name ?? '',
+        selectedPeriod,
+      ),
       trafficLight,
       kpis: [
         {
-          label: 'Total ingresos del mes',
+          label: `Total ingresos del ${periodNoun}`,
           value: totalIncome,
           detail: `${incomeRecords.length} movimientos considerados`,
           helper: 'Entradas del periodo filtradas con la fecha principal del movimiento.',
           tone: 'good',
         },
         {
-          label: 'Total gastos del mes',
+          label: `Total gastos del ${periodNoun}`,
           value: totalExpense,
           detail: topCategories[0]
             ? `${topCategories[0].name} concentra ${this.formatPercent(topCategories[0].share)}`
@@ -744,9 +827,12 @@ export class AnalisisFinancieroPage implements OnInit {
           tone: expenseRatio !== null && expenseRatio > 0.85 ? 'warning' : 'info',
         },
         {
-          label: 'Balance mensual',
+          label: selectedPeriod.type === 'quincena' ? 'Balance quincenal' : 'Balance mensual',
           value: balance,
-          detail: balance >= 0 ? 'Estas cerrando el mes en positivo' : 'Estas gastando mas de lo que ingresa',
+          detail:
+            balance >= 0
+              ? `Estas cerrando el ${periodNoun} en positivo`
+              : `Estas gastando mas de lo que ingresa en el ${periodNoun}`,
           helper: 'Mide si el mes se sostiene por si mismo.',
           tone: balance >= 0 ? 'good' : 'danger',
         },
@@ -772,7 +858,7 @@ export class AnalisisFinancieroPage implements OnInit {
           value: debtMonthly,
           detail:
             debtRatio !== null
-              ? `${this.formatPercent(debtRatio)} de los ingresos del mes`
+              ? `${this.formatPercent(debtRatio)} de los ingresos del periodo`
               : 'No hay ingresos para medir la carga de deuda',
           helper: 'Relacion entre deuda mensual y capacidad real de generar ingresos.',
           tone: debtRatio === null ? 'neutral' : debtRatio > 0.5 ? 'danger' : debtRatio >= 0.3 ? 'warning' : 'good',
@@ -782,8 +868,8 @@ export class AnalisisFinancieroPage implements OnInit {
           value: freeMoney,
           detail:
             freeMoney > 0
-              ? 'Espacio libre despues de cubrir compromisos del mes'
-              : 'No queda margen libre este mes',
+              ? 'Espacio libre despues de cubrir compromisos del periodo'
+              : 'No queda margen libre en este corte',
           helper: 'Caja disponible para imprevistos, ahorro o amortizar deuda.',
           tone: freeMoney > 0 ? 'good' : 'danger',
         },
@@ -818,15 +904,11 @@ export class AnalisisFinancieroPage implements OnInit {
       totalExpense,
       balance,
     };
-
-    if (this.analysis.hasData && this.analysis.monthLabel && monthKey !== this.getMonthKey(monthDate)) {
-      this.analysis.monthLabel = this.capitalizeText(this.monthFormatter.format(monthDate));
-    }
+    this.syncCategoryAnalysisModal();
   }
 
   private filterRecords(applyMonthFilter: boolean): AnalysisRecord[] {
-    const selectedMonth = Number(this.filtrosForm.controls.month.value ?? new Date().getMonth() + 1);
-    const selectedYear = Number(this.filtrosForm.controls.year.value ?? new Date().getFullYear());
+    const selectedPeriod = this.getSelectedPeriodRange();
     const categoryId = this.filtrosForm.controls.categoryId.value ?? '';
     const subcategoryId = this.filtrosForm.controls.subcategoryId.value ?? '';
     const paymentMethodId = this.filtrosForm.controls.paymentMethodId.value ?? '';
@@ -840,11 +922,7 @@ export class AnalisisFinancieroPage implements OnInit {
       }
 
       if (applyMonthFilter) {
-        if (record.analysisDate.getMonth() + 1 !== selectedMonth) {
-          return false;
-        }
-
-        if (record.analysisDate.getFullYear() !== selectedYear) {
+        if (!this.isDateWithinPeriod(record.analysisDate, selectedPeriod)) {
           return false;
         }
       }
@@ -907,6 +985,8 @@ export class AnalisisFinancieroPage implements OnInit {
   private buildCategoryBreakdowns(
     records: AnalysisRecord[],
     totalAmount: number,
+    maxCategories = 5,
+    maxSubcategories = 4,
   ): CategoryBreakdownItem[] {
     const groups = new Map<
       string,
@@ -942,15 +1022,24 @@ export class AnalisisFinancieroPage implements OnInit {
       groups.set(categoryKey, currentCategory);
     }
 
-    return Array.from(groups.values())
-      .sort((left, right) => right.amount - left.amount)
-      .slice(0, 5)
+    const groupedCategories = Array.from(groups.values()).sort(
+      (left, right) => right.amount - left.amount,
+    );
+    const limitedCategories =
+      maxCategories > 0 ? groupedCategories.slice(0, maxCategories) : groupedCategories;
+
+    return limitedCategories
       .map((category, index) => {
         const amount = this.roundMoney(category.amount);
         const share = totalAmount > 0 ? category.amount / totalAmount : 0;
-        const subcategories = Array.from(category.subcategories.values())
-          .sort((left, right) => right.amount - left.amount)
-          .slice(0, 4)
+        const groupedSubcategories = Array.from(category.subcategories.values()).sort(
+          (left, right) => right.amount - left.amount,
+        );
+        const limitedSubcategories =
+          maxSubcategories > 0
+            ? groupedSubcategories.slice(0, maxSubcategories)
+            : groupedSubcategories;
+        const subcategories = limitedSubcategories
           .map((subcategory) => ({
             name: subcategory.name,
             amount: this.roundMoney(subcategory.amount),
@@ -971,12 +1060,25 @@ export class AnalisisFinancieroPage implements OnInit {
       });
   }
 
-  private buildTrend(records: AnalysisRecord[], endMonth: Date): TrendPoint[] {
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(endMonth.getFullYear(), endMonth.getMonth() - (5 - index), 1);
+  private buildTrend(records: AnalysisRecord[], selectedPeriod: AnalysisPeriodRange): TrendPoint[] {
+    const buckets = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(
+        selectedPeriod.start.getFullYear(),
+        selectedPeriod.start.getMonth() - (5 - index),
+        1,
+      );
+      const key = this.getTrendBucketKey(
+        date,
+        selectedPeriod.type,
+        selectedPeriod.type === 'quincena' ? this.getSelectedQuincena() : undefined,
+      );
+      const label = this.capitalizeText(this.shortMonthFormatter.format(date));
       return {
-        key: this.getMonthKey(date),
-        label: this.capitalizeText(this.shortMonthFormatter.format(date)),
+        key,
+        label:
+          selectedPeriod.type === 'quincena'
+            ? `${label} ${this.getQuincenaShortLabel()}`
+            : label,
         income: 0,
         expense: 0,
         balance: 0,
@@ -984,14 +1086,26 @@ export class AnalisisFinancieroPage implements OnInit {
       };
     });
 
-    const monthMap = new Map(months.map((item) => [item.key, item]));
+    const bucketMap = new Map(buckets.map((item) => [item.key, item]));
 
     for (const record of records) {
-      if (!record.monthKey || !monthMap.has(record.monthKey)) {
+      if (!record.analysisDate) {
         continue;
       }
 
-      const bucket = monthMap.get(record.monthKey)!;
+      const bucketKey = this.getTrendBucketKey(record.analysisDate, selectedPeriod.type);
+      if (!bucketMap.has(bucketKey)) {
+        continue;
+      }
+
+      if (
+        selectedPeriod.type === 'quincena' &&
+        this.resolveQuincenaFromDate(record.analysisDate) !== this.getSelectedQuincena()
+      ) {
+        continue;
+      }
+
+      const bucket = bucketMap.get(bucketKey)!;
       if (record.type === 'income') {
         bucket.income += record.amount;
       } else {
@@ -1000,7 +1114,7 @@ export class AnalisisFinancieroPage implements OnInit {
       }
     }
 
-    return months.map((item) => ({
+    return buckets.map((item) => ({
       ...item,
       income: this.roundMoney(item.income),
       expense: this.roundMoney(item.expense),
@@ -1425,7 +1539,9 @@ export class AnalisisFinancieroPage implements OnInit {
     trend: TrendPoint[],
     interestRatio: number | null,
     topCategoryName: string,
+    selectedPeriod: AnalysisPeriodRange,
   ): string {
+    const periodLabel = selectedPeriod.type === 'quincena' ? 'La quincena' : 'El mes';
     const lastMonth = trend[trend.length - 1];
     const previousMonth = trend[trend.length - 2];
     const trendText =
@@ -1436,12 +1552,12 @@ export class AnalisisFinancieroPage implements OnInit {
         : 'Aun hay poco historial para medir tendencia.';
     const balanceText =
       balance >= 0
-        ? 'El mes cierra en positivo.'
-        : 'El mes cierra en negativo y exige correccion.';
+        ? `${periodLabel} cierra en positivo.`
+        : `${periodLabel} cierra en negativo y exige correccion.`;
     const debtText =
       debtRatio === null
         ? 'No hay base suficiente para medir deuda contra ingresos.'
-        : `La deuda mensual consume ${this.formatPercent(debtRatio)} de tus ingresos.`;
+        : `La deuda del periodo consume ${this.formatPercent(debtRatio)} de tus ingresos.`;
     const interestText =
       interestRatio === null
         ? 'La carga de intereses no pudo medirse con precision.'
@@ -1450,7 +1566,7 @@ export class AnalisisFinancieroPage implements OnInit {
           : 'Los intereses siguen contenidos.';
     const categoryText = topCategoryName
       ? `${topCategoryName} es la categoria con mayor salida.`
-      : 'No hay una categoria dominante este mes.';
+      : 'No hay una categoria dominante en este corte.';
 
     return `${balanceText} ${debtText} ${interestText} ${trendText} ${categoryText}`;
   }
@@ -1462,7 +1578,7 @@ export class AnalisisFinancieroPage implements OnInit {
         this.monthFormatter.format(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
       ),
       summary:
-        'Selecciona mes y anio para revisar ingresos, gastos, deuda e intereses usando solo detalles pagados o pendientes de pago.',
+        'Selecciona mes o quincena para revisar ingresos, gastos, deuda e intereses usando solo detalles pagados o pendientes de pago.',
       trafficLight: {
         tone: 'yellow',
         label: 'Sin datos suficientes',
@@ -1498,6 +1614,140 @@ export class AnalisisFinancieroPage implements OnInit {
 
   private getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private getSelectedPeriodRange(): AnalysisPeriodRange {
+    const selectedMonth = Number(this.filtrosForm.controls.month.value ?? new Date().getMonth() + 1);
+    const selectedYear = Number(this.filtrosForm.controls.year.value ?? new Date().getFullYear());
+    const monthStart = new Date(selectedYear, Math.max(0, selectedMonth - 1), 1);
+    const monthLabel = this.capitalizeText(this.monthFormatter.format(monthStart));
+
+    if (this.selectedPeriodType === 'month') {
+      return {
+        type: 'month',
+        start: monthStart,
+        end: this.getEndOfMonthDate(selectedYear, monthStart.getMonth()),
+        label: monthLabel,
+        descriptionLabel: monthLabel,
+      };
+    }
+
+    if (this.getSelectedQuincena() === 'first') {
+      return {
+        type: 'quincena',
+        start: monthStart,
+        end: new Date(selectedYear, monthStart.getMonth(), 15),
+        label: `${monthLabel} | 1 - 15`,
+        descriptionLabel: `1 al 15 de ${monthLabel}`,
+      };
+    }
+
+    const monthEnd = this.getEndOfMonthDate(selectedYear, monthStart.getMonth());
+    return {
+      type: 'quincena',
+      start: new Date(selectedYear, monthStart.getMonth(), 16),
+      end: monthEnd,
+      label: `${monthLabel} | 16 - ${monthEnd.getDate()}`,
+      descriptionLabel: `16 al ${monthEnd.getDate()} de ${monthLabel}`,
+    };
+  }
+
+  private getSelectedQuincena(): AnalysisQuincena {
+    return this.filtrosForm.controls.quincena.value === 'second' ? 'second' : 'first';
+  }
+
+  private getDefaultQuincena(): AnalysisQuincena {
+    return new Date().getDate() <= 15 ? 'first' : 'second';
+  }
+
+  private getEndOfMonthDate(year: number, monthIndex: number): Date {
+    return new Date(year, monthIndex + 1, 0);
+  }
+
+  private isDateWithinPeriod(date: Date, selectedPeriod: AnalysisPeriodRange): boolean {
+    const time = date.getTime();
+    return time >= selectedPeriod.start.getTime() && time <= selectedPeriod.end.getTime();
+  }
+
+  private resolveQuincenaFromDate(date: Date): AnalysisQuincena {
+    return date.getDate() <= 15 ? 'first' : 'second';
+  }
+
+  private getTrendBucketKey(
+    date: Date,
+    type: AnalysisPeriodType,
+    quincena: AnalysisQuincena | null = null,
+  ): string {
+    return type === 'quincena'
+      ? `${this.getMonthKey(date)}-${quincena ?? this.resolveQuincenaFromDate(date)}`
+      : this.getMonthKey(date);
+  }
+
+  private getQuincenaShortLabel(): string {
+    return this.getSelectedQuincena() === 'first' ? '1-15' : '16-fin';
+  }
+
+  private syncCategoryAnalysisModal(): void {
+    const selectedPeriod = this.getSelectedPeriodRange();
+    const expenseRecords = this.filterRecords(true).filter((item) => item.type === 'expense');
+    const totalExpense = this.roundMoney(expenseRecords.reduce((sum, item) => sum + item.amount, 0));
+    const categoryBreakdowns = this.buildCategoryBreakdowns(expenseRecords, totalExpense, 0, 6);
+    const uniqueSubcategories = new Set(
+      categoryBreakdowns.flatMap((item) => item.subcategories.map((subitem) => subitem.name)),
+    );
+
+    this.categoryAnalysisModalData = {
+      title:
+        selectedPeriod.type === 'quincena'
+          ? 'Analisis de categorias por quincena'
+          : 'Analisis de categorias por mes',
+      subtitle:
+        'Solo se consideran gastos visibles tuyos como titular y gastos que otros usuarios te asignaron. Las transacciones anuladas no participan.',
+      periodLabel: selectedPeriod.label,
+      totalExpense,
+      totalCategories: categoryBreakdowns.length,
+      totalSubcategories: uniqueSubcategories.size,
+      topCategoryName: categoryBreakdowns[0]?.name ?? 'Sin categoria dominante',
+      topSubcategoryName:
+        categoryBreakdowns[0]?.subcategories[0]?.name ?? 'Sin subcategoria dominante',
+      categoryBreakdowns,
+    };
+  }
+
+  private createEmptyCategoryAnalysisModalData(): CategoryAnalysisModalData {
+    return {
+      title: 'Analisis de categorias',
+      subtitle: '',
+      periodLabel: '',
+      totalExpense: 0,
+      totalCategories: 0,
+      totalSubcategories: 0,
+      topCategoryName: 'Sin categoria dominante',
+      topSubcategoryName: 'Sin subcategoria dominante',
+      categoryBreakdowns: [],
+    };
+  }
+
+  private filterVisibleTransactions(transacciones: TransaccionListado[]): TransaccionListado[] {
+    return transacciones.filter((transaccion) => !this.isCancelledTransaction(transaccion));
+  }
+
+  private isCancelledTransaction(transaccion: TransaccionListado): boolean {
+    const transactionStatus = this.normalizeTransactionStatus(
+      transaccion.nombre_estado_registro ?? transaccion.nombre_estado ?? '',
+    );
+
+    return transactionStatus === 'anulado';
+  }
+
+  private normalizeTransactionStatus(value: string): string {
+    switch (this.normalizeText(value)) {
+      case 'anulada':
+      case 'anulado':
+        return 'anulado';
+      default:
+        return this.normalizeText(value);
+    }
   }
 
   private parseDateOnly(value: string | null | undefined): Date | null {

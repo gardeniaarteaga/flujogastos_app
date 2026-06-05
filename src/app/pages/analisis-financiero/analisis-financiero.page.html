@@ -116,14 +116,21 @@
           <span class="panel-kicker">Parametros</span>
           <h3>Filtros del analisis</h3>
         </div>
-        <span class="scope-pill">Mes y anio son obligatorios</span>
+        <span class="scope-pill">Periodo, mes y anio son obligatorios</span>
       </div>
 
       <p class="panel-copy">
-        Esta vista prioriza la fecha programada o fecha de pago y solo toma movimientos pagados, pendientes o con pago parcial. Los anulados no aparecen.
+        Esta vista prioriza la fecha programada o fecha de pago, solo toma movimientos pagados, pendientes o con pago parcial, excluye anuladas e incluye los gastos que otros usuarios te asignaron.
       </p>
 
       <form class="filters-grid" [formGroup]="filtrosForm">
+        <label class="field">
+          <span>Periodo</span>
+          <select formControlName="periodType">
+            <option *ngFor="let item of periodTypeOptions" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
         <label class="field">
           <span>Mes</span>
           <select formControlName="month">
@@ -135,6 +142,13 @@
           <span>Anio</span>
           <select formControlName="year">
             <option *ngFor="let item of years" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
+        <label *ngIf="selectedPeriodType === 'quincena'" class="field">
+          <span>Quincena</span>
+          <select formControlName="quincena">
+            <option *ngFor="let item of quincenaOptions" [value]="item.value">{{ item.label }}</option>
           </select>
         </label>
       </form>
@@ -162,7 +176,17 @@
               <span class="panel-kicker">Gasto por categoria</span>
               <h3>Donde se va el dinero</h3>
             </div>
-            <span class="score-chip">{{ getSelectedMonthName() }}</span>
+            <div class="panel-heading-actions">
+              <button
+                type="button"
+                class="secondary-button category-analysis-button"
+                (click)="openCategoryAnalysisModal()"
+                [disabled]="!analysis.hasData"
+              >
+                Ver analisis
+              </button>
+              <span class="score-chip">{{ analysis.monthLabel }}</span>
+            </div>
           </div>
 
           <div class="donut-layout">
@@ -431,5 +455,104 @@
         <p>Con los filtros actuales no aparecen cuotas o intereses pendientes dentro del periodo analizado.</p>
       </div>
     </ng-template>
+
+    <section
+      *ngIf="categoryAnalysisModalOpen"
+      class="analysis-modal-backdrop"
+      (click)="closeCategoryAnalysisModal()"
+    >
+      <article
+        class="analysis-modal panel"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="categoryAnalysisModalData.title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="analysis-modal-header">
+          <div>
+            <span class="panel-kicker">Lectura por categoria</span>
+            <h3>{{ categoryAnalysisModalData.title }}</h3>
+            <p>{{ categoryAnalysisModalData.subtitle }}</p>
+          </div>
+          <button
+            type="button"
+            class="secondary-button"
+            aria-label="Cerrar analisis por categoria"
+            (click)="closeCategoryAnalysisModal()"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div class="analysis-modal-metrics">
+          <article class="analysis-modal-metric">
+            <span>Periodo</span>
+            <strong>{{ categoryAnalysisModalData.periodLabel }}</strong>
+          </article>
+          <article class="analysis-modal-metric">
+            <span>Total gasto</span>
+            <strong>{{ formatCurrency(categoryAnalysisModalData.totalExpense) }}</strong>
+          </article>
+          <article class="analysis-modal-metric">
+            <span>Categorias</span>
+            <strong>{{ categoryAnalysisModalData.totalCategories }}</strong>
+          </article>
+          <article class="analysis-modal-metric">
+            <span>Subcategorias</span>
+            <strong>{{ categoryAnalysisModalData.totalSubcategories }}</strong>
+          </article>
+          <article class="analysis-modal-metric">
+            <span>Categoria dominante</span>
+            <strong>{{ categoryAnalysisModalData.topCategoryName }}</strong>
+          </article>
+          <article class="analysis-modal-metric">
+            <span>Subcategoria dominante</span>
+            <strong>{{ categoryAnalysisModalData.topSubcategoryName }}</strong>
+          </article>
+        </div>
+
+        <div
+          *ngIf="categoryAnalysisModalData.categoryBreakdowns.length > 0; else emptyCategoryAnalysis"
+          class="analysis-modal-body"
+        >
+          <article
+            *ngFor="let item of categoryAnalysisModalData.categoryBreakdowns"
+            class="category-breakdown-card analysis-modal-category-card"
+          >
+            <div class="category-breakdown-head">
+              <div class="category-breakdown-title">
+                <span class="legend-dot" [style.background]="item.color"></span>
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.count }} movimientos | {{ formatPercent(item.share) }} del gasto total</small>
+                </div>
+              </div>
+              <span class="category-breakdown-amount">{{ formatCurrency(item.amount) }}</span>
+            </div>
+
+            <p class="category-breakdown-summary">{{ item.summary }}</p>
+
+            <div class="subcategory-breakdown-list">
+              <div *ngFor="let subitem of item.subcategories" class="subcategory-breakdown-row">
+                <div class="subcategory-breakdown-copy">
+                  <strong>{{ subitem.name }}</strong>
+                  <small>
+                    {{ formatPercent(subitem.shareOfCategory) }} de {{ item.name }} | {{ formatPercent(subitem.shareOfTotal) }} del gasto total
+                  </small>
+                </div>
+                <span>{{ formatCurrency(subitem.amount) }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #emptyCategoryAnalysis>
+          <div class="chart-empty">
+            <strong>Sin categorias visibles</strong>
+            <p>No hay movimientos del periodo actual para construir el analisis detallado.</p>
+          </div>
+        </ng-template>
+      </article>
+    </section>
   </main>
 </div>

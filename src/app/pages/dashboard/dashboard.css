@@ -227,7 +227,7 @@
 .kpi-detail {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--tone-text, #334155);
 }
 
 .kpi-card p {
@@ -257,7 +257,7 @@
 
 .compact-kpi-card .kpi-detail {
   font-size: 1rem;
-  color: #172033;
+  color: var(--tone-text, #172033);
 }
 
 .compact-kpi-card p {
@@ -305,7 +305,7 @@
 
 .dashboard-modal-table {
   width: 100%;
-  min-width: 780px;
+  min-width: 910px;
   border-collapse: collapse;
   background: #fff;
 }
@@ -322,6 +322,25 @@
   font-size: 0.82rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.status-column {
+  white-space: nowrap;
+}
+
+.dashboard-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.8rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--tone-border, #dbe4ff);
+  border-radius: 999px;
+  background: var(--tone-bg, #eef4ff);
+  color: var(--tone-text, #3354b8);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .amount-column {

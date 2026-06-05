@@ -282,7 +282,7 @@
           <span class="kpi-label">{{ card.label }}</span>
           <strong>{{ formatCurrency(card.value) }}</strong>
           <span class="kpi-detail">{{ card.detail }}</span>
-          <p>{{ card.helper }}</p>
+          <p *ngIf="card.helper">{{ card.helper }}</p>
         </article>
       </section>
     </section>
@@ -365,6 +365,7 @@
                 <th>Categoria</th>
                 <th>Subcategoria</th>
                 <th>Forma de pago</th>
+                <th>Estado</th>
                 <th *ngIf="dashboardTransactionsModalShowSender">Enviado por</th>
                 <th class="amount-column">Monto</th>
               </tr>
@@ -376,6 +377,11 @@
                 <td>{{ row.categoryName }}</td>
                 <td>{{ row.subcategoryName }}</td>
                 <td>{{ row.paymentMethodName }}</td>
+                <td class="status-column">
+                  <span class="dashboard-status-pill" [ngClass]="'tone-' + row.statusTone">
+                    {{ row.statusLabel }}
+                  </span>
+                </td>
                 <td *ngIf="dashboardTransactionsModalShowSender">{{ row.senderName || 'Sin remitente' }}</td>
                 <td class="amount-column">{{ formatCurrency(row.amount) }}</td>
               </tr>

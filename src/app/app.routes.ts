@@ -13,6 +13,7 @@ import { IngresoTransaccionesPage } from './pages/ingreso-transacciones/ingreso-
 import { ListadoTransaccionesPage } from './pages/listado-transacciones/listado-transacciones.page';
 import { TipoProductoPage } from './pages/tipo-producto/tipo-producto.page';
 import { ResumenNotificacionesPage } from './pages/resumen-notificaciones/resumen-notificaciones.page';
+import { analisisFinancieroResolver } from './pages/analisis-financiero/analisis-financiero.resolver';
 import { adminOnlyGuard } from './shared/guards/admin-only.guard';
 
 export const routes: Routes = [
@@ -54,6 +55,9 @@ export const routes: Routes = [
   },
   {
     path: 'reportes/analisis-financiero',
+    resolve: {
+      initialData: analisisFinancieroResolver,
+    },
     loadComponent: () =>
       import('./pages/analisis-financiero/analisis-financiero.page').then(
         (module) => module.AnalisisFinancieroPage,

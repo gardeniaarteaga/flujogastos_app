@@ -122,6 +122,8 @@ interface DashboardTransactionModalRow {
   categoryName: string;
   subcategoryName: string;
   paymentMethodName: string;
+  statusLabel: string;
+  statusTone: DashboardTone;
   amount: number;
   senderName: string | null;
 }
@@ -581,7 +583,7 @@ export class Dashboard implements OnInit {
           label: `Total ingresos ${incomeLabelSuffix}`,
           value: currentPeriodIncome,
           detail: 'Solo titular',
-          helper: `Suma de ingresos visibles para el titular dentro ${periodSummary}.`,
+          helper: '',
           tone: 'good',
         },
         {
@@ -589,7 +591,7 @@ export class Dashboard implements OnInit {
           label: `Total gastos ${expenseLabelSuffix}`,
           value: currentPeriodExpense,
           detail: 'Solo titular',
-          helper: `Suma de gastos visibles para el titular dentro ${periodSummary}.`,
+          helper: '',
           tone: currentPeriodExpense > 0 ? 'warning' : 'neutral',
         },
         {
@@ -597,7 +599,7 @@ export class Dashboard implements OnInit {
           label: 'Gastos compartidos a mi nombre',
           value: currentPeriodSharedExpenseAssigned,
           detail: 'Registrados por otros',
-          helper: `Monto asignado al usuario actual dentro ${periodSummary}.`,
+          helper: '',
           tone: currentPeriodSharedExpenseAssigned > 0 ? 'info' : 'neutral',
         },
       ],
@@ -880,6 +882,8 @@ export class Dashboard implements OnInit {
     amount: number,
     senderName: string | null = null,
   ): DashboardTransactionModalRow {
+    const statusLabel = this.getDashboardTransactionStatusLabel(transaction);
+
     return {
       date: detailDate,
       dateLabel: detailDate ? this.fullDateFormatter.format(detailDate) : 'Sin fecha definida',
@@ -887,6 +891,8 @@ export class Dashboard implements OnInit {
       categoryName: transaction.nombre_categoria?.trim() || 'Sin categoria',
       subcategoryName: transaction.nombre_subcategoria?.trim() || 'Sin subcategoria',
       paymentMethodName: transaction.nombre_forma_pago?.trim() || 'Sin forma de pago',
+      statusLabel,
+      statusTone: this.getDashboardTransactionStatusTone(statusLabel),
       amount: this.roundMoney(Math.max(0, this.normalizeAmount(amount))),
       senderName,
     };
@@ -909,28 +915,36 @@ export class Dashboard implements OnInit {
 
   private prepareDashboardTransactionsModalData(): void {
     const selectedPeriod = this.getSelectedPeriodRange();
-    const periodLabel = this.analytics.currentPeriodLabel;
+    const subtitle = this.buildTransactionsModalSubtitle(selectedPeriod);
 
     this.dashboardTransactionsModalData = {
       income: {
         title: 'Detalle de ingresos',
-        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        subtitle,
         rows: this.buildIncomeModalRows(selectedPeriod),
         showSender: false,
       },
       expense: {
         title: 'Detalle de gastos',
-        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        subtitle,
         rows: this.buildExpenseModalRows(selectedPeriod),
         showSender: false,
       },
       shared: {
         title: 'Detalle de gastos compartidos',
-        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        subtitle,
         rows: this.buildSharedExpenseModalRows(selectedPeriod),
         showSender: true,
       },
     };
+  }
+
+  private buildTransactionsModalSubtitle(selectedPeriod: DashboardPeriodRange): string {
+    if (selectedPeriod.type === 'quincena') {
+      return `Movimientos visibles correspondientes a la quincena del ${selectedPeriod.descriptionLabel}.`;
+    }
+
+    return `Movimientos visibles correspondientes a ${selectedPeriod.descriptionLabel}.`;
   }
 
   private enrichTransaction(
@@ -2053,7 +2067,7 @@ export class Dashboard implements OnInit {
         type: 'quincena',
         start: monthStart,
         end: new Date(monthStart.getFullYear(), monthStart.getMonth(), 15),
-        label: `${monthLabel} | 1-15`,
+        label: `${monthLabel} (1 al 15)`,
         descriptionLabel: `1 al 15 de ${monthLabel}`,
       };
     }
@@ -2063,7 +2077,7 @@ export class Dashboard implements OnInit {
       type: 'quincena',
       start: new Date(monthStart.getFullYear(), monthStart.getMonth(), 16),
       end: monthEnd,
-      label: `${monthLabel} | 16-${monthEnd.getDate()}`,
+      label: `${monthLabel} (16 al ${monthEnd.getDate()})`,
       descriptionLabel: `16 al ${monthEnd.getDate()} de ${monthLabel}`,
     };
   }
@@ -2122,10 +2136,50 @@ export class Dashboard implements OnInit {
     return transactionStatus === 'anulado';
   }
 
+  private getDashboardTransactionStatusLabel(transaccion: TransaccionListado): string {
+    const rawStatus =
+      transaccion.nombre_estado?.trim() ||
+      transaccion.nombre_estado_registro?.trim() ||
+      'Sin estado';
+    const normalizedStatus = this.normalizeTransactionStatus(rawStatus);
+
+    switch (normalizedStatus) {
+      case 'anulado':
+        return 'ANULADO';
+      case 'pagado':
+      case 'completado':
+        return 'PAGADO';
+      case 'pendiente':
+      case 'pago parcial':
+        return 'PENDIENTE';
+      default:
+        return rawStatus;
+    }
+  }
+
+  private getDashboardTransactionStatusTone(statusLabel: string): DashboardTone {
+    const normalizedStatus = this.normalizeTransactionStatus(statusLabel);
+
+    switch (normalizedStatus) {
+      case 'pagado':
+      case 'completado':
+        return 'good';
+      case 'pendiente':
+      case 'pago parcial':
+        return 'warning';
+      case 'anulado':
+        return 'neutral';
+      default:
+        return 'info';
+    }
+  }
+
   private normalizeTransactionStatus(value: string): string {
     switch (this.normalizeText(value)) {
       case 'anulada':
       case 'anulado':
+      case 'cancelada':
+      case 'cancelado':
         return 'anulado';
       default:
         return this.normalizeText(value);

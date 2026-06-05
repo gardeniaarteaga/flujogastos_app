@@ -250,6 +250,11 @@
   margin-bottom: 0.8rem;
 }
 
+.panel-heading-actions {
+  align-items: center;
+  gap: .75rem;
+}
+
 .panel-heading h3 {
   margin: 0.2rem 0 0;
   color: #172033;
@@ -311,6 +316,47 @@
 .subcategory-breakdown-list {
   display: grid;
   gap: 0.75rem;
+}
+.analysis-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.analysis-modal {
+  width: min(1100px, 100%);
+  max-height: 90dvh;
+  display: grid;
+  overflow: auto;
+}
+
+.analysis-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.analysis-modal-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.analysis-modal-metric {
+  display: grid;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: #f8fbff;
+}
+
+.analysis-modal-metric span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #64748b;
 }
 
 .legend-row,
@@ -655,6 +701,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .analysis-modal-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .main-grid,
   .split-grid,
   .trend-grid,
@@ -667,8 +717,15 @@
   .hero-finance,
   .donut-layout,
   .distribution-grid,
-  .debt-highlight-grid {
+  .debt-highlight-grid,
+  .analysis-modal-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .analysis-modal-header,
+  .panel-heading-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .donut-chart {
