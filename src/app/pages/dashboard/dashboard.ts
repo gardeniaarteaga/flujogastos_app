@@ -18,6 +18,16 @@ import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
 type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
+type DashboardPeriodType = 'month' | 'quincena';
+type DashboardQuincena = 'first' | 'second';
+
+interface DashboardPeriodRange {
+  type: DashboardPeriodType;
+  start: Date;
+  end: Date;
+  label: string;
+  descriptionLabel: string;
+}
 
 interface ScheduledNotificationView {
   id_notificacion_programada: number;
@@ -52,6 +62,10 @@ interface TransaccionListado {
   intereses: number;
   saldo_pendiente: number;
   id_tipo_transaccion: number;
+  id_estado?: number | null;
+  nombre_estado?: string | null;
+  id_estado_registro?: number | null;
+  nombre_estado_registro?: string | null;
   id_metodo_pago: number;
   nombre_forma_pago?: string | null;
   id_categoria: number;
@@ -239,7 +253,7 @@ interface ScheduledTransactionDetail {
 
 interface DashboardAnalytics {
   hasData: boolean;
-  currentMonthLabel: string;
+  currentPeriodLabel: string;
   healthScore: number;
   healthTone: DashboardTone;
   healthLabel: string;
@@ -331,13 +345,23 @@ export class Dashboard implements OnInit {
   maintenanceOpen = false;
   readonly userProfile = loadUserProfile();
   currentUserId = getCurrentUserId();
+  selectedPeriodType: DashboardPeriodType = 'month';
   selectedMonth = this.getToday().getMonth() + 1;
   selectedYear = this.getToday().getFullYear();
+  selectedQuincena: DashboardQuincena = this.getToday().getDate() <= 15 ? 'first' : 'second';
   availableYears: number[] = [this.selectedYear];
+  readonly periodTypeOptions: Array<{ value: DashboardPeriodType; label: string }> = [
+    { value: 'month', label: 'Mes' },
+    { value: 'quincena', label: 'Quincena' },
+  ];
   readonly monthOptions = Array.from({ length: 12 }, (_, index) => ({
     value: index + 1,
     label: this.capitalizeText(this.monthNameFormatter.format(new Date(2024, index, 1))),
   }));
+  readonly quincenaOptions: Array<{ value: DashboardQuincena; label: string }> = [
+    { value: 'first', label: '1 - 15' },
+    { value: 'second', label: '16 - fin de mes' },
+  ];
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
   transactions: TransaccionListado[] = [];
@@ -388,7 +412,7 @@ export class Dashboard implements OnInit {
         }),
       ]);
 
-      this.transactions = Array.isArray(transacciones) ? transacciones : [];
+      this.transactions = this.filterVisibleTransactions(Array.isArray(transacciones) ? transacciones : []);
       this.availableYears = this.buildAvailableYears(this.transactions);
       this.refreshDashboardSummary();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
@@ -451,6 +475,32 @@ export class Dashboard implements OnInit {
     this.refreshDashboardSummary();
   }
 
+  onSelectedPeriodTypeChange(value: string): void {
+    if (value !== 'month' && value !== 'quincena') {
+      return;
+    }
+
+    if (value === this.selectedPeriodType) {
+      return;
+    }
+
+    this.selectedPeriodType = value;
+    this.refreshDashboardSummary();
+  }
+
+  onSelectedQuincenaChange(value: string): void {
+    if (value !== 'first' && value !== 'second') {
+      return;
+    }
+
+    if (value === this.selectedQuincena) {
+      return;
+    }
+
+    this.selectedQuincena = value;
+    this.refreshDashboardSummary();
+  }
+
   onSelectedYearChange(value: string): void {
     const nextYear = Number(value);
 
@@ -486,66 +536,69 @@ export class Dashboard implements OnInit {
 
   private buildAnalytics(
     transacciones: TransaccionListado[],
-    selectedMonthStart: Date = this.getSelectedMonthStart(),
+    selectedPeriod: DashboardPeriodRange = this.getSelectedPeriodRange(),
   ): DashboardAnalytics {
-    const currentMonthKey = this.getMonthKey(selectedMonthStart);
-    const currentMonthLabel = this.capitalizeText(this.monthFormatter.format(selectedMonthStart));
+    const currentPeriodLabel = selectedPeriod.label;
+    const incomeLabelSuffix = selectedPeriod.type === 'month' ? 'del mes' : 'de la quincena';
+    const expenseLabelSuffix = incomeLabelSuffix;
+    const periodSummary =
+      selectedPeriod.type === 'month' ? 'del mes seleccionado' : 'de la quincena seleccionada';
 
-    const currentMonthIncome = this.roundMoney(
+    const currentPeriodIncome = this.roundMoney(
       transacciones.reduce(
-        (sum, transaction) => sum + this.resolveTitularIncomeForMonth(transaction, currentMonthKey),
+        (sum, transaction) => sum + this.resolveTitularIncomeForPeriod(transaction, selectedPeriod),
         0,
       ),
     );
-    const currentMonthExpense = this.roundMoney(
+    const currentPeriodExpense = this.roundMoney(
       transacciones.reduce(
-        (sum, transaction) => sum + this.resolveTitularExpenseForMonth(transaction, currentMonthKey),
+        (sum, transaction) => sum + this.resolveTitularExpenseForPeriod(transaction, selectedPeriod),
         0,
       ),
     );
-    const currentMonthSharedExpenseAssigned = this.roundMoney(
+    const currentPeriodSharedExpenseAssigned = this.roundMoney(
       transacciones.reduce(
         (sum, transaction) =>
-          sum + this.resolveSharedExpenseAssignedForMonth(transaction, currentMonthKey),
+          sum + this.resolveSharedExpenseAssignedForPeriod(transaction, selectedPeriod),
         0,
       ),
     );
     const hasData =
-      currentMonthIncome > 0 ||
-      currentMonthExpense > 0 ||
-      currentMonthSharedExpenseAssigned > 0;
+      currentPeriodIncome > 0 ||
+      currentPeriodExpense > 0 ||
+      currentPeriodSharedExpenseAssigned > 0;
 
     return {
       hasData,
-      currentMonthLabel,
+      currentPeriodLabel,
       healthScore: 0,
       healthTone: 'neutral',
       healthLabel: 'Resumen del titular',
-      summary: `Vista mensual del titular para ${currentMonthLabel}.`,
+      summary: `Vista del titular para ${selectedPeriod.descriptionLabel}.`,
       kpis: [
         {
           key: 'income',
-          label: 'Total ingresos del mes',
-          value: currentMonthIncome,
+          label: `Total ingresos ${incomeLabelSuffix}`,
+          value: currentPeriodIncome,
           detail: 'Solo titular',
-          helper: 'Suma de ingresos del mes visibles para el titular.',
+          helper: `Suma de ingresos visibles para el titular dentro ${periodSummary}.`,
           tone: 'good',
         },
         {
           key: 'expense',
-          label: 'Total gastos del mes',
-          value: currentMonthExpense,
+          label: `Total gastos ${expenseLabelSuffix}`,
+          value: currentPeriodExpense,
           detail: 'Solo titular',
-          helper: 'Suma de gastos del mes visibles para el titular.',
-          tone: currentMonthExpense > 0 ? 'warning' : 'neutral',
+          helper: `Suma de gastos visibles para el titular dentro ${periodSummary}.`,
+          tone: currentPeriodExpense > 0 ? 'warning' : 'neutral',
         },
         {
           key: 'shared',
           label: 'Gastos compartidos a mi nombre',
-          value: currentMonthSharedExpenseAssigned,
+          value: currentPeriodSharedExpenseAssigned,
           detail: 'Registrados por otros',
-          helper: 'Monto del mes asignado al usuario actual en gastos compartidos.',
-          tone: currentMonthSharedExpenseAssigned > 0 ? 'info' : 'neutral',
+          helper: `Monto asignado al usuario actual dentro ${periodSummary}.`,
+          tone: currentPeriodSharedExpenseAssigned > 0 ? 'info' : 'neutral',
         },
       ],
       capacity: {
@@ -600,9 +653,9 @@ export class Dashboard implements OnInit {
     };
   }
 
-  private resolveTitularIncomeForMonth(
+  private resolveTitularIncomeForPeriod(
     transaction: TransaccionListado,
-    monthKey: string,
+    selectedPeriod: DashboardPeriodRange,
   ): number {
     if (transaction.id_tipo_transaccion !== 2) {
       return 0;
@@ -612,7 +665,7 @@ export class Dashboard implements OnInit {
 
     if (titularDetails.length === 0) {
       const date = this.parseDateOnly(transaction.fecha);
-      return date && this.getMonthKey(date) === monthKey
+      return date && this.isDateWithinPeriod(date, selectedPeriod)
         ? this.roundMoney(Math.max(0, this.normalizeAmount(transaction.monto)))
         : 0;
     }
@@ -623,7 +676,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           return sum;
         }
 
@@ -632,9 +685,9 @@ export class Dashboard implements OnInit {
     );
   }
 
-  private resolveTitularExpenseForMonth(
+  private resolveTitularExpenseForPeriod(
     transaction: TransaccionListado,
-    monthKey: string,
+    selectedPeriod: DashboardPeriodRange,
   ): number {
     if (transaction.id_tipo_transaccion === 2) {
       return 0;
@@ -648,7 +701,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           return sum;
         }
 
@@ -670,9 +723,9 @@ export class Dashboard implements OnInit {
     return details.filter((detail) => detail.es_titular);
   }
 
-  private resolveSharedExpenseAssignedForMonth(
+  private resolveSharedExpenseAssignedForPeriod(
     transaction: TransaccionListado,
-    monthKey: string,
+    selectedPeriod: DashboardPeriodRange,
   ): number {
     if (transaction.id_tipo_transaccion === 2 || transaction.es_propietario || this.currentUserId <= 0) {
       return 0;
@@ -686,7 +739,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           return sum;
         }
 
@@ -713,7 +766,7 @@ export class Dashboard implements OnInit {
     );
   }
 
-  private buildIncomeModalRows(monthKey: string): DashboardTransactionModalRow[] {
+  private buildIncomeModalRows(selectedPeriod: DashboardPeriodRange): DashboardTransactionModalRow[] {
     const rows: DashboardTransactionModalRow[] = [];
 
     for (const transaction of this.transactions) {
@@ -726,7 +779,7 @@ export class Dashboard implements OnInit {
       if (titularDetails.length === 0) {
         const transactionDate = this.parseDateOnly(transaction.fecha);
 
-        if (!transactionDate || this.getMonthKey(transactionDate) !== monthKey) {
+        if (!transactionDate || !this.isDateWithinPeriod(transactionDate, selectedPeriod)) {
           continue;
         }
 
@@ -739,7 +792,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           continue;
         }
 
@@ -756,7 +809,7 @@ export class Dashboard implements OnInit {
     return this.sortDashboardTransactionModalRows(rows);
   }
 
-  private buildExpenseModalRows(monthKey: string): DashboardTransactionModalRow[] {
+  private buildExpenseModalRows(selectedPeriod: DashboardPeriodRange): DashboardTransactionModalRow[] {
     const rows: DashboardTransactionModalRow[] = [];
 
     for (const transaction of this.transactions) {
@@ -769,7 +822,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           continue;
         }
 
@@ -788,7 +841,7 @@ export class Dashboard implements OnInit {
     return this.sortDashboardTransactionModalRows(rows);
   }
 
-  private buildSharedExpenseModalRows(monthKey: string): DashboardTransactionModalRow[] {
+  private buildSharedExpenseModalRows(selectedPeriod: DashboardPeriodRange): DashboardTransactionModalRow[] {
     const rows: DashboardTransactionModalRow[] = [];
 
     for (const transaction of this.transactions) {
@@ -801,7 +854,7 @@ export class Dashboard implements OnInit {
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || this.getMonthKey(detailDate) !== monthKey) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
           continue;
         }
 
@@ -855,26 +908,26 @@ export class Dashboard implements OnInit {
   }
 
   private prepareDashboardTransactionsModalData(): void {
-    const currentMonthKey = this.getMonthKey(this.getSelectedMonthStart());
-    const monthLabel = this.analytics.currentMonthLabel;
+    const selectedPeriod = this.getSelectedPeriodRange();
+    const periodLabel = this.analytics.currentPeriodLabel;
 
     this.dashboardTransactionsModalData = {
       income: {
-        title: 'Ingresos del mes',
-        subtitle: `Detalle mensual de ingresos para ${monthLabel}.`,
-        rows: this.buildIncomeModalRows(currentMonthKey),
+        title: 'Detalle de ingresos',
+        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        rows: this.buildIncomeModalRows(selectedPeriod),
         showSender: false,
       },
       expense: {
-        title: 'Gastos del mes',
-        subtitle: `Detalle mensual de gastos para ${monthLabel}.`,
-        rows: this.buildExpenseModalRows(currentMonthKey),
+        title: 'Detalle de gastos',
+        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        rows: this.buildExpenseModalRows(selectedPeriod),
         showSender: false,
       },
       shared: {
-        title: 'Gastos compartidos a mi nombre',
-        subtitle: `Detalle mensual asignado al usuario actual para ${monthLabel}.`,
-        rows: this.buildSharedExpenseModalRows(currentMonthKey),
+        title: 'Detalle de gastos compartidos',
+        subtitle: `Movimientos visibles para ${periodLabel}.`,
+        rows: this.buildSharedExpenseModalRows(selectedPeriod),
         showSender: true,
       },
     };
@@ -1882,11 +1935,11 @@ export class Dashboard implements OnInit {
   private createEmptyAnalytics(): DashboardAnalytics {
     return {
       hasData: false,
-      currentMonthLabel: this.capitalizeText(this.monthFormatter.format(this.getSelectedMonthStart())),
+      currentPeriodLabel: this.getSelectedPeriodRange().label,
       healthScore: 0,
       healthTone: 'neutral',
       healthLabel: 'Resumen del titular',
-      summary: `Vista mensual del titular para ${this.capitalizeText(this.monthFormatter.format(this.getSelectedMonthStart()))}.`,
+      summary: `Vista del titular para ${this.getSelectedPeriodRange().descriptionLabel}.`,
       kpis: [
         {
           key: 'income',
@@ -1981,6 +2034,40 @@ export class Dashboard implements OnInit {
     return new Date(this.selectedYear, this.selectedMonth - 1, 1);
   }
 
+  private getSelectedPeriodRange(): DashboardPeriodRange {
+    const monthStart = this.getSelectedMonthStart();
+    const monthLabel = this.capitalizeText(this.monthFormatter.format(monthStart));
+
+    if (this.selectedPeriodType === 'month') {
+      return {
+        type: 'month',
+        start: monthStart,
+        end: this.getEndOfMonthDate(monthStart.getFullYear(), monthStart.getMonth()),
+        label: monthLabel,
+        descriptionLabel: monthLabel,
+      };
+    }
+
+    if (this.selectedQuincena === 'first') {
+      return {
+        type: 'quincena',
+        start: monthStart,
+        end: new Date(monthStart.getFullYear(), monthStart.getMonth(), 15),
+        label: `${monthLabel} | 1-15`,
+        descriptionLabel: `1 al 15 de ${monthLabel}`,
+      };
+    }
+
+    const monthEnd = this.getEndOfMonthDate(monthStart.getFullYear(), monthStart.getMonth());
+    return {
+      type: 'quincena',
+      start: new Date(monthStart.getFullYear(), monthStart.getMonth(), 16),
+      end: monthEnd,
+      label: `${monthLabel} | 16-${monthEnd.getDate()}`,
+      descriptionLabel: `16 al ${monthEnd.getDate()} de ${monthLabel}`,
+    };
+  }
+
   private getToday(): Date {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -2013,9 +2100,36 @@ export class Dashboard implements OnInit {
   }
 
   private refreshDashboardSummary(): void {
-    this.analytics = this.buildAnalytics(this.transactions, this.getSelectedMonthStart());
+    this.analytics = this.buildAnalytics(this.transactions, this.getSelectedPeriodRange());
     this.prepareDashboardTransactionsModalData();
     this.cdr.detectChanges();
+  }
+
+  private isDateWithinPeriod(date: Date, selectedPeriod: DashboardPeriodRange): boolean {
+    const time = date.getTime();
+    return time >= selectedPeriod.start.getTime() && time <= selectedPeriod.end.getTime();
+  }
+
+  private filterVisibleTransactions(transacciones: TransaccionListado[]): TransaccionListado[] {
+    return transacciones.filter((transaccion) => !this.isCancelledTransaction(transaccion));
+  }
+
+  private isCancelledTransaction(transaccion: TransaccionListado): boolean {
+    const transactionStatus = this.normalizeTransactionStatus(
+      transaccion.nombre_estado_registro ?? transaccion.nombre_estado ?? '',
+    );
+
+    return transactionStatus === 'anulado';
+  }
+
+  private normalizeTransactionStatus(value: string): string {
+    switch (this.normalizeText(value)) {
+      case 'anulada':
+      case 'anulado':
+        return 'anulado';
+      default:
+        return this.normalizeText(value);
+    }
   }
 
   private formatIsoDate(date: Date | null): string {

@@ -41,6 +41,10 @@
   gap: 0.35rem;
 }
 
+.dashboard-period-field.dashboard-period-field-wide select {
+  min-width: 160px;
+}
+
 .dashboard-period-field span {
   color: #64748b;
   font-size: 0.78rem;

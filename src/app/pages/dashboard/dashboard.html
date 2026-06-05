@@ -159,17 +159,34 @@
 
     <section *ngIf="loading" class="panel state-panel">
       <strong>Actualizando dashboard del titular...</strong>
-      <p>Estoy consolidando los totales del mes y tus notificaciones configuradas.</p>
+      <p>Estoy consolidando los totales del periodo y tus notificaciones configuradas.</p>
     </section>
 
     <section *ngIf="!loading" class="dashboard-body compact-dashboard">
       <section class="panel dashboard-header-panel">
         <div class="panel-heading">
           <div>
-            <h3>{{ analytics.currentMonthLabel }}</h3>
+            <h3>{{ analytics.currentPeriodLabel }}</h3>
           </div>
           <div class="dashboard-header-actions">
             <div class="dashboard-period-filter" aria-label="Seleccionar periodo del dashboard">
+              <label class="dashboard-period-field dashboard-period-field-wide">
+                <span>Periodo</span>
+                <select
+                  #periodTypeSelect
+                  [value]="selectedPeriodType"
+                  (change)="onSelectedPeriodTypeChange(periodTypeSelect.value)"
+                >
+                  <option
+                    *ngFor="let item of periodTypeOptions"
+                    [value]="item.value"
+                    [selected]="item.value === selectedPeriodType"
+                  >
+                    {{ item.label }}
+                  </option>
+                </select>
+              </label>
+
               <label class="dashboard-period-field">
                 <span>Mes</span>
                 <select
@@ -177,21 +194,49 @@
                   [value]="selectedMonth"
                   (change)="onSelectedMonthChange(monthSelect.value)"
                 >
-                  <option *ngFor="let month of monthOptions" [value]="month.value">
+                  <option
+                    *ngFor="let month of monthOptions"
+                    [value]="month.value"
+                    [selected]="month.value === selectedMonth"
+                  >
                     {{ month.label }}
                   </option>
                 </select>
               </label>
 
               <label class="dashboard-period-field">
-                <span>Año</span>
+                <span>Anio</span>
                 <select
                   #yearSelect
                   [value]="selectedYear"
                   (change)="onSelectedYearChange(yearSelect.value)"
                 >
-                  <option *ngFor="let year of availableYears" [value]="year">
+                  <option
+                    *ngFor="let year of availableYears"
+                    [value]="year"
+                    [selected]="year === selectedYear"
+                  >
                     {{ year }}
+                  </option>
+                </select>
+              </label>
+
+              <label
+                *ngIf="selectedPeriodType === 'quincena'"
+                class="dashboard-period-field dashboard-period-field-wide"
+              >
+                <span>Quincena</span>
+                <select
+                  #quincenaSelect
+                  [value]="selectedQuincena"
+                  (change)="onSelectedQuincenaChange(quincenaSelect.value)"
+                >
+                  <option
+                    *ngFor="let item of quincenaOptions"
+                    [value]="item.value"
+                    [selected]="item.value === selectedQuincena"
+                  >
+                    {{ item.label }}
                   </option>
                 </select>
               </label>
@@ -297,7 +342,7 @@
       >
         <div class="dashboard-modal-header">
           <div>
-            <span class="panel-kicker">Detalle mensual</span>
+            <span class="panel-kicker">Detalle del periodo</span>
             <h3>{{ dashboardTransactionsModalTitle }}</h3>
             <p>{{ dashboardTransactionsModalSubtitle }}</p>
           </div>
@@ -341,7 +386,7 @@
         <ng-template #emptyDashboardTransactions>
           <div class="chart-empty">
             <strong>Sin transacciones para mostrar</strong>
-            <p>No hay movimientos del mes que alimenten este total.</p>
+            <p>No hay movimientos del periodo que alimenten este total.</p>
           </div>
         </ng-template>
       </article>
