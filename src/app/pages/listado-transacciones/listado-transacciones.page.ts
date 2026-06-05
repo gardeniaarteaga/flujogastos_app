@@ -4055,9 +4055,19 @@ export class ListadoTransaccionesPage implements OnInit {
   ): number {
     const leftDate = this.parseIsoDateOnly(left.detalle.fecha_programada);
     const rightDate = this.parseIsoDateOnly(right.detalle.fecha_programada);
+    const today = this.getDateOnlyValue(new Date()).getTime();
 
-    if (leftDate && rightDate && leftDate.getTime() !== rightDate.getTime()) {
-      return leftDate.getTime() - rightDate.getTime();
+    if (leftDate && rightDate) {
+      const leftDistance = Math.abs(leftDate.getTime() - today);
+      const rightDistance = Math.abs(rightDate.getTime() - today);
+
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+
+      if (leftDate.getTime() !== rightDate.getTime()) {
+        return leftDate.getTime() - rightDate.getTime();
+      }
     }
 
     if (leftDate && !rightDate) {
