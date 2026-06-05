@@ -1,3 +1,3 @@
 window.__APP_CONFIG__ = {
-  apiBaseUrl: "http://localhost:3001/api",
+  apiBaseUrl: "https://flujogastosapi-production.up.railway.app/api",
 };

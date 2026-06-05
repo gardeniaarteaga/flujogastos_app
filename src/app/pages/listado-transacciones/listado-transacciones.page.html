@@ -177,6 +177,26 @@
             </div>
 
             <div class="filter-toggle-group filter-toggle-group-compact quick-pay-toggle-group">
+              <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
+                <input
+                  id="prioritariosDetalle"
+                  type="checkbox"
+                  formControlName="prioritarios"
+                  (change)="onPrioritariosToggle($event)"
+                />
+                <span>Proximos 15 dias</span>
+              </label>
+
+              <label class="checkbox-row checkbox-row-compact" for="vencidosDetalle">
+                <input
+                  id="vencidosDetalle"
+                  type="checkbox"
+                  formControlName="vencidos"
+                  (change)="onVencidosToggle($event)"
+                />
+                <span>Vencidos</span>
+              </label>
+
               <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
                 <input
                   id="mesActualDetalle"
@@ -851,7 +871,17 @@
                     </span>
                   </div>
                 </td>
-                <td>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</td>
+                <td>
+                  <div style="display:grid;gap:.3rem;">
+                    <span>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</span>
+                    <span
+                      *ngIf="isDetalleVencido(row.detalle)"
+                      style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
+                    >
+                      Vencido
+                    </span>
+                  </div>
+                </td>
                 <td>{{ row.metodo_pago || '-' }}</td>
                 <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
                 <td>${{ row.detalle.monto | number: '1.2-2' }}</td>

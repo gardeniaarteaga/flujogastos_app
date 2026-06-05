@@ -5,7 +5,9 @@
     "ng": "ng",
     "prebuild": "node scripts/generate-env.js",
     "start": "ng serve",
+    "start:pago-rapido-android": "ng serve pago-rapido-android --host 0.0.0.0 --port 4300",
     "build": "ng build",
+    "build:pago-rapido-android": "node scripts/generate-env.js && ng build pago-rapido-android --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -18,6 +20,7 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@angular/service-worker": "^21.2.7",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.24",
     "tslib": "^2.3.0"

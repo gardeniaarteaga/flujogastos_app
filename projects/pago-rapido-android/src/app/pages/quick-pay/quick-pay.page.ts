@@ -281,8 +281,9 @@ export class QuickPayPage implements OnInit {
   readonly filtrosForm = this.fb.group({
     todos: [this.viewMode !== 'detalle'],
     soloHoy: [false],
-    mesActual: [this.viewMode === 'detalle'],
-    prioritarios: [false],
+    mesActual: [false],
+    prioritarios: [this.viewMode === 'detalle'],
+    vencidos: [this.viewMode === 'detalle'],
     diasPrioridad: [
       this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -292,8 +293,8 @@ export class QuickPayPage implements OnInit {
     enviadas: [false],
     compartidos: [false],
     pendienteRegistro: [false],
-    fechaDesde: [this.viewMode === 'detalle' ? this.formatDateDisplayFromApi(this.currentMonthStartValue) : '', [this.dateDisplayValidator()]],
-    fechaHasta: [this.viewMode === 'detalle' ? this.formatDateDisplayFromApi(this.currentMonthEndValue) : '', [this.dateDisplayValidator()]],
+    fechaDesde: ['', [this.dateDisplayValidator()]],
+    fechaHasta: ['', [this.dateDisplayValidator()]],
     estado: [this.viewMode === 'detalle' ? 'PENDIENTE' : null as string | null],
     tipoTransaccion: [null as 'credito' | 'debito' | null],
     idMetodoPago: [null as number | null],
@@ -521,6 +522,8 @@ export class QuickPayPage implements OnInit {
     const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
     const mostrarTodas = !!filtros.todos;
+    const prioridadActiva = !!filtros.prioritarios;
+    const vencidosActivos = !!filtros.vencidos;
 
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
@@ -540,11 +543,14 @@ export class QuickPayPage implements OnInit {
         return false;
       }
 
-      if (
-        filtros.prioritarios &&
-        !this.hasPriorityPendingSchedule(transaccion)
-      ) {
-        return false;
+      if (prioridadActiva || vencidosActivos) {
+        const coincideConFiltroRapidoFecha =
+          (prioridadActiva && this.hasPriorityPendingSchedule(transaccion)) ||
+          (vencidosActivos && this.hasOverduePendingSchedule(transaccion));
+
+        if (!coincideConFiltroRapidoFecha) {
+          return false;
+        }
       }
 
       if (
@@ -626,6 +632,7 @@ export class QuickPayPage implements OnInit {
     const tipoTransaccionFiltro =
       (this.normalizeText(filtros.tipoTransaccion ?? '') as 'credito' | 'debito' | '') || null;
     const prioridadActiva = !!filtros.prioritarios;
+    const vencidosActivos = !!filtros.vencidos;
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
@@ -641,8 +648,14 @@ export class QuickPayPage implements OnInit {
           return false;
         }
 
-        if (prioridadActiva && !this.isDetallePrioritario(row.detalle)) {
-          return false;
+        if (prioridadActiva || vencidosActivos) {
+          const coincideConFiltroRapidoFecha =
+            (prioridadActiva && this.isDetallePrioritario(row.detalle)) ||
+            (vencidosActivos && this.isDetalleVencido(row.detalle));
+
+          if (!coincideConFiltroRapidoFecha) {
+            return false;
+          }
         }
 
         if (filtros.enviadas && row.transaccion.es_propietario) {
@@ -1484,6 +1497,16 @@ export class QuickPayPage implements OnInit {
     this.syncQuickFilterFlagsWithRange();
   }
 
+  onPrioritariosToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
+    this.setQuickPayScheduleFilterState('prioritarios', checked);
+  }
+
+  onVencidosToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
+    this.setQuickPayScheduleFilterState('vencidos', checked);
+  }
+
   onTodosToggle(event: Event): void {
     const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
 
@@ -1657,6 +1680,7 @@ export class QuickPayPage implements OnInit {
   canSelectQuickPayDetalle(row: DetalleTransaccionListadoRow): boolean {
     return (
       this.canPagarDetalle(row) &&
+      this.hasQuickPayMetodoPagoValido(row) &&
       this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario) &&
       this.isQuickPayMetodoPagoCompatible(row)
     );
@@ -1673,6 +1697,10 @@ export class QuickPayPage implements OnInit {
   getQuickPayDetalleSelectionHint(row: DetalleTransaccionListadoRow): string {
     if (!this.canPagarDetalle(row)) {
       return 'La cuota ya no tiene saldo pendiente para pagar.';
+    }
+
+    if (!this.hasQuickPayMetodoPagoValido(row)) {
+      return 'La cuota no tiene un metodo de pago valido para usar pago masivo.';
     }
 
     if (!this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario)) {
@@ -4050,8 +4078,14 @@ export class QuickPayPage implements OnInit {
         return false;
       }
 
-      return scheduledDate <= limitDate;
+      return scheduledDate >= today && scheduledDate <= limitDate;
     });
+  }
+
+  private hasOverduePendingSchedule(transaccion: TransaccionListado): boolean {
+    return this.getParticipantesDetalleSafe(transaccion).some((detalle) =>
+      this.isDetalleVencido(detalle),
+    );
   }
 
   private isDetallePrioritario(detalle: ParticipanteDetalleListado): boolean {
@@ -4071,7 +4105,7 @@ export class QuickPayPage implements OnInit {
       return false;
     }
 
-    return scheduledDate <= limitDate;
+    return scheduledDate >= today && scheduledDate <= limitDate;
   }
 
   private compareDetalleRowsByFechaProgramada(
@@ -6252,16 +6286,23 @@ export class QuickPayPage implements OnInit {
       : null;
   }
 
+  private hasQuickPayMetodoPagoValido(row: DetalleTransaccionListadoRow): boolean {
+    return this.getQuickPayMetodoPagoId(row) !== null;
+  }
+
   private isQuickPayMetodoPagoCompatible(row: DetalleTransaccionListadoRow): boolean {
     if (this.selectedQuickPayDetalleIds.has(row.detalle.id)) {
       return true;
     }
 
+    const rowMetodoPagoId = this.getQuickPayMetodoPagoId(row);
+
+    if (rowMetodoPagoId === null) {
+      return false;
+    }
+
     const selectedMetodoPagoId = this.getQuickPaySelectedMetodoPagoId();
-    return (
-      selectedMetodoPagoId === null ||
-      this.getQuickPayMetodoPagoId(row) === selectedMetodoPagoId
-    );
+    return selectedMetodoPagoId === null || rowMetodoPagoId === selectedMetodoPagoId;
   }
 
   private hasMixedQuickPayBulkMethods(rows: DetalleTransaccionListadoRow[]): boolean {
@@ -6270,11 +6311,22 @@ export class QuickPayPage implements OnInit {
     }
 
     const firstMetodoPagoId = this.getQuickPayMetodoPagoId(rows[0]);
+
+    if (firstMetodoPagoId === null) {
+      return true;
+    }
+
     return rows.some((row) => this.getQuickPayMetodoPagoId(row) !== firstMetodoPagoId);
   }
 
-  private getQuickPayMetodoPagoId(row: DetalleTransaccionListadoRow): number {
-    return Number(row.detalle.id_metodo_pago ?? row.transaccion.id_metodo_pago);
+  private getQuickPayMetodoPagoId(row: DetalleTransaccionListadoRow): number | null {
+    const methodId = Number(row.detalle.id_metodo_pago ?? row.transaccion.id_metodo_pago);
+
+    if (!Number.isFinite(methodId) || methodId <= 0) {
+      return null;
+    }
+
+    return methodId;
   }
 
   private getQuickPayMetodoPagoNombre(row: DetalleTransaccionListadoRow): string {
@@ -6283,7 +6335,12 @@ export class QuickPayPage implements OnInit {
       row.detalle.nombre_forma_pago?.trim() ||
       row.transaccion.nombre_forma_pago?.trim();
 
-    return methodName || `Metodo #${this.getQuickPayMetodoPagoId(row)}`;
+    if (methodName) {
+      return methodName;
+    }
+
+    const methodId = this.getQuickPayMetodoPagoId(row);
+    return methodId === null ? 'Sin metodo asignado' : `Metodo #${methodId}`;
   }
 
   private getMontoRestantePagoParcialTotal(
@@ -7076,12 +7133,14 @@ export class QuickPayPage implements OnInit {
   private resetDefaultFilters(): void {
     const useTodayDefaults = false;
     const useAllListadoDefaults = this.viewMode !== 'detalle';
-    const useCurrentMonthDefaults = this.viewMode === 'detalle';
+    const usePriorityDefaults = this.viewMode === 'detalle';
+    const useOverdueDefaults = this.viewMode === 'detalle';
     this.filtrosForm.reset({
       todos: useAllListadoDefaults,
       soloHoy: useTodayDefaults,
-      mesActual: useCurrentMonthDefaults,
-      prioritarios: false,
+      mesActual: false,
+      prioritarios: usePriorityDefaults,
+      vencidos: useOverdueDefaults,
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
         : PRIORITY_WINDOW_DAYS,
@@ -7089,12 +7148,8 @@ export class QuickPayPage implements OnInit {
       enviadas: false,
       compartidos: false,
       pendienteRegistro: false,
-      fechaDesde: useCurrentMonthDefaults
-        ? this.formatDateDisplayFromApi(this.currentMonthStartValue)
-        : '',
-      fechaHasta: useCurrentMonthDefaults
-        ? this.formatDateDisplayFromApi(this.currentMonthEndValue)
-        : '',
+      fechaDesde: '',
+      fechaHasta: '',
       estado: this.viewMode === 'detalle' ? 'PENDIENTE' : null,
       tipoTransaccion: null,
       idMetodoPago: null,
@@ -7261,6 +7316,8 @@ export class QuickPayPage implements OnInit {
         todos: false,
         soloHoy: true,
         mesActual: false,
+        prioritarios: false,
+        vencidos: false,
         fechaDesde: this.formatDateDisplayFromApi(this.todayFilterValue),
         fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
       },
@@ -7274,6 +7331,8 @@ export class QuickPayPage implements OnInit {
         todos: false,
         soloHoy: false,
         mesActual: true,
+        prioritarios: false,
+        vencidos: false,
         fechaDesde: this.formatDateDisplayFromApi(this.currentMonthStartValue),
         fechaHasta: this.formatDateDisplayFromApi(this.currentMonthEndValue),
       },
@@ -7325,6 +7384,7 @@ export class QuickPayPage implements OnInit {
         soloHoy: false,
         mesActual: false,
         prioritarios: false,
+        vencidos: false,
         pendientePago: false,
         enviadas: false,
         compartidos: false,
@@ -7354,6 +7414,7 @@ export class QuickPayPage implements OnInit {
       !filtros.soloHoy &&
       !filtros.mesActual &&
       !filtros.prioritarios &&
+      !filtros.vencidos &&
       !filtros.pendientePago &&
       !filtros.enviadas &&
       !filtros.compartidos &&
@@ -7465,7 +7526,8 @@ export class QuickPayPage implements OnInit {
         todos: false,
         soloHoy: false,
         mesActual: false,
-        prioritarios: false,
+        prioritarios: true,
+        vencidos: true,
         pendientePago: false,
         enviadas: true,
         compartidos: false,
@@ -7482,6 +7544,25 @@ export class QuickPayPage implements OnInit {
       },
       { emitEvent: true },
     );
+  }
+
+  private setQuickPayScheduleFilterState(
+    controlName: 'prioritarios' | 'vencidos',
+    checked: boolean,
+  ): void {
+    if (checked) {
+      this.filtrosForm.patchValue(
+        {
+          soloHoy: false,
+          mesActual: false,
+          fechaDesde: '',
+          fechaHasta: '',
+        },
+        { emitEvent: false },
+      );
+    }
+
+    this.filtrosForm.controls[controlName].setValue(checked);
   }
 
   private refreshFilteredSubcategoriasFiltro(): void {
