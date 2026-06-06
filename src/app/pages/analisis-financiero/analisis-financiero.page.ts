@@ -95,6 +95,7 @@ interface AnalysisRecord {
   interestPaid: number;
   interestPending: number;
   pendingDebt: number;
+  carryForwardAmount: number;
   debtDue: number;
   isDebtLike: boolean;
   categoryId: number;
@@ -569,6 +570,10 @@ export class AnalisisFinancieroPage implements OnInit {
             transactionType === 'income'
               ? normalized.baseAmount
               : normalized.totalAmount;
+          const carryForwardAmount =
+            transactionType === 'income'
+              ? 0
+              : this.resolveCarryForwardAmount(normalized, paymentMethod, detail);
 
           records.push({
             id: `${transactionType}-${transaction.id_transaccion}-${detail.id || index}`,
@@ -581,6 +586,7 @@ export class AnalisisFinancieroPage implements OnInit {
             interestPaid: transactionType === 'income' ? 0 : normalized.interestPaid,
             interestPending: transactionType === 'income' ? 0 : normalized.interestPending,
             pendingDebt: transactionType === 'income' ? 0 : normalized.pendingDebt,
+            carryForwardAmount,
             debtDue: isDebtLike ? amount : 0,
             isDebtLike,
             categoryId: transaction.id_categoria,
@@ -732,7 +738,7 @@ export class AnalisisFinancieroPage implements OnInit {
       this.analysis = {
         ...this.createEmptyAnalysis(),
         monthLabel: selectedPeriod.label,
-        summary: `No hay detalles pagados o pendientes de pago visibles para esta ${periodNoun}.`,
+        summary: `No hay detalles visibles del ${periodNoun} ni vencidos pendientes arrastrados para este corte.`,
       };
       this.syncCategoryAnalysisModal();
       return;
@@ -823,7 +829,7 @@ export class AnalisisFinancieroPage implements OnInit {
           detail: topCategories[0]
             ? `${topCategories[0].name} concentra ${this.formatPercent(topCategories[0].share)}`
             : 'Sin categoria dominante',
-          helper: 'Incluye gastos, cuotas, pagos compartidos e intereses del periodo.',
+          helper: 'Incluye gastos, cuotas, pagos compartidos e intereses del periodo mas vencidos pendientes arrastrados.',
           tone: expenseRatio !== null && expenseRatio > 0.85 ? 'warning' : 'info',
         },
         {
@@ -840,7 +846,7 @@ export class AnalisisFinancieroPage implements OnInit {
           label: 'Total deuda pendiente',
           value: debtPending,
           detail: debtEntities[0] ? `${debtEntities[0].name} es la mayor presion` : 'Sin deuda visible',
-          helper: 'Saldo pendiente ligado a lo filtrado en este mes.',
+          helper: 'Saldo pendiente ligado al periodo filtrado y a vencidos pendientes de pago.',
           tone: debtPending > 0 ? 'warning' : 'good',
         },
         {
@@ -916,43 +922,72 @@ export class AnalisisFinancieroPage implements OnInit {
     const entityId = this.filtrosForm.controls.entityId.value ?? '';
     const state = this.filtrosForm.controls.state.value ?? '';
 
-    return this.records.filter((record) => {
+    return this.records.reduce<AnalysisRecord[]>((filtered, record) => {
       if (!record.analysisDate) {
-        return false;
+        return filtered;
       }
 
+      let effectiveRecord = record;
+
       if (applyMonthFilter) {
-        if (!this.isDateWithinPeriod(record.analysisDate, selectedPeriod)) {
-          return false;
+        if (this.isDateWithinPeriod(record.analysisDate, selectedPeriod)) {
+          effectiveRecord = record;
+        } else if (this.shouldIncludeCarryForwardRecord(record, selectedPeriod)) {
+          effectiveRecord = this.createCarryForwardRecord(record);
+        } else {
+          return filtered;
         }
       }
 
-      if (categoryId && String(record.categoryId) !== categoryId) {
-        return false;
+      if (categoryId && String(effectiveRecord.categoryId) !== categoryId) {
+        return filtered;
       }
 
-      if (subcategoryId && String(record.subcategoryId ?? '') !== subcategoryId) {
-        return false;
+      if (subcategoryId && String(effectiveRecord.subcategoryId ?? '') !== subcategoryId) {
+        return filtered;
       }
 
-      if (paymentMethodId && String(record.paymentMethodId) !== paymentMethodId) {
-        return false;
+      if (paymentMethodId && String(effectiveRecord.paymentMethodId) !== paymentMethodId) {
+        return filtered;
       }
 
-      if (participantKey && record.participantKey !== participantKey) {
-        return false;
+      if (participantKey && effectiveRecord.participantKey !== participantKey) {
+        return filtered;
       }
 
-      if (entityId && String(record.entityId ?? '') !== entityId) {
-        return false;
+      if (entityId && String(effectiveRecord.entityId ?? '') !== entityId) {
+        return filtered;
       }
 
-      if (state && this.normalizeText(record.statusName) !== state) {
-        return false;
+      if (state && this.normalizeText(effectiveRecord.statusName) !== state) {
+        return filtered;
       }
 
-      return true;
-    });
+      filtered.push(effectiveRecord);
+      return filtered;
+    }, []);
+  }
+
+  private shouldIncludeCarryForwardRecord(
+    record: AnalysisRecord,
+    selectedPeriod: AnalysisPeriodRange,
+  ): boolean {
+    return (
+      record.type === 'expense' &&
+      record.analysisDate !== null &&
+      record.analysisDate.getTime() < selectedPeriod.start.getTime() &&
+      record.carryForwardAmount > 0
+    );
+  }
+
+  private createCarryForwardRecord(record: AnalysisRecord): AnalysisRecord {
+    return {
+      ...record,
+      amount: record.carryForwardAmount,
+      baseAmount: record.pendingDebt,
+      interestPaid: 0,
+      debtDue: record.isDebtLike ? record.carryForwardAmount : 0,
+    };
   }
 
   private buildCategoryStats(
@@ -1804,6 +1839,18 @@ export class AnalisisFinancieroPage implements OnInit {
       pendingDebt: this.roundMoney(Math.max(0, baseAmount + interestPending - amountPaid)),
       totalAmount: this.roundMoney(baseAmount + interestPaid + interestPending),
     };
+  }
+
+  private resolveCarryForwardAmount(
+    normalized: NormalizedDetailAmounts,
+    paymentMethod: CatalogoFormaPago | null | undefined,
+    detail: Pick<ParticipanteDetalleListado, 'id_estado'>,
+  ): number {
+    if (paymentMethod?.calcula_interes === true && this.shouldApplyInterestToDetail(detail)) {
+      return this.roundMoney(Math.max(0, normalized.pendingDebt));
+    }
+
+    return this.roundMoney(Math.max(0, normalized.pendingDebt + normalized.interestPending));
   }
 
   private shouldApplyInterestToDetail(

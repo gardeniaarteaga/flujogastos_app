@@ -698,6 +698,20 @@
                     </div>
 
                     <div class="participant-actions">
+                      <div
+                        *ngIf="participanteGroup.controls.es_titular.value && shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"
+                        class="participant-quick-check-wrap"
+                        [formGroup]="transaccionForm"
+                      >
+                        <label class="checkbox-row participant-quick-check" for="titular_cuota_unica_pagada">
+                          <input
+                            id="titular_cuota_unica_pagada"
+                            type="checkbox"
+                            formControlName="titular_cuota_unica_pagada"
+                          />
+                          <span>Marcar Pagada</span>
+                        </label>
+                      </div>
                       <button
                         *ngIf="!participanteGroup.controls.es_titular.value"
                         type="button"

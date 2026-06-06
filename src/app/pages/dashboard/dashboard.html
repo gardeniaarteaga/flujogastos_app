@@ -360,6 +360,7 @@
           <table class="dashboard-modal-table">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Fecha</th>
                 <th>Descripcion</th>
                 <th>Categoria</th>
@@ -372,7 +373,13 @@
             </thead>
             <tbody>
               <tr *ngFor="let row of dashboardTransactionsModalRows">
-                <td>{{ row.dateLabel }}</td>
+                <td>{{ row.transactionId }}</td>
+                <td>
+                  <div class="dashboard-date-cell">
+                    <span>{{ row.dateLabel }}</span>
+                    <span *ngIf="isDashboardModalRowOverdue(row)" class="dashboard-overdue-pill">Vencido</span>
+                  </div>
+                </td>
                 <td>{{ row.description }}</td>
                 <td>{{ row.categoryName }}</td>
                 <td>{{ row.subcategoryName }}</td>
@@ -382,7 +389,7 @@
                     {{ row.statusLabel }}
                   </span>
                 </td>
-                <td *ngIf="dashboardTransactionsModalShowSender">{{ row.senderName || 'Sin remitente' }}</td>
+                <td *ngIf="dashboardTransactionsModalShowSender">{{ row.senderName || '-' }}</td>
                 <td class="amount-column">{{ formatCurrency(row.amount) }}</td>
               </tr>
             </tbody>

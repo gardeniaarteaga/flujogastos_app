@@ -51,6 +51,8 @@ type ModoCuotas = 'fijas' | 'divididas';
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
 const PRIORITY_WINDOW_DAYS = 7;
 const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
+const QUICK_PAY_PRIORITY_FILTER_STORAGE_KEY =
+  'flujo-gastos.quick-pay.prioritarios';
 const ESTADOS_LISTADO_PERMITIDOS = new Set(['pagado', 'pendiente', 'anulado']);
 const ESTADOS_FILTRO_DISPONIBLES = new Set([...ESTADOS_LISTADO_PERMITIDOS]);
 
@@ -219,6 +221,14 @@ interface QuickPaySubtotalSummary {
   ingresos: number;
 }
 
+interface QuickPayMetodoGroup {
+  metodoPagoId: number | null;
+  metodoPagoNombre: string;
+  oldestScheduledDate: string | null;
+  rows: DetalleTransaccionListadoRow[];
+  totalPendiente: number;
+}
+
 type FiltroDateControlName = 'fechaDesde' | 'fechaHasta';
 
 @Component({
@@ -280,7 +290,7 @@ export class ListadoTransaccionesPage implements OnInit {
     todos: [this.viewMode !== 'detalle'],
     soloHoy: [false],
     mesActual: [false],
-    prioritarios: [this.viewMode === 'detalle'],
+    prioritarios: [this.getInitialQuickPayPriorityFilterValue()],
     vencidos: [this.viewMode === 'detalle'],
     diasPrioridad: [
       this.viewMode === 'detalle'
@@ -343,6 +353,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly pendingDismissedTitularFullShareGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
   private autoOpenPaymentHandledKey: string | null = null;
+  private readonly quickPayMetodoGroupExpansionState: Record<string, boolean> = {};
   readonly listadoPageSize = 10;
   readonly cuotasPageSize = 12;
 
@@ -397,6 +408,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.filtrosForm.controls.prioritarios.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((isEnabled) => {
+        this.persistQuickPayPriorityFilterPreference(isEnabled);
         this.syncQuickPayPriorityControlState(isEnabled);
       });
 
@@ -707,6 +719,11 @@ export class ListadoTransaccionesPage implements OnInit {
     return scheduledDate < this.getDateOnlyValue(new Date());
   }
 
+  readonly isTransaccionVencida = (transaccion: TransaccionListado): boolean =>
+    this.getParticipantesDetalleSafe(transaccion).some((detalle) =>
+      this.isDetalleVencido(detalle),
+    );
+
   get quickPayBulkSelectedRows(): DetalleTransaccionListadoRow[] {
     if (this.selectedQuickPayDetalleIds.size === 0) {
       return [];
@@ -769,6 +786,74 @@ export class ListadoTransaccionesPage implements OnInit {
       pagado: this.roundMoneyValue(summary.pagado),
       ingresos: this.roundMoneyValue(summary.ingresos),
     };
+  }
+
+  get quickPayDetalleMetodoGroups(): QuickPayMetodoGroup[] {
+    const groups = new Map<string, QuickPayMetodoGroup>();
+
+    for (const row of this.filteredDetalleTransacciones) {
+      const metodoPagoId = this.getQuickPayMetodoPagoId(row);
+      const metodoPagoNombre = this.getQuickPayMetodoPagoNombre(row);
+      const groupKey =
+        metodoPagoId === null ? `sin-metodo:${metodoPagoNombre}` : `metodo:${metodoPagoId}`;
+      const saldoPendiente = Number(row.detalle.saldo_pendiente ?? 0);
+      const fechaProgramada = this.normalizeDateOnly(row.detalle.fecha_programada);
+      const currentGroup = groups.get(groupKey);
+
+      if (currentGroup) {
+        currentGroup.rows.push(row);
+        currentGroup.totalPendiente = this.roundMoneyValue(
+          currentGroup.totalPendiente + saldoPendiente,
+        );
+
+        if (
+          fechaProgramada &&
+          (!currentGroup.oldestScheduledDate ||
+            fechaProgramada < currentGroup.oldestScheduledDate)
+        ) {
+          currentGroup.oldestScheduledDate = fechaProgramada;
+        }
+
+        continue;
+      }
+
+      groups.set(groupKey, {
+        metodoPagoId,
+        metodoPagoNombre,
+        oldestScheduledDate: fechaProgramada,
+        rows: [row],
+        totalPendiente: this.roundMoneyValue(saldoPendiente),
+      });
+    }
+
+    return Array.from(groups.values()).sort((left, right) =>
+      this.compareQuickPayMetodoGroups(left, right),
+    );
+  }
+
+  isQuickPayMetodoGroupExpanded(group: QuickPayMetodoGroup, index: number): boolean {
+    const groupKey = this.getQuickPayMetodoGroupKey(group);
+    return this.quickPayMetodoGroupExpansionState[groupKey] ?? index === 0;
+  }
+
+  toggleQuickPayMetodoGroup(group: QuickPayMetodoGroup, index: number): void {
+    const groupKey = this.getQuickPayMetodoGroupKey(group);
+    this.quickPayMetodoGroupExpansionState[groupKey] =
+      !this.isQuickPayMetodoGroupExpanded(group, index);
+  }
+
+  getQuickPayMetodoGroupAccentColor(index: number): string {
+    return this.getPaymentGroupAccentColor(index);
+  }
+
+  getQuickPayMetodoGroupSurfaceColor(index: number): string {
+    const surfacePalette = ['#eaf1ff', '#fff1e8', '#f3ecff', '#e8f7f4', '#fff1eb', '#fdebf4'];
+    return surfacePalette[index % surfacePalette.length];
+  }
+
+  getQuickPayMetodoGroupTextColor(index: number): string {
+    const textPalette = ['#1e3a8a', '#9a3412', '#5b21b6', '#115e59', '#9a3412', '#9d174d'];
+    return textPalette[index % textPalette.length];
   }
 
   get pageEyebrow(): string {
@@ -3773,7 +3858,7 @@ export class ListadoTransaccionesPage implements OnInit {
     transaccion: Pick<TransaccionListado, 'descripcion' | 'id_transaccion'> | null | undefined,
   ): string {
     const descripcion = transaccion?.descripcion?.trim() || 'Sin descripcion';
-    return `${descripcion} #${transaccion?.id_transaccion ?? '-'}`;
+    return `${descripcion} ${transaccion?.id_transaccion ?? '-'}`;
   }
 
   getDetailModalCuotas(): ParticipanteDetalleListado[] {
@@ -3894,6 +3979,12 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getEstadoClass(nombreEstado: string | null | undefined): string {
+    const estadoOriginal = this.normalizeText(nombreEstado ?? '');
+
+    if (estadoOriginal === 'pago parcial') {
+      return 'status-pill-parcial';
+    }
+
     const estado = this.getNormalizedEstadoListado(nombreEstado ?? '');
 
     switch (estado) {
@@ -4130,6 +4221,36 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return left.detalle.id - right.detalle.id;
+  }
+
+  private compareQuickPayMetodoGroups(
+    left: QuickPayMetodoGroup,
+    right: QuickPayMetodoGroup,
+  ): number {
+    const leftDate = this.parseIsoDateOnly(left.oldestScheduledDate);
+    const rightDate = this.parseIsoDateOnly(right.oldestScheduledDate);
+
+    if (leftDate && rightDate && leftDate.getTime() !== rightDate.getTime()) {
+      return leftDate.getTime() - rightDate.getTime();
+    }
+
+    if (leftDate && !rightDate) {
+      return -1;
+    }
+
+    if (!leftDate && rightDate) {
+      return 1;
+    }
+
+    return left.metodoPagoNombre.localeCompare(right.metodoPagoNombre);
+  }
+
+  private getQuickPayMetodoGroupKey(
+    group: Pick<QuickPayMetodoGroup, 'metodoPagoId' | 'metodoPagoNombre'>,
+  ): string {
+    return group.metodoPagoId === null
+      ? `sin-metodo:${group.metodoPagoNombre}`
+      : `metodo:${group.metodoPagoId}`;
   }
 
   private getPriorityWindowDays(): number {
@@ -5335,6 +5456,12 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getEstadoDisplayLabel(nombreEstado: string | null | undefined): string {
+    const estadoOriginal = this.normalizeText(nombreEstado ?? '');
+
+    if (estadoOriginal === 'pago parcial') {
+      return 'PAGO PARCIAL';
+    }
+
     const estado = this.getNormalizedEstadoListado(nombreEstado ?? '');
 
     switch (estado) {
@@ -7117,7 +7244,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private resetDefaultFilters(): void {
     const useTodayDefaults = false;
     const useAllListadoDefaults = this.viewMode !== 'detalle';
-    const usePriorityDefaults = this.viewMode === 'detalle';
+    const usePriorityDefaults = this.getInitialQuickPayPriorityFilterValue();
     const useOverdueDefaults = this.viewMode === 'detalle';
     this.filtrosForm.reset({
       todos: useAllListadoDefaults,
@@ -7146,6 +7273,53 @@ export class ListadoTransaccionesPage implements OnInit {
     this.listadoCurrentPage = 1;
     this.showAdvancedFilters = false;
     this.sharedParticipantFilterAutoReset = false;
+  }
+
+  private getInitialQuickPayPriorityFilterValue(): boolean {
+    if (!this.isDetalleViewMode) {
+      return false;
+    }
+
+    return this.getStoredQuickPayPriorityFilterPreference() ?? true;
+  }
+
+  private getStoredQuickPayPriorityFilterPreference(): boolean | null {
+    if (!this.isDetalleViewMode || typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const storedValue = window.sessionStorage.getItem(
+        QUICK_PAY_PRIORITY_FILTER_STORAGE_KEY,
+      );
+
+      if (storedValue === 'true') {
+        return true;
+      }
+
+      if (storedValue === 'false') {
+        return false;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private persistQuickPayPriorityFilterPreference(isEnabled: boolean | null): void {
+    if (!this.isDetalleViewMode || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(
+        QUICK_PAY_PRIORITY_FILTER_STORAGE_KEY,
+        String(!!isEnabled),
+      );
+    } catch {
+      // Ignore storage access issues and keep the in-memory filter state.
+    }
   }
 
   private syncQuickPayPriorityControlState(isEnabled: boolean | null): void {

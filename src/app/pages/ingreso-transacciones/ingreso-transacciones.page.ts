@@ -258,7 +258,11 @@ export class IngresoTransaccionesPage implements OnInit {
 
     return this.estadosTransaccion.filter((item) => {
       const nombreEstado = item.nombre_estado.trim().toUpperCase();
-      return nombreEstado === 'PAGADO' || nombreEstado === 'PENDIENTE';
+      return (
+        nombreEstado === 'PAGADO' ||
+        nombreEstado === 'PENDIENTE' ||
+        nombreEstado === 'PAGO PARCIAL'
+      );
     });
   }
 
@@ -355,7 +359,19 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   shouldShowTitularCuotaUnicaPagadaOption(group: ParticipanteDetalleForm): boolean {
-    return false;
+    if (!this.isSharedExpenseMode || !group.controls.es_titular.value) {
+      return false;
+    }
+
+    if (this.isImmediatePaymentSelected) {
+      return false;
+    }
+
+    if (Number(group.controls.cantidad_cuotas.value ?? 0) !== 1) {
+      return false;
+    }
+
+    return this.toCents(this.getGroupMontoTarget(group)) > 0;
   }
 
   getModoCuotasLabel(group: ParticipanteDetalleForm): string {
@@ -3268,10 +3284,32 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseEstadoForTitularCuotaUnica(): void {
-    return;
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+
+    if (!titularGroup || !this.shouldShowTitularCuotaUnicaPagadaOption(titularGroup)) {
+      return;
+    }
+
+    if (!this.isTitularCuotaUnicaPagadaSelected) {
+      return;
+    }
+
+    this.setEstadoTransaccionByName(this.resolveTitularCuotaUnicaPagadaEstadoName());
   }
 
   private resolveSharedExpenseEstadoName(): string {
+    if (
+      this.titularDetalleGroup &&
+      this.shouldShowTitularCuotaUnicaPagadaOption(this.titularDetalleGroup) &&
+      this.isTitularCuotaUnicaPagadaSelected
+    ) {
+      return this.resolveTitularCuotaUnicaPagadaEstadoName();
+    }
+
     const estadoActual = this.transaccionForm.controls.estado_transaccion.value?.trim().toUpperCase();
     const estadoDisponible = this.estadosIngresoDisponibles.some(
       (item) => item.nombre_estado.trim().toUpperCase() === estadoActual,
@@ -3287,6 +3325,14 @@ export class IngresoTransaccionesPage implements OnInit {
 
     if (this.isImmediatePaymentSelected) {
       return 'COMPLETADO';
+    }
+
+    if (
+      this.titularDetalleGroup &&
+      this.shouldShowTitularCuotaUnicaPagadaOption(this.titularDetalleGroup) &&
+      this.isTitularCuotaUnicaPagadaSelected
+    ) {
+      return this.resolveTitularCuotaUnicaPagadaEstadoName();
     }
 
     if (!this.usarParticipantesControl.value) {
@@ -3336,6 +3382,14 @@ export class IngresoTransaccionesPage implements OnInit {
     )
       ? 'COMPLETADO'
       : 'PENDIENTE';
+  }
+
+  private resolveTitularCuotaUnicaPagadaEstadoName(): 'PAGO PARCIAL' | 'PAGADO' {
+    const hasPendingAdditionalParticipants = this.getAdditionalParticipants().some(
+      (group) => this.toCents(this.getGroupMontoTarget(group)) > 0,
+    );
+
+    return hasPendingAdditionalParticipants ? 'PAGO PARCIAL' : 'PAGADO';
   }
 
   private updateMontoFromPorcentaje(

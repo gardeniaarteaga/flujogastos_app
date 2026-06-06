@@ -133,6 +133,9 @@
             <span>
               {{ quickPayBulkSelectedCount }} pagos seleccionados por ${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}.
             </span>
+            <span *ngIf="quickPayBulkSelectedMetodoPago">
+              Forma de pago activa: {{ quickPayBulkSelectedMetodoPago }}.
+            </span>
           </div>
 
           <div class="quick-pay-bulk-actions">
@@ -821,7 +824,7 @@
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Transaccion</th>
-                <th>Fecha programada</th>
+                <th>Fecha pago</th>
                 <th>Metodo</th>
                 <th>Cuota</th>
                 <th>Monto</th>
@@ -834,115 +837,143 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of filteredDetalleTransacciones; trackBy: trackDetalleTransaccion">
-                <td>
-                  <label
-                    class="quick-pay-select-cell"
-                    [attr.title]="getQuickPayDetalleSelectionHint(row)"
-                  >
-                    <input
-                      type="checkbox"
-                      [checked]="isQuickPayDetalleSelected(row)"
-                      [disabled]="isQuickPayDetalleSelectionDisabled(row)"
-                      (change)="onQuickPayDetalleSelectionChange(row, $event)"
-                    />
-                  </label>
-                </td>
-                <td>{{ row.transaccion.id_transaccion }}</td>
-                <td>{{ row.transaccion.fecha | date: 'dd/MM/yyyy' }}</td>
-                <td>
-                  <div style="display:grid;gap:.35rem;">
-                    <strong [attr.title]="getTransaccionTitle(row.transaccion)">
-                      {{ getTransaccionTitle(row.transaccion) }}
-                    </strong>
-                    <span
-                      *ngIf="!row.transaccion.es_propietario"
-                      style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
-                      title="Transaccion recibida de otro miembro"
-                      aria-label="Transaccion recibida de otro miembro"
+              <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index">
+                <tr class="quick-pay-method-group-row">
+                  <td colspan="14">
+                    <button
+                      type="button"
+                      class="quick-pay-method-group-header"
+                      (click)="toggleQuickPayMetodoGroup(group, groupIndex)"
+                      [attr.aria-expanded]="isQuickPayMetodoGroupExpanded(group, groupIndex)"
+                      [style.background]="'linear-gradient(180deg,' + getQuickPayMetodoGroupSurfaceColor(groupIndex) + ' 0%, #ffffff 100%)'"
+                      [style.boxShadow]="'inset .36rem 0 0 ' + getQuickPayMetodoGroupAccentColor(groupIndex)"
                     >
+                      <div class="quick-pay-method-group-copy">
+                        <strong [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)">{{ group.metodoPagoNombre }}</strong>
+                        <span>{{ group.rows.length }} cuotas</span>
+                        <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
+                      </div>
                       <span
-                        style="width:.45rem;height:.45rem;border-radius:50%;background:currentColor;flex:0 0 auto;"
+                        class="quick-pay-method-group-caret"
+                        [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
+                        [style.transform]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? 'rotate(180deg)' : 'rotate(0deg)'"
                         aria-hidden="true"
-                      ></span>
-                      Recibido
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <div style="display:grid;gap:.3rem;">
-                    <span>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</span>
+                      >
+                        v
+                      </span>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngFor="let row of group.rows; trackBy: trackDetalleTransaccion" [style.display]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? '' : 'none'">
+                  <td>
+                    <label
+                      class="quick-pay-select-cell"
+                      [attr.title]="getQuickPayDetalleSelectionHint(row)"
+                    >
+                      <input
+                        type="checkbox"
+                        [checked]="isQuickPayDetalleSelected(row)"
+                        [disabled]="isQuickPayDetalleSelectionDisabled(row)"
+                        (change)="onQuickPayDetalleSelectionChange(row, $event)"
+                      />
+                    </label>
+                  </td>
+                  <td>{{ row.transaccion.id_transaccion }}</td>
+                  <td>
+                    <div style="display:grid;gap:.3rem;">
+                      <span>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</span>
+                      <span
+                        *ngIf="isDetalleVencido(row.detalle)"
+                        style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
+                      >
+                        Vencido
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:grid;gap:.35rem;">
+                      <strong [attr.title]="getTransaccionTitle(row.transaccion)">
+                        {{ getTransaccionTitle(row.transaccion) }}
+                      </strong>
+                      <span
+                        *ngIf="!row.transaccion.es_propietario"
+                        style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
+                        title="Transaccion recibida de otro miembro"
+                        aria-label="Transaccion recibida de otro miembro"
+                      >
+                        <span
+                          style="width:.45rem;height:.45rem;border-radius:50%;background:currentColor;flex:0 0 auto;"
+                          aria-hidden="true"
+                        ></span>
+                        Recibido
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ row.detalle.fecha_pago ? (row.detalle.fecha_pago | date: 'dd/MM/yyyy') : '-' }}</td>
+                  <td>{{ row.metodo_pago || '-' }}</td>
+                  <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
+                  <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
+                  <td>${{ row.detalle.interes_pendiente | number: '1.2-2' }}</td>
+                  <td>${{ row.detalle.monto_pagado | number: '1.2-2' }}</td>
+                  <td>${{ row.detalle.saldo_pendiente | number: '1.2-2' }}</td>
+                  <td>
                     <span
-                      *ngIf="isDetalleVencido(row.detalle)"
-                      style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
+                      class="status-pill"
+                      [ngClass]="getEstadoClass(row.detalle.nombre_estado || 'Sin estado')"
                     >
-                      Vencido
+                      {{ getEstadoDisplayLabel(row.detalle.nombre_estado) }}
                     </span>
-                  </div>
-                </td>
-                <td>{{ row.metodo_pago || '-' }}</td>
-                <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
-                <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
-                <td>${{ row.detalle.interes_pendiente | number: '1.2-2' }}</td>
-                <td>${{ row.detalle.monto_pagado | number: '1.2-2' }}</td>
-                <td>${{ row.detalle.saldo_pendiente | number: '1.2-2' }}</td>
-                <td>
-                  <span
-                    class="status-pill"
-                    [ngClass]="getEstadoClass(row.detalle.nombre_estado || 'Sin estado')"
-                  >
-                    {{ getEstadoDisplayLabel(row.detalle.nombre_estado) }}
-                  </span>
-                </td>
-                <td>{{ row.nombre_mostrado }}</td>
-                <td class="table-actions-cell">
-                  <div class="icon-actions">
-                    <button
-                      type="button"
-                      class="icon-action-button detail"
-                      title="Detalle"
-                      aria-label="Detalle"
-                      (click)="openDetailModal(row.transaccion, $event)"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M1.5 12s3.75-6.75 10.5-6.75S22.5 12 22.5 12s-3.75 6.75-10.5 6.75S1.5 12 1.5 12Z"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="1.8"
-                        />
-                        <circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="1.8" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="icon-action-button pay"
-                      title="Pagar"
-                      aria-label="Pagar"
-                      [disabled]="!canPagarDetalle(row)"
-                      (click)="openPaymentModalForDetalle(row, $event)"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.8"
-                        />
-                        <path
-                          d="M3 9.75h18M15.75 15h2.25"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-width="1.8"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                  <td>{{ row.nombre_mostrado }}</td>
+                  <td class="table-actions-cell">
+                    <div class="icon-actions">
+                      <button
+                        type="button"
+                        class="icon-action-button detail"
+                        title="Detalle"
+                        aria-label="Detalle"
+                        (click)="openDetailModal(row.transaccion, $event)"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M1.5 12s3.75-6.75 10.5-6.75S22.5 12 22.5 12s-3.75 6.75-10.5 6.75S1.5 12 1.5 12Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                          />
+                          <circle cx="12" cy="12" r="3.25" fill="none" stroke="currentColor" stroke-width="1.8" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="icon-action-button pay"
+                        title="Pagar"
+                        aria-label="Pagar"
+                        [disabled]="!canPagarDetalle(row)"
+                        (click)="openPaymentModalForDetalle(row, $event)"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                          />
+                          <path
+                            d="M3 9.75h18M15.75 15h2.25"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-width="1.8"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
             </tbody>
           </table>
         </div>

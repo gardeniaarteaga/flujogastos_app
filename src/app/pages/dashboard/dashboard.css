@@ -281,8 +281,8 @@
 }
 
 .dashboard-modal {
-  width: min(1100px, 100%);
-  max-height: 90dvh;
+  width: min(1380px, 96vw);
+  max-height: 92dvh;
   display: grid;
   gap: 1rem;
   overflow: auto;
@@ -305,7 +305,7 @@
 
 .dashboard-modal-table {
   width: 100%;
-  min-width: 910px;
+  min-width: 1160px;
   border-collapse: collapse;
   background: #fff;
 }
@@ -326,6 +326,27 @@
 
 .status-column {
   white-space: nowrap;
+}
+
+.dashboard-date-cell {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dashboard-overdue-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.65rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid #fecdd3;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .dashboard-status-pill {

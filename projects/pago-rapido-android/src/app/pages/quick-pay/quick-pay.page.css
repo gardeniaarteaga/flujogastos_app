@@ -14,8 +14,14 @@
 .payment-entity-note { display:block; margin-top:.45rem; color:#1d4ed8; font-size:.88rem; font-weight:800; }
 .quick-pay-bulk-toolbar { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; padding:.9rem 1rem; border:1px solid #d9e3f0; border-radius:.75rem; background:linear-gradient(180deg,#fbfcff 0%,#f4f8ff 100%); }
 .quick-pay-bulk-summary { display:grid; gap:.2rem; }
-.quick-pay-bulk-summary span { color:#5f6f82; font-size:.9rem; }
+.quick-pay-bulk-summary span { color:#334155; font-size:.9rem; font-weight:800; }
 .quick-pay-bulk-actions { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.quick-pay-method-group-row td { padding:0; background:#f8fbff; }
+.quick-pay-method-group-header { width:100%; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.95rem 1rem; border:0; border-top:1px solid #d9e3f0; border-bottom:1px solid #d9e3f0; background:linear-gradient(180deg,#fafdff 0%,#edf5ff 100%); text-align:left; cursor:pointer; }
+.quick-pay-method-group-copy { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+.quick-pay-method-group-copy strong { color:var(--color-heading); font-size:1rem; font-weight:900; }
+.quick-pay-method-group-copy span { color:#334155; font-size:.84rem; font-weight:800; }
+.quick-pay-method-group-caret { display:inline-flex; align-items:center; justify-content:center; font-size:1rem; font-weight:900; transition:transform .18s ease; }
 
 .filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }

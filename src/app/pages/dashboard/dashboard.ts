@@ -116,8 +116,10 @@ interface DashboardKpi {
 }
 
 interface DashboardTransactionModalRow {
+  transactionId: number;
   date: Date | null;
   dateLabel: string;
+  isOverdue: boolean;
   description: string;
   categoryName: string;
   subcategoryName: string;
@@ -554,7 +556,7 @@ export class Dashboard implements OnInit {
     );
     const currentPeriodExpense = this.roundMoney(
       transacciones.reduce(
-        (sum, transaction) => sum + this.resolveTitularExpenseForPeriod(transaction, selectedPeriod),
+        (sum, transaction) => sum + this.resolveVisibleExpenseForPeriod(transaction, selectedPeriod),
         0,
       ),
     );
@@ -576,7 +578,7 @@ export class Dashboard implements OnInit {
       healthScore: 0,
       healthTone: 'neutral',
       healthLabel: 'Resumen del titular',
-      summary: `Vista del titular para ${selectedPeriod.descriptionLabel}.`,
+      summary: `Vista del titular y lo asignado por otros para ${selectedPeriod.descriptionLabel}, incluyendo vencidos pendientes arrastrados.`,
       kpis: [
         {
           key: 'income',
@@ -590,8 +592,8 @@ export class Dashboard implements OnInit {
           key: 'expense',
           label: `Total gastos ${expenseLabelSuffix}`,
           value: currentPeriodExpense,
-          detail: 'Solo titular',
-          helper: '',
+          detail: 'Titular + asignado',
+          helper: 'Incluye lo del periodo y lo vencido pendiente de pago.',
           tone: currentPeriodExpense > 0 ? 'warning' : 'neutral',
         },
         {
@@ -599,7 +601,7 @@ export class Dashboard implements OnInit {
           label: 'Gastos compartidos a mi nombre',
           value: currentPeriodSharedExpenseAssigned,
           detail: 'Registrados por otros',
-          helper: '',
+          helper: 'Subconjunto del gasto visible que otros usuarios te asignaron.',
           tone: currentPeriodSharedExpenseAssigned > 0 ? 'info' : 'neutral',
         },
       ],
@@ -687,7 +689,7 @@ export class Dashboard implements OnInit {
     );
   }
 
-  private resolveTitularExpenseForPeriod(
+  private resolveVisibleExpenseForPeriod(
     transaction: TransaccionListado,
     selectedPeriod: DashboardPeriodRange,
   ): number {
@@ -695,23 +697,21 @@ export class Dashboard implements OnInit {
       return 0;
     }
 
-    const titularDetails = this.getTitularDetails(transaction);
+    const visibleDetails = this.getVisibleExpenseDetails(transaction);
 
     return this.roundMoney(
-      titularDetails.reduce((sum, detail) => {
+      visibleDetails.reduce((sum, detail) => {
         const detailDate =
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
+        if (!detailDate || !this.shouldIncludeExpenseDetailInPeriod(detailDate, detail, selectedPeriod)) {
           return sum;
         }
 
         return (
           sum +
-          Math.max(0, this.normalizeAmount(detail.monto)) +
-          Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
-          Math.max(0, this.normalizeAmount(detail.interes_pendiente))
+          this.getExpenseDetailAmountForPeriod(detail, detailDate, selectedPeriod)
         );
       }, 0),
     );
@@ -768,6 +768,66 @@ export class Dashboard implements OnInit {
     );
   }
 
+  private getVisibleExpenseDetails(transaction: TransaccionListado): ParticipanteDetalleListado[] {
+    if (transaction.es_propietario) {
+      return this.getTitularDetails(transaction);
+    }
+
+    return this.getCurrentUserAssignedSharedDetails(transaction);
+  }
+
+  private shouldIncludeExpenseDetailInPeriod(
+    detailDate: Date,
+    detail: ParticipanteDetalleListado,
+    selectedPeriod: DashboardPeriodRange,
+  ): boolean {
+    if (this.isDateWithinPeriod(detailDate, selectedPeriod)) {
+      return true;
+    }
+
+    return (
+      detailDate.getTime() < selectedPeriod.start.getTime() &&
+      this.getExpenseDetailCarryForwardAmount(detail) > 0
+    );
+  }
+
+  private getExpenseDetailAmountForPeriod(
+    detail: ParticipanteDetalleListado,
+    detailDate: Date,
+    selectedPeriod: DashboardPeriodRange,
+  ): number {
+    if (this.isDateWithinPeriod(detailDate, selectedPeriod)) {
+      return (
+        Math.max(0, this.normalizeAmount(detail.monto)) +
+        Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
+        Math.max(0, this.normalizeAmount(detail.interes_pendiente))
+      );
+    }
+
+    return this.getExpenseDetailCarryForwardAmount(detail);
+  }
+
+  private getExpenseDetailCarryForwardAmount(detail: ParticipanteDetalleListado): number {
+    return this.roundMoney(
+      Math.max(0, this.normalizeAmount(detail.saldo_pendiente)) +
+      Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
+    );
+  }
+
+  private isOverduePendingDetail(
+    detail: ParticipanteDetalleListado,
+    detailDate: Date | null,
+  ): boolean {
+    if (!detailDate) {
+      return false;
+    }
+
+    return (
+      detailDate.getTime() < this.getToday().getTime() &&
+      this.getExpenseDetailCarryForwardAmount(detail) > 0
+    );
+  }
+
   private buildIncomeModalRows(selectedPeriod: DashboardPeriodRange): DashboardTransactionModalRow[] {
     const rows: DashboardTransactionModalRow[] = [];
 
@@ -819,12 +879,12 @@ export class Dashboard implements OnInit {
         continue;
       }
 
-      for (const detail of this.getTitularDetails(transaction)) {
+      for (const detail of this.getVisibleExpenseDetails(transaction)) {
         const detailDate =
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
 
-        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
+        if (!detailDate || !this.shouldIncludeExpenseDetailInPeriod(detailDate, detail, selectedPeriod)) {
           continue;
         }
 
@@ -832,9 +892,9 @@ export class Dashboard implements OnInit {
           this.createDashboardTransactionModalRow(
             transaction,
             detailDate,
-            Math.max(0, this.normalizeAmount(detail.monto)) +
-              Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
-              Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
+            this.getExpenseDetailAmountForPeriod(detail, detailDate, selectedPeriod),
+            transaction.es_propietario ? null : (transaction.titular?.trim() || 'Sin remitente'),
+            this.isOverduePendingDetail(detail, detailDate),
           ),
         );
       }
@@ -868,6 +928,7 @@ export class Dashboard implements OnInit {
               Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
               Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
             transaction.titular?.trim() || 'Sin remitente',
+            this.isOverduePendingDetail(detail, detailDate),
           ),
         );
       }
@@ -881,12 +942,15 @@ export class Dashboard implements OnInit {
     detailDate: Date | null,
     amount: number,
     senderName: string | null = null,
+    isOverdue = false,
   ): DashboardTransactionModalRow {
     const statusLabel = this.getDashboardTransactionStatusLabel(transaction);
 
     return {
+      transactionId: transaction.id_transaccion,
       date: detailDate,
       dateLabel: detailDate ? this.fullDateFormatter.format(detailDate) : 'Sin fecha definida',
+      isOverdue,
       description: transaction.descripcion?.trim() || 'Sin detalle',
       categoryName: transaction.nombre_categoria?.trim() || 'Sin categoria',
       subcategoryName: transaction.nombre_subcategoria?.trim() || 'Sin subcategoria',
@@ -898,6 +962,10 @@ export class Dashboard implements OnInit {
     };
   }
 
+  isDashboardModalRowOverdue(row: DashboardTransactionModalRow): boolean {
+    return Boolean((row as DashboardTransactionModalRow & { isOverdue?: boolean }).isOverdue);
+  }
+
   private sortDashboardTransactionModalRows(
     rows: DashboardTransactionModalRow[],
   ): DashboardTransactionModalRow[] {
@@ -905,8 +973,8 @@ export class Dashboard implements OnInit {
       const leftTime = left.date?.getTime() ?? 0;
       const rightTime = right.date?.getTime() ?? 0;
 
-      if (rightTime !== leftTime) {
-        return rightTime - leftTime;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
       }
 
       return left.description.localeCompare(right.description, 'es');
@@ -916,6 +984,7 @@ export class Dashboard implements OnInit {
   private prepareDashboardTransactionsModalData(): void {
     const selectedPeriod = this.getSelectedPeriodRange();
     const subtitle = this.buildTransactionsModalSubtitle(selectedPeriod);
+    const expenseRows = this.buildExpenseModalRows(selectedPeriod);
 
     this.dashboardTransactionsModalData = {
       income: {
@@ -927,8 +996,8 @@ export class Dashboard implements OnInit {
       expense: {
         title: 'Detalle de gastos',
         subtitle,
-        rows: this.buildExpenseModalRows(selectedPeriod),
-        showSender: false,
+        rows: expenseRows,
+        showSender: expenseRows.some((row) => Boolean(row.senderName)),
       },
       shared: {
         title: 'Detalle de gastos compartidos',
@@ -941,10 +1010,10 @@ export class Dashboard implements OnInit {
 
   private buildTransactionsModalSubtitle(selectedPeriod: DashboardPeriodRange): string {
     if (selectedPeriod.type === 'quincena') {
-      return `Movimientos visibles correspondientes a la quincena del ${selectedPeriod.descriptionLabel}.`;
+      return `Movimientos visibles correspondientes a la quincena del ${selectedPeriod.descriptionLabel}, mas vencidos pendientes arrastrados.`;
     }
 
-    return `Movimientos visibles correspondientes a ${selectedPeriod.descriptionLabel}.`;
+    return `Movimientos visibles correspondientes a ${selectedPeriod.descriptionLabel}, mas vencidos pendientes arrastrados.`;
   }
 
   private enrichTransaction(
@@ -2146,11 +2215,12 @@ export class Dashboard implements OnInit {
     switch (normalizedStatus) {
       case 'anulado':
         return 'ANULADO';
+      case 'pago parcial':
+        return 'PAGO PARCIAL';
       case 'pagado':
       case 'completado':
         return 'PAGADO';
       case 'pendiente':
-      case 'pago parcial':
         return 'PENDIENTE';
       default:
         return rawStatus;

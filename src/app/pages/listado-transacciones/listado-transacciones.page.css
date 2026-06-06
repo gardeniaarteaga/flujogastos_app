@@ -14,7 +14,7 @@
 .payment-entity-note { display:block; margin-top:.45rem; color:#1d4ed8; font-size:.88rem; font-weight:800; }
 .quick-pay-bulk-toolbar { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; padding:.9rem 1rem; border:1px solid #d9e3f0; border-radius:.75rem; background:linear-gradient(180deg,#fbfcff 0%,#f4f8ff 100%); }
 .quick-pay-bulk-summary { display:grid; gap:.2rem; }
-.quick-pay-bulk-summary span { color:#5f6f82; font-size:.9rem; }
+.quick-pay-bulk-summary span { color:#334155; font-size:.9rem; font-weight:800; }
 .quick-pay-bulk-actions { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
 .filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
