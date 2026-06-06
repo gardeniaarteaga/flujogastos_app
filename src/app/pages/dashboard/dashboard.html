@@ -377,7 +377,7 @@
                 <td>
                   <div class="dashboard-date-cell">
                     <span>{{ row.dateLabel }}</span>
-                    <span *ngIf="isDashboardModalRowOverdue(row)" class="dashboard-overdue-pill">Vencido</span>
+                    <span *ngIf="$any(row).isOverdue" class="dashboard-overdue-pill">Vencido</span>
                   </div>
                 </td>
                 <td>{{ row.description }}</td>

@@ -962,10 +962,6 @@ export class Dashboard implements OnInit {
     };
   }
 
-  isDashboardModalRowOverdue(row: DashboardTransactionModalRow): boolean {
-    return Boolean((row as DashboardTransactionModalRow & { isOverdue?: boolean }).isOverdue);
-  }
-
   private sortDashboardTransactionModalRows(
     rows: DashboardTransactionModalRow[],
   ): DashboardTransactionModalRow[] {
