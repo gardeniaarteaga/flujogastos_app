@@ -145,6 +145,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "projects/pago-rapido-android/proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "pago-rapido-android:build:production"
