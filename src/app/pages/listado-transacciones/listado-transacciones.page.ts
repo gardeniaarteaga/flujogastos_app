@@ -3909,7 +3909,7 @@ export class ListadoTransaccionesPage implements OnInit {
     transaccion: Pick<TransaccionListado, 'descripcion' | 'id_transaccion'> | null | undefined,
   ): string {
     const descripcion = transaccion?.descripcion?.trim() || 'Sin descripcion';
-    return `${descripcion} ${transaccion?.id_transaccion ?? '-'}`;
+    return `${descripcion} #${transaccion?.id_transaccion ?? '-'}`;
   }
 
   getDetailModalCuotas(): ParticipanteDetalleListado[] {

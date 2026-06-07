@@ -13,7 +13,8 @@ declare global {
 const normalizeBaseUrl = (url: string): string => url.replace(/\/+$/, '');
 
 export const API_BASE_URL = normalizeBaseUrl(
-  window.__APP_CONFIG__?.apiBaseUrl || environment.apiBaseUrl,
+  (environment.production ? window.__APP_CONFIG__?.apiBaseUrl : undefined) ||
+    environment.apiBaseUrl,
 );
 
 export const apiUrl = (...segments: string[]): string => {
