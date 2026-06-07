@@ -87,15 +87,6 @@
         <button type="submit" class="submit-button" [disabled]="loading">
           {{ loading ? 'Ingresando...' : 'Ingresar' }}
         </button>
-        <button
-          *ngIf="devQuickAccessEnabled"
-          type="button"
-          class="secondary-action-button"
-          [disabled]="loading"
-          (click)="continueWithDemoAccess()"
-        >
-          Continuar a Pago Rapido
-        </button>
       </form>
 
       <ng-template #passwordChangeStep>
@@ -138,9 +129,6 @@
       <div class="card-footer">
         <span>
           {{ pendingUsuario ? 'Despues de actualizar la contrasena entraras al sistema con tu nuevo acceso.' : 'Ingresa con un acceso existente para entrar al sistema.' }}
-        </span>
-        <span *ngIf="devQuickAccessEnabled" class="dev-access-note">
-          Acceso local de desarrollo habilitado.
         </span>
       </div>
     </article>

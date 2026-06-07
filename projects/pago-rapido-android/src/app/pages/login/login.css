@@ -230,10 +230,6 @@ small {
   background: #ecfdf5;
 }
 
-.secondary-action-button + .secondary-action-button {
-  margin-top: -0.15rem;
-}
-
 .register-link-button {
   width: 100%;
   min-height: 3rem;
@@ -388,13 +384,6 @@ small {
   color: #8a95a3;
   font-size: 0.92rem;
   line-height: 1.6;
-  display: grid;
-  gap: 0.4rem;
-}
-
-.dev-access-note {
-  color: #0f766e;
-  font-weight: 700;
 }
 
 @media (max-width: 920px) {
