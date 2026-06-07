@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { apiUrl } from '../../shared/config/api.config';
 import { CatalogosTransaccionService } from '../../shared/services/catalogos-transaccion.service';
 import { SweetAlertService } from '../../shared/services/sweet-alert.service';
@@ -39,6 +40,7 @@ export class Login {
   private readonly alerts = inject(SweetAlertService);
   private readonly usuariosBaseUrl = apiUrl('usuarios');
   private readonly usuariosUrl = `${this.usuariosBaseUrl}/login`;
+  readonly devQuickAccessEnabled = !environment.production;
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -182,6 +184,20 @@ export class Login {
     });
     this.successMessage = '';
     this.errorMessage = '';
+  }
+
+  async continueWithDemoAccess(): Promise<void> {
+    this.clearMessages();
+    this.pendingUsuario = null;
+
+    seedUserProfileFromLogin('demo@flujo.local', {
+      idUsuario: 1,
+      fullName: 'Demo Pago Rapido',
+      idRol: 1,
+    });
+
+    this.catalogosTransaccionService.clearCache();
+    await this.router.navigate(['/pago-rapido']);
   }
 
   private clearMessages(): void {

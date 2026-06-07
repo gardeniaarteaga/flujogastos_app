@@ -842,6 +842,57 @@ export class ListadoTransaccionesPage implements OnInit {
       !this.isQuickPayMetodoGroupExpanded(group, index);
   }
 
+  getQuickPayMetodoGroupSelectableCount(group: QuickPayMetodoGroup): number {
+    return group.rows.filter((row) => this.canSelectQuickPayDetalle(row)).length;
+  }
+
+  getQuickPayMetodoGroupSelectedCount(group: QuickPayMetodoGroup): number {
+    return group.rows.filter((row) => this.selectedQuickPayDetalleIds.has(row.detalle.id)).length;
+  }
+
+  isQuickPayMetodoGroupSelectionDisabled(group: QuickPayMetodoGroup): boolean {
+    if (this.applyingBulkQuickPayments) {
+      return true;
+    }
+
+    if (this.getQuickPayMetodoGroupSelectableCount(group) === 0) {
+      return true;
+    }
+
+    const selectedMetodoPagoId = this.getQuickPaySelectedMetodoPagoId();
+    return selectedMetodoPagoId !== null && group.metodoPagoId !== selectedMetodoPagoId;
+  }
+
+  isQuickPayMetodoGroupFullySelected(group: QuickPayMetodoGroup): boolean {
+    const selectableCount = this.getQuickPayMetodoGroupSelectableCount(group);
+    return selectableCount > 0 && this.getQuickPayMetodoGroupSelectedCount(group) === selectableCount;
+  }
+
+  isQuickPayMetodoGroupPartiallySelected(group: QuickPayMetodoGroup): boolean {
+    const selectedCount = this.getQuickPayMetodoGroupSelectedCount(group);
+    return selectedCount > 0 && !this.isQuickPayMetodoGroupFullySelected(group);
+  }
+
+  toggleQuickPayMetodoGroupSelection(group: QuickPayMetodoGroup, event?: Event): void {
+    event?.stopPropagation();
+
+    if (this.isQuickPayMetodoGroupSelectionDisabled(group)) {
+      return;
+    }
+
+    const selectableRows = group.rows.filter((row) => this.canSelectQuickPayDetalle(row));
+    const shouldSelectAll = !this.isQuickPayMetodoGroupFullySelected(group);
+
+    selectableRows.forEach((row) => {
+      if (shouldSelectAll) {
+        this.selectedQuickPayDetalleIds.add(row.detalle.id);
+        return;
+      }
+
+      this.selectedQuickPayDetalleIds.delete(row.detalle.id);
+    });
+  }
+
   getQuickPayMetodoGroupAccentColor(index: number): string {
     return this.getPaymentGroupAccentColor(index);
   }

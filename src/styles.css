@@ -123,6 +123,124 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   padding: 0;
 }
 
+.module-page .quick-pay-method-group-row td {
+  padding: 0;
+  background: #f8fbff;
+}
+
+.module-page .quick-pay-method-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+  border-top: 1px solid #d9e3f0;
+  border-bottom: 1px solid #d9e3f0;
+  background: linear-gradient(180deg, #fafdff 0%, #edf5ff 100%);
+}
+
+.module-page .quick-pay-method-group-toggle {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.module-page .quick-pay-method-group-copy {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.module-page .quick-pay-method-group-copy strong {
+  color: var(--color-heading);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.module-page .quick-pay-method-group-copy span {
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.module-page .quick-pay-method-group-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
+  transition: transform 0.18s ease;
+}
+
+.module-page .quick-pay-group-select-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #d9e3f0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  cursor: pointer;
+}
+
+.module-page .quick-pay-group-select-button.is-disabled,
+.module-page .quick-pay-group-select-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.module-page .quick-pay-group-select-box {
+  position: relative;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 2px solid #94a3b8;
+  border-radius: 0.28rem;
+  background: #ffffff;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+
+.module-page .quick-pay-group-select-button.is-checked .quick-pay-group-select-box,
+.module-page .quick-pay-group-select-button.is-indeterminate .quick-pay-group-select-box {
+  border-color: #16a34a;
+  background: #22c55e;
+}
+
+.module-page .quick-pay-group-select-button.is-checked .quick-pay-group-select-box::after {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  top: 0.08rem;
+  width: 0.24rem;
+  height: 0.52rem;
+  border: solid #ffffff;
+  border-width: 0 0.14rem 0.14rem 0;
+  transform: rotate(45deg);
+}
+
+.module-page .quick-pay-group-select-button.is-indeterminate .quick-pay-group-select-box::after {
+  content: '';
+  position: absolute;
+  left: 0.18rem;
+  right: 0.18rem;
+  top: 50%;
+  height: 0.12rem;
+  border-radius: 999px;
+  background: #ffffff;
+  transform: translateY(-50%);
+}
+
 .module-page .compact-button {
   min-height: auto;
   padding: 0.45rem 0.8rem;

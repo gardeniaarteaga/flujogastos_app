@@ -840,28 +840,47 @@
               <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index">
                 <tr class="quick-pay-method-group-row">
                   <td colspan="14">
-                    <button
-                      type="button"
+                    <div
                       class="quick-pay-method-group-header"
-                      (click)="toggleQuickPayMetodoGroup(group, groupIndex)"
-                      [attr.aria-expanded]="isQuickPayMetodoGroupExpanded(group, groupIndex)"
                       [style.background]="'linear-gradient(180deg,' + getQuickPayMetodoGroupSurfaceColor(groupIndex) + ' 0%, #ffffff 100%)'"
                       [style.boxShadow]="'inset .36rem 0 0 ' + getQuickPayMetodoGroupAccentColor(groupIndex)"
                     >
-                      <div class="quick-pay-method-group-copy">
-                        <strong [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)">{{ group.metodoPagoNombre }}</strong>
-                        <span>{{ group.rows.length }} cuotas</span>
-                        <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
-                      </div>
-                      <span
-                        class="quick-pay-method-group-caret"
-                        [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
-                        [style.transform]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? 'rotate(180deg)' : 'rotate(0deg)'"
-                        aria-hidden="true"
+                      <button
+                        type="button"
+                        class="quick-pay-group-select-button"
+                        [class.is-checked]="isQuickPayMetodoGroupFullySelected(group)"
+                        [class.is-indeterminate]="isQuickPayMetodoGroupPartiallySelected(group)"
+                        [class.is-disabled]="isQuickPayMetodoGroupSelectionDisabled(group)"
+                        [attr.title]="isQuickPayMetodoGroupSelectionDisabled(group) ? 'Selecciona cuotas validas de este metodo para habilitar la seleccion masiva.' : 'Seleccionar todas las cuotas validas de este metodo.'"
+                        [attr.aria-label]="'Seleccionar cuotas de ' + group.metodoPagoNombre"
+                        [attr.aria-pressed]="isQuickPayMetodoGroupFullySelected(group)"
+                        [disabled]="isQuickPayMetodoGroupSelectionDisabled(group)"
+                        (click)="toggleQuickPayMetodoGroupSelection(group, $event)"
                       >
-                        v
-                      </span>
-                    </button>
+                        <span class="quick-pay-group-select-box" aria-hidden="true"></span>
+                      </button>
+                      <button
+                        type="button"
+                        class="quick-pay-method-group-toggle"
+                        (click)="toggleQuickPayMetodoGroup(group, groupIndex)"
+                        [attr.aria-expanded]="isQuickPayMetodoGroupExpanded(group, groupIndex)"
+                      >
+                        <div class="quick-pay-method-group-copy">
+                          <strong [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)">{{ group.metodoPagoNombre }}</strong>
+                          <span>{{ group.rows.length }} cuotas</span>
+                          <span>{{ getQuickPayMetodoGroupSelectedCount(group) }}/{{ getQuickPayMetodoGroupSelectableCount(group) }} seleccionadas</span>
+                          <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
+                        </div>
+                        <span
+                          class="quick-pay-method-group-caret"
+                          [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
+                          [style.transform]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? 'rotate(180deg)' : 'rotate(0deg)'"
+                          aria-hidden="true"
+                        >
+                          v
+                        </span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 <tr *ngFor="let row of group.rows; trackBy: trackDetalleTransaccion" [style.display]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? '' : 'none'">
