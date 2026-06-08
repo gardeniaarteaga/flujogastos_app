@@ -406,8 +406,7 @@ export class ParticipantesPage {
       }
 
       const currentIsLinked = participante.id_usuario_titular === systemUserId;
-      const existingIsLinked =
-        existingParticipante.id_usuario_titular === systemUserId;
+      const existingIsLinked = existingParticipante.id_usuario_titular === systemUserId;
 
       if (currentIsLinked && !existingIsLinked) {
         participantesBySystemUser.set(systemUserId, participante);

@@ -7711,8 +7711,8 @@ export class ListadoTransaccionesPage implements OnInit {
   private resetDefaultFilters(): void {
     const useTodayDefaults = false;
     const useAllListadoDefaults = this.viewMode !== 'detalle';
-    const usePriorityDefaults = this.getInitialQuickPayPriorityFilterValue();
-    const useOverdueDefaults = this.viewMode === 'detalle';
+    const usePriorityDefaults = false;
+    const useOverdueDefaults = false;
     this.filtrosForm.reset({
       todos: useAllListadoDefaults,
       soloHoy: useTodayDefaults,

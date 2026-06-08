@@ -6,7 +6,7 @@
 .payments-hero {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1rem;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
@@ -158,6 +158,16 @@
 .payments-summary-card {
   display: grid;
   gap: 0.45rem;
+  border: 1px solid transparent;
+  box-shadow: 0 0.8rem 1.8rem rgba(15, 23, 42, 0.08);
+}
+
+.payments-summary-card .panel-kicker {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
 }
 
 .payments-summary-card strong {
@@ -167,8 +177,43 @@
 }
 
 .payments-summary-card-total {
-  background: linear-gradient(135deg, #eef5ff 0%, #ffffff 100%);
-  border-color: #cfe0ff;
+  background: linear-gradient(135deg, #fff1e8 0%, #ffffff 100%);
+  border-color: #ffd3b6;
+}
+
+.payments-summary-card-total .panel-kicker {
+  background: #ffe0cc;
+  color: #a64b18;
+}
+
+.payments-summary-card:nth-child(2) {
+  background: linear-gradient(135deg, #fff8dd 0%, #ffffff 100%);
+  border-color: #f5df8c;
+}
+
+.payments-summary-card:nth-child(2) .panel-kicker {
+  background: #fff0b8;
+  color: #8f6a00;
+}
+
+.payments-summary-card:nth-child(3) {
+  background: linear-gradient(135deg, #e9fbf0 0%, #ffffff 100%);
+  border-color: #b7ebc8;
+}
+
+.payments-summary-card:nth-child(3) .panel-kicker {
+  background: #d3f5de;
+  color: #1f7a43;
+}
+
+.payments-summary-card:nth-child(4) {
+  background: linear-gradient(135deg, #eef4ff 0%, #ffffff 100%);
+  border-color: #cddcff;
+}
+
+.payments-summary-card:nth-child(4) .panel-kicker {
+  background: #dce7ff;
+  color: #2d57b8;
 }
 
 .payment-total-cell {

@@ -5,6 +5,7 @@ import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angu
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { catchError, firstValueFrom, of, timeout } from 'rxjs';
 
+import { filterOwnedByCurrentUser } from '../../shared/catalog-visibility';
 import { apiUrl } from '../../shared/config/api.config';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
@@ -664,7 +665,10 @@ export class FormasPagoPage implements OnInit {
     try {
       const formasResult = await this.loadCollection<FormaPago>(this.apiUrl);
 
-      this.formasPago = this.sortByText(formasResult.data, (item) => item.nombre_forma);
+      this.formasPago = this.sortByText(
+        filterOwnedByCurrentUser(formasResult.data, this.currentUserId),
+        (item) => item.nombre_forma,
+      );
       this.currentPage = 1;
 
       if (formasResult.failed) {
@@ -695,9 +699,12 @@ export class FormasPagoPage implements OnInit {
         this.loadCollection<TipoProducto>(this.tiposUrl),
       ]);
 
-      this.entidades = this.sortByText(entidadesResult.data, (item) => item.nombre_entidad);
+      this.entidades = this.sortByText(
+        filterOwnedByCurrentUser(entidadesResult.data, this.currentUserId),
+        (item) => item.nombre_entidad,
+      );
       this.tiposEntidad = this.sortByText(
-        tiposEntidadResult.data,
+        filterOwnedByCurrentUser(tiposEntidadResult.data, this.currentUserId),
         (item) => item.descripcion,
       );
       this.tipos = this.sortByText(tiposResult.data, (item) => item.nombre_tipo);

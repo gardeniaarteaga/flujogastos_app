@@ -121,8 +121,8 @@ export class PagosRealizadosPage {
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly filtrosForm = this.fb.group({
-    fechaDesde: [this.todayFilterValue],
-    fechaHasta: [this.todayFilterValue],
+    fechaDesde: [''],
+    fechaHasta: [''],
     metodoPagoId: [''],
     participanteKey: [''],
   });
@@ -159,14 +159,14 @@ export class PagosRealizadosPage {
     const filtros = this.filtrosForm.getRawValue();
     const chips: string[] = [];
 
-    if (!this.isTodayRange()) {
+    if (filtros.fechaDesde || filtros.fechaHasta) {
       chips.push(
         filtros.fechaDesde === filtros.fechaHasta
           ? `Fecha: ${filtros.fechaDesde}`
           : `${filtros.fechaDesde} a ${filtros.fechaHasta}`,
       );
     } else {
-      chips.push('Hoy');
+      chips.push('Todo');
     }
 
     if (filtros.metodoPagoId) {
@@ -213,6 +213,19 @@ export class PagosRealizadosPage {
     );
   }
 
+  get currentUserParticipanteIds(): Set<number> {
+    return new Set(
+      this.participantes
+        .filter(
+          (participante) =>
+            participante.id_usuario_titular === this.currentUserId ||
+            participante.id_usuario === this.currentUserId ||
+            participante.id_usuario_relacionado === this.currentUserId,
+        )
+        .map((participante) => participante.id_participante),
+    );
+  }
+
   constructor() {
     this.filtrosForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -248,7 +261,7 @@ export class PagosRealizadosPage {
         Array.isArray(transacciones) ? transacciones : [],
       );
       this.metodoPagoOptions = this.buildMetodoPagoOptions(this.pagos);
-      this.participanteOptions = this.buildParticipanteOptions(this.pagos);
+      this.participanteOptions = this.buildParticipanteOptions();
       this.applyFilters();
     } catch {
       this.pagos = [];
@@ -265,15 +278,18 @@ export class PagosRealizadosPage {
 
   clearFilters(): void {
     this.filtrosForm.setValue({
-      fechaDesde: this.todayFilterValue,
-      fechaHasta: this.todayFilterValue,
+      fechaDesde: '',
+      fechaHasta: '',
       metodoPagoId: '',
       participanteKey: '',
     });
   }
 
   setTodayFilters(): void {
-    this.clearFilters();
+    this.filtrosForm.patchValue({
+      fechaDesde: this.todayFilterValue,
+      fechaHasta: this.todayFilterValue,
+    });
   }
 
   setLastDaysRange(days: number): void {
@@ -371,20 +387,21 @@ export class PagosRealizadosPage {
     return options.sort((left, right) => left.label.localeCompare(right.label));
   }
 
-  private buildParticipanteOptions(rows: PagoRealizadoRow[]): SelectOption[] {
-    const seen = new Set<string>();
-    const options: SelectOption[] = [];
+  private buildParticipanteOptions(): SelectOption[] {
+    const options = this.participantes
+      .filter((participante) => !this.isCurrentUserSystemParticipante(participante))
+      .map((participante) => ({
+        value: `participante:${participante.id_participante}`,
+        label: this.getParticipanteDisplayName(participante),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label));
 
-    for (const row of rows) {
-      if (seen.has(row.participanteKey)) {
-        continue;
-      }
-
-      seen.add(row.participanteKey);
-      options.push({ value: row.participanteKey, label: row.participanteNombre });
+    const titularRow = this.pagos.find((row) => row.participanteKey.startsWith('titular:'));
+    if (titularRow) {
+      options.unshift({ value: titularRow.participanteKey, label: 'Titular' });
     }
 
-    return options.sort((left, right) => left.label.localeCompare(right.label));
+    return options;
   }
 
   private applyFilters(): void {
@@ -421,15 +438,9 @@ export class PagosRealizadosPage {
         )
       : [];
 
-    if (transaccion?.es_propietario) {
-      return detalles;
-    }
-
-    const detallesAsociados = detalles.filter((detalle) =>
-      this.isDetalleDelUsuarioLogueado(detalle, false),
+    return detalles.filter((detalle) =>
+      this.isDetalleDelUsuarioLogueado(detalle, Boolean(transaccion?.es_propietario)),
     );
-
-    return detallesAsociados.length > 0 ? detallesAsociados : detalles;
   }
 
   private isDetallePagoRealizado(
@@ -488,7 +499,11 @@ export class PagosRealizadosPage {
     metodoPagoId: number | null,
   ): string {
     const methodName =
-      transaccion.nombre_forma_pago?.trim() || detalle.nombre_forma_pago?.trim();
+      detalle.nombre_forma_pago?.trim() ||
+      (metodoPagoId !== null
+        ? this.formasPago.find((item) => item.id_forma === metodoPagoId)?.nombre_forma?.trim()
+        : null) ||
+      transaccion.nombre_forma_pago?.trim();
 
     if (methodName) {
       return methodName;
@@ -513,19 +528,55 @@ export class PagosRealizadosPage {
       );
     }
 
-    return detalle.nombre_participante?.trim() || 'Participante';
+    return (
+      detalle.nombre_participante?.trim() ||
+      this.participantes.find((participante) => participante.id_participante === detalle.id_participante)
+        ?.nombre_participante?.trim() ||
+      'Participante'
+    );
+  }
+
+  private isCurrentUserSystemParticipante(
+    participante:
+      | Pick<CatalogoParticipante, 'id_usuario_relacionado' | 'id_usuario_titular'>
+      | null
+      | undefined,
+  ): boolean {
+    const systemUserId =
+      participante?.id_usuario_titular ?? participante?.id_usuario_relacionado ?? null;
+
+    return systemUserId === this.currentUserId;
+  }
+
+  private getParticipanteDisplayName(
+    participante: Pick<
+      CatalogoParticipante,
+      'nombre_participante' | 'id_usuario_relacionado' | 'id_usuario_titular'
+    >,
+  ): string {
+    return this.isParticipanteAsociado(participante)
+      ? `${participante.nombre_participante} ★`
+      : participante.nombre_participante;
+  }
+
+  private isParticipanteAsociado(
+    participante:
+      | Pick<CatalogoParticipante, 'id_usuario_relacionado' | 'id_usuario_titular'>
+      | null
+      | undefined,
+  ): boolean {
+    return Boolean(
+      participante?.id_usuario_relacionado ?? participante?.id_usuario_titular ?? null,
+    );
   }
 
   private isDetalleDelUsuarioLogueado(
     detalle: ParticipanteDetalleListado,
     transaccionEsPropietario = false,
   ): boolean {
-    const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
-
     return (
       detalle.id_usuario_relacionado === this.currentUserId ||
-      (currentUserParticipanteId !== null &&
-        detalle.id_participante === currentUserParticipanteId) ||
+      this.currentUserParticipanteIds.has(detalle.id_participante) ||
       (transaccionEsPropietario && detalle.es_titular)
     );
   }
