@@ -424,6 +424,8 @@ export class ListadoTransaccionesPage implements OnInit {
     ingresos: 0,
   };
   private quickPayDetalleMetodoGroupsCache: QuickPayMetodoGroup[] = [];
+  quickPayBulkAccentPalette: QuickPayAccentPalette =
+    this.getQuickPayMethodAccentPalette(null, '');
 
   readonly transaccionForm = this.fb.group({
     fecha_transaccion: ['', [Validators.required, this.dateDisplayValidator()]],
@@ -801,7 +803,7 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.quickPayBulkSelectedMetodoPagoCache;
   }
 
-  get quickPayBulkAccentPalette(): QuickPayAccentPalette {
+  private resolveQuickPayBulkAccentPalette(): QuickPayAccentPalette {
     const selectedGroupIndex = this.quickPayDetalleMetodoGroupsCache.findIndex(
       (group) =>
         group.metodoPagoId === this.quickPayBulkSelectedMetodoPagoIdCache &&
@@ -4364,6 +4366,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.quickPayBulkSelectedMetodoPagoIdCache = null;
       this.quickPayBulkSelectedMetodoPagoCache = '';
       this.canApplyQuickPayBulkCache = false;
+      this.quickPayBulkAccentPalette = this.resolveQuickPayBulkAccentPalette();
       return;
     }
 
@@ -4398,6 +4401,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.quickPayBulkSelectedMontoTotalCache = this.roundMoneyValue(selectedMontoTotal);
     this.quickPayBulkSelectedMetodoPagoIdCache = selectedMetodoPagoId;
     this.quickPayBulkSelectedMetodoPagoCache = selectedMetodoPagoNombre;
+    this.quickPayBulkAccentPalette = this.resolveQuickPayBulkAccentPalette();
 
     for (const row of this.filteredDetalleTransaccionesCache) {
       const rowCanSelect = this.canSelectQuickPayDetalleForMethod(
