@@ -63,6 +63,13 @@ export const routes: Routes = [
         (module) => module.AnalisisFinancieroPage,
       ),
   },
+  {
+    path: 'reportes/pagos-realizados',
+    loadComponent: () =>
+      import('./pages/pagos-realizados/pagos-realizados.page').then(
+        (module) => module.PagosRealizadosPage,
+      ),
+  },
   { path: 'categorias', component: CategoriasPage },
   { path: 'subcategorias', component: SubcategoriasPage },
   { path: 'formas-pago', component: FormasPagoPage },

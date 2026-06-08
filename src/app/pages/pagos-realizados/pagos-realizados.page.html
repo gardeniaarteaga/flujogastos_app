@@ -1,0 +1,256 @@
+﻿<div class="dashboard-page payments-page" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen financiero
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Configurar notificaciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Ingresos
+      </a>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Gastos
+      </a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Cuotas/Compartidos
+      </a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias">Categorias</a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Participantes
+          </a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias">Subcategorias</a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras">Entidades financieras</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad">Tipo de entidad</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto">Tipo de producto</a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Usuarios
+          </a>
+        </div>
+      </div>
+
+      <details class="nav-group" open>
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Análisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Pagos realizados</a>
+        </div>
+      </details>
+      <a class="nav-item" routerLink="/perfil">Mi perfil</a>
+    </nav>
+
+    <section class="sidebar-card">
+      <span class="sidebar-label">Ubicacion</span>
+      <strong>{{ userProfile.country || 'Sin pais definido' }}</strong>
+      <p>{{ userProfile.notificationsLabel }}</p>
+    </section>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <section class="panel payments-hero">
+      <div>
+        <span class="panel-kicker">Reportes</span>
+        <h2>Pagos realizados</h2>
+      </div>
+      <button type="button" class="secondary-button" (click)="clearFilters()">
+        Volver a hoy
+      </button>
+    </section>
+
+    <section class="panel payments-filter-panel">
+      <div class="payments-filter-head">
+        <div>
+          <span class="panel-kicker">Filtros</span>
+          <h3>Buscar pagos aplicados</h3>
+          <p class="payments-filter-copy">Compacto, rapido y listo para usar.</p>
+        </div>
+
+        <div class="payments-filter-presets">
+          <button type="button" class="filter-preset-button" [class.is-active]="isTodayRange()" (click)="setTodayFilters()">
+            Hoy
+          </button>
+          <button type="button" class="filter-preset-button" [class.is-active]="isLastDaysRange(7)" (click)="setLastDaysRange(7)">
+            7 dias
+          </button>
+          <button type="button" class="filter-preset-button" [class.is-active]="isCurrentMonthRange()" (click)="setCurrentMonthFilters()">
+            Mes
+          </button>
+        </div>
+      </div>
+
+      <form class="payments-filter-grid" [formGroup]="filtrosForm">
+        <label class="filter-card">
+          <span>Desde</span>
+          <input type="date" formControlName="fechaDesde" />
+        </label>
+
+        <label class="filter-card">
+          <span>Hasta</span>
+          <input type="date" formControlName="fechaHasta" />
+        </label>
+
+        <label class="filter-card">
+          <span>Metodo</span>
+          <select formControlName="metodoPagoId">
+            <option value="">Todos</option>
+            <option *ngFor="let option of metodoPagoOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-card">
+          <span>Participante</span>
+          <select formControlName="participanteKey">
+            <option value="">Todos</option>
+            <option *ngFor="let option of participanteOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+      </form>
+
+      <div class="payments-filter-foot">
+        <div class="payments-filter-chips">
+          <span *ngFor="let chip of activeFilterChips" class="payments-filter-chip">{{ chip }}</span>
+        </div>
+
+        <span class="payments-filter-result">
+          {{ filteredPagos.length }} pagos
+        </span>
+      </div>
+    </section>
+
+    <section class="payments-summary-grid">
+      <article class="panel payments-summary-card payments-summary-card-total">
+        <span class="panel-kicker">Total pagado</span>
+        <strong>{{ formatCurrency(totalPagado) }}</strong>
+      </article>
+      <article class="panel payments-summary-card">
+        <span class="panel-kicker">Capital pagado</span>
+        <strong>{{ formatCurrency(totalCapitalPagado) }}</strong>
+      </article>
+      <article class="panel payments-summary-card">
+        <span class="panel-kicker">Intereses pagados</span>
+        <strong>{{ formatCurrency(totalInteresesPagados) }}</strong>
+      </article>
+      <article class="panel payments-summary-card">
+        <span class="panel-kicker">Pagos encontrados</span>
+        <strong>{{ filteredPagos.length }}</strong>
+      </article>
+    </section>
+
+    <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
+      <strong>No se pudieron cargar los pagos realizados.</strong>
+      <p>{{ errorMessage }}</p>
+    </section>
+
+    <section *ngIf="loading" class="panel state-panel">
+      <strong>Cargando pagos realizados...</strong>
+    </section>
+
+    <section *ngIf="!loading && !errorMessage && filteredPagos.length === 0" class="panel state-panel">
+      <strong>No hay pagos para los filtros seleccionados.</strong>
+      <p>Prueba cambiando el rango de fechas o limpiando los filtros.</p>
+    </section>
+
+    <section *ngIf="!loading && filteredPagos.length > 0" class="panel">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Detalle</span>
+          <h3>Historial de pagos</h3>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha pago</th>
+              <th>Transaccion</th>
+              <th>Metodo</th>
+              <th>Participante</th>
+              <th>Cuota</th>
+              <th>Monto cuota</th>
+              <th>Capital pagado</th>
+              <th>Interes pagado</th>
+              <th>Total pagado</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of filteredPagos; trackBy: trackPago">
+              <td>{{ row.fechaPagoLabel }}</td>
+              <td>{{ row.descripcion }}</td>
+              <td>{{ row.metodoPagoNombre }}</td>
+              <td>{{ row.participanteNombre }}</td>
+              <td>{{ row.cuotaLabel }}</td>
+              <td>{{ formatCurrency(row.montoCuota) }}</td>
+              <td>{{ formatCurrency(row.montoPagado) }}</td>
+              <td>{{ formatCurrency(row.interesPagado) }}</td>
+              <td class="payment-total-cell">{{ formatCurrency(row.totalPagado) }}</td>
+              <td>
+                <span class="status-pill status-pill-completado">
+                  {{ row.estadoNombre }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+

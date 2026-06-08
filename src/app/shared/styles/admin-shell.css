@@ -354,6 +354,18 @@ h3 {
   font-weight: 800;
 }
 
+.nav-group > summary.nav-item-group {
+  list-style: none;
+}
+
+.nav-group > summary.nav-item-group::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group > summary.nav-item-group::marker {
+  content: '';
+}
+
 .caret {
   margin-left: auto;
   color: #b6bfc9;
@@ -434,11 +446,13 @@ h3 {
 }
 
 .nav-group.open .submenu,
+.nav-group[open] .submenu,
 .nav-group:has(.submenu-item.active) .submenu {
   display: grid;
 }
 
 .nav-group.open .caret,
+.nav-group[open] .caret,
 .nav-group:has(.submenu-item.active) .caret {
   transform: rotate(180deg);
 }

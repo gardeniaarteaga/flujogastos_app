@@ -1,0 +1,210 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.payments-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
+    radial-gradient(circle at right, rgba(16, 185, 129, 0.12), transparent 24%),
+    linear-gradient(135deg, #ffffff 0%, #f6fbff 50%, #f7fbf8 100%);
+}
+
+.hero-copy {
+  margin: 0.45rem 0 0;
+  color: #5f6f82;
+  max-width: 62ch;
+}
+
+.payments-filter-panel {
+  display: grid;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.payments-filter-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.payments-filter-copy {
+  margin: 0.35rem 0 0;
+  color: #6b7a90;
+  font-size: 0.92rem;
+}
+
+.payments-filter-presets {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.filter-preset-button {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #dbe4ef;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #48617f;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.filter-preset-button:hover,
+.filter-preset-button.is-active {
+  border-color: #bfd4ff;
+  background: #eef4ff;
+  color: #2457b8;
+  transform: translateY(-1px);
+  box-shadow: 0 0.55rem 1rem rgba(36, 87, 184, 0.1);
+}
+
+.payments-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.filter-card {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #e3ebf5;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.filter-card span {
+  color: #708198;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-card input,
+.filter-card select {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.filter-card input:focus,
+.filter-card select:focus {
+  outline: none;
+}
+
+.payments-filter-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.payments-filter-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.payments-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+  background: #f4f7fb;
+  color: #526277;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.payments-filter-result {
+  color: #2457b8;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.payments-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.payments-summary-card {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.payments-summary-card strong {
+  color: #0f172a;
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+.payments-summary-card-total {
+  background: linear-gradient(135deg, #eef5ff 0%, #ffffff 100%);
+  border-color: #cfe0ff;
+}
+
+.payment-total-cell {
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.state-panel {
+  margin-top: 1rem;
+}
+
+.state-panel-error {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+
+@media (max-width: 1080px) {
+  .payments-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .payments-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .payments-hero {
+    flex-direction: column;
+  }
+
+  .payments-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .payments-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

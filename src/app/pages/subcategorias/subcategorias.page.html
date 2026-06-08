@@ -1,4 +1,4 @@
-<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
+﻿<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-copy">
@@ -81,7 +81,16 @@
         </div>
       </div>
 
-      <a class="nav-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Reportes</a>
+      <details class="nav-group">
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Análisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Pagos realizados</a>
+        </div>
+      </details>
 
       <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Mi perfil
@@ -136,7 +145,7 @@
           </div>
 
           <div class="field">
-            <label for="nombre_subcategoria">Nombre subcategoría</label>
+            <label for="nombre_subcategoria">Nombre subcategorÃ­a</label>
             <input id="nombre_subcategoria" type="text" formControlName="nombre_subcategoria" maxlength="50" />
             <small *ngIf="subcategoriaForm.controls.nombre_subcategoria.touched && subcategoriaForm.controls.nombre_subcategoria.errors?.['required']">
               El nombre de la subcategoria es obligatorio.
@@ -147,7 +156,7 @@
           </div>
 
           <div class="field">
-            <label for="descripcion">Descripción</label>
+            <label for="descripcion">DescripciÃ³n</label>
             <textarea id="descripcion" rows="4" formControlName="descripcion" maxlength="100"></textarea>
             <small *ngIf="subcategoriaForm.controls.descripcion.touched && subcategoriaForm.controls.descripcion.errors?.['maxlength']">
               La descripcion no puede exceder 100 caracteres.
@@ -163,7 +172,7 @@
           </div>
 
           <div class="field">
-            <label for="fecha_creacion">Fecha creación</label>
+            <label for="fecha_creacion">Fecha creaciÃ³n</label>
             <input id="fecha_creacion" type="text" [value]="today | date: 'yyyy-MM-dd'" readonly />
           </div>
 
@@ -260,3 +269,4 @@
     </section>
   </main>
 </div>
+

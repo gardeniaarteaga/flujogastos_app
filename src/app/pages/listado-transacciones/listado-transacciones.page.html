@@ -1,4 +1,4 @@
-<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
+﻿<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-copy">
@@ -78,7 +78,16 @@
         </div>
       </div>
 
-      <a class="nav-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Reportes</a>
+      <details class="nav-group">
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Análisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Pagos realizados</a>
+        </div>
+      </details>
 
       <a class="nav-item" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Mi perfil
@@ -130,14 +139,27 @@
         <div
           *ngIf="isDetalleViewMode && filteredDetalleTransacciones.length > 0 && quickPayBulkSelectedCount > 0"
           class="quick-pay-bulk-toolbar"
+          style="padding:1rem 1.1rem;border:1px solid var(--quick-pay-bulk-border);border-radius:.95rem;background:radial-gradient(circle at top left,var(--quick-pay-bulk-glow),transparent 32%),linear-gradient(135deg,var(--quick-pay-bulk-soft) 0%,#fff 52%,color-mix(in srgb,var(--quick-pay-bulk-soft) 72%,#fff 28%) 100%);box-shadow:0 .7rem 1.6rem var(--quick-pay-bulk-glow);"
+          [style.--quick-pay-bulk-border]="quickPayBulkAccentPalette.border"
+          [style.--quick-pay-bulk-soft]="quickPayBulkAccentPalette.soft"
+          [style.--quick-pay-bulk-glow]="quickPayBulkAccentPalette.glow"
+          [style.--quick-pay-bulk-accent]="quickPayBulkAccentPalette.accent"
+          [style.--quick-pay-bulk-chip-border]="quickPayBulkAccentPalette.chipBorder"
+          [style.--quick-pay-bulk-chip-bg]="quickPayBulkAccentPalette.chipBg"
+          [style.--quick-pay-bulk-chip-color]="quickPayBulkAccentPalette.chipColor"
+          [style.--quick-pay-bulk-method-border]="quickPayBulkAccentPalette.methodBorder"
+          [style.--quick-pay-bulk-method-bg]="quickPayBulkAccentPalette.methodBg"
+          [style.--quick-pay-bulk-method-color]="quickPayBulkAccentPalette.methodColor"
         >
-          <div class="quick-pay-bulk-summary">
-            <span>
-              {{ quickPayBulkSelectedCount }} pagos seleccionados por ${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}.
-            </span>
-            <span *ngIf="quickPayBulkSelectedMetodoPago">
-              Forma de pago activa: {{ quickPayBulkSelectedMetodoPago }}.
-            </span>
+          <div class="quick-pay-bulk-summary" style="gap:.28rem;">
+            <span style="color:var(--quick-pay-bulk-accent);font-size:.74rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Monto listo para pagar</span>
+            <strong style="color:#0f172a;font-size:clamp(1.55rem,2.7vw,2.25rem);line-height:1;font-weight:950;text-shadow:0 1px 0 rgba(255,255,255,.82);">${{ quickPayBulkSelectedMontoTotal | number: '1.2-2' }}</strong>
+            <div style="display:flex;gap:.45rem;flex-wrap:wrap;">
+              <span style="display:inline-flex;align-items:center;padding:.34rem .72rem;border-radius:999px;border:1px solid var(--quick-pay-bulk-chip-border);background:var(--quick-pay-bulk-chip-bg);color:var(--quick-pay-bulk-chip-color);font-size:.82rem;font-weight:800;">{{ quickPayBulkSelectedCount }} pagos seleccionados</span>
+              <span *ngIf="quickPayBulkSelectedMetodoPago" style="display:inline-flex;align-items:center;padding:.34rem .72rem;border-radius:999px;border:1px solid var(--quick-pay-bulk-method-border);background:var(--quick-pay-bulk-method-bg);color:var(--quick-pay-bulk-method-color);font-size:.82rem;font-weight:800;">
+                {{ quickPayBulkSelectedMetodoPago }}
+              </span>
+            </div>
           </div>
 
           <div class="quick-pay-bulk-actions">
@@ -847,7 +869,7 @@
               </tr>
             </thead>
             <tbody>
-              <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index">
+              <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index; trackBy: trackQuickPayMetodoGroup">
                 <tr class="quick-pay-method-group-row">
                   <td colspan="14">
                     <div
@@ -858,13 +880,13 @@
                       <button
                         type="button"
                         class="quick-pay-group-select-button"
-                        [class.is-checked]="isQuickPayMetodoGroupFullySelected(group)"
-                        [class.is-indeterminate]="isQuickPayMetodoGroupPartiallySelected(group)"
-                        [class.is-disabled]="isQuickPayMetodoGroupSelectionDisabled(group)"
-                        [attr.title]="isQuickPayMetodoGroupSelectionDisabled(group) ? 'Selecciona cuotas validas de este metodo para habilitar la seleccion masiva.' : 'Seleccionar todas las cuotas validas de este metodo.'"
+                        [class.is-checked]="group.fullySelected"
+                        [class.is-indeterminate]="group.partiallySelected"
+                        [class.is-disabled]="group.selectionDisabled"
+                        [attr.title]="group.selectionDisabled ? 'Selecciona cuotas validas de este metodo para habilitar la seleccion masiva.' : 'Seleccionar todas las cuotas validas de este metodo.'"
                         [attr.aria-label]="'Seleccionar cuotas de ' + group.metodoPagoNombre"
-                        [attr.aria-pressed]="isQuickPayMetodoGroupFullySelected(group)"
-                        [disabled]="isQuickPayMetodoGroupSelectionDisabled(group)"
+                        [attr.aria-pressed]="group.fullySelected"
+                        [disabled]="group.selectionDisabled"
                         (click)="toggleQuickPayMetodoGroupSelection(group, $event)"
                       >
                         <span class="quick-pay-group-select-box" aria-hidden="true"></span>
@@ -873,18 +895,18 @@
                         type="button"
                         class="quick-pay-method-group-toggle"
                         (click)="toggleQuickPayMetodoGroup(group, groupIndex)"
-                        [attr.aria-expanded]="isQuickPayMetodoGroupExpanded(group, groupIndex)"
+                        [attr.aria-expanded]="group.expanded"
                       >
                         <div class="quick-pay-method-group-copy">
                           <strong [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)">{{ group.metodoPagoNombre }}</strong>
                           <span>{{ group.rows.length }} cuotas</span>
-                          <span>{{ getQuickPayMetodoGroupSelectedCount(group) }}/{{ getQuickPayMetodoGroupSelectableCount(group) }} seleccionadas</span>
+                          <span>{{ group.selectedCount }}/{{ group.selectableCount }} seleccionadas</span>
                           <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
                         </div>
                         <span
                           class="quick-pay-method-group-caret"
                           [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
-                          [style.transform]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? 'rotate(180deg)' : 'rotate(0deg)'"
+                          [style.transform]="group.expanded ? 'rotate(180deg)' : 'rotate(0deg)'"
                           aria-hidden="true"
                         >
                           v
@@ -893,16 +915,16 @@
                     </div>
                   </td>
                 </tr>
-                <tr *ngFor="let row of group.rows; trackBy: trackDetalleTransaccion" [style.display]="isQuickPayMetodoGroupExpanded(group, groupIndex) ? '' : 'none'">
+                <tr *ngFor="let row of group.rows; trackBy: trackDetalleTransaccion" [style.display]="group.expanded ? '' : 'none'">
                   <td>
                     <label
                       class="quick-pay-select-cell"
-                      [attr.title]="getQuickPayDetalleSelectionHint(row)"
+                      [attr.title]="row.quickPaySelectionHint"
                     >
                       <input
                         type="checkbox"
-                        [checked]="isQuickPayDetalleSelected(row)"
-                        [disabled]="isQuickPayDetalleSelectionDisabled(row)"
+                        [checked]="row.quickPaySelected"
+                        [disabled]="row.quickPaySelectionDisabled"
                         (change)="onQuickPayDetalleSelectionChange(row, $event)"
                       />
                     </label>
@@ -910,9 +932,9 @@
                   <td>{{ row.transaccion.id_transaccion }}</td>
                   <td>
                     <div style="display:grid;gap:.3rem;">
-                      <span>{{ row.detalle.fecha_programada ? (row.detalle.fecha_programada | date: 'dd/MM/yyyy') : '-' }}</span>
+                      <span>{{ row.quickPayFechaProgramadaLabel }}</span>
                       <span
-                        *ngIf="isDetalleVencido(row.detalle)"
+                        *ngIf="row.quickPayIsVencido"
                         style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
                       >
                         Vencido
@@ -921,8 +943,8 @@
                   </td>
                   <td>
                     <div style="display:grid;gap:.35rem;">
-                      <strong [attr.title]="getTransaccionTitle(row.transaccion)">
-                        {{ getTransaccionTitle(row.transaccion) }}
+                      <strong [attr.title]="row.quickPayTitle">
+                        {{ row.quickPayTitle }}
                       </strong>
                       <span
                         *ngIf="!row.transaccion.es_propietario"
@@ -938,19 +960,19 @@
                       </span>
                     </div>
                   </td>
-                  <td>{{ row.detalle.fecha_pago ? (row.detalle.fecha_pago | date: 'dd/MM/yyyy') : '-' }}</td>
+                  <td>{{ row.quickPayFechaPagoLabel }}</td>
                   <td>{{ row.metodo_pago || '-' }}</td>
                   <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
-                  <td>${{ row.detalle.monto | number: '1.2-2' }}</td>
-                  <td>${{ row.detalle.interes_pendiente | number: '1.2-2' }}</td>
-                  <td>${{ row.detalle.monto_pagado | number: '1.2-2' }}</td>
-                  <td>${{ row.detalle.saldo_pendiente | number: '1.2-2' }}</td>
+                  <td>{{ row.quickPayMontoLabel }}</td>
+                  <td>{{ row.quickPayInteresPendienteLabel }}</td>
+                  <td>{{ row.quickPayMontoPagadoLabel }}</td>
+                  <td style="color:#0f172a;font-weight:900;">{{ row.quickPaySaldoPendienteLabel }}</td>
                   <td>
                     <span
                       class="status-pill"
-                      [ngClass]="getEstadoClass(row.detalle.nombre_estado || 'Sin estado')"
+                      [ngClass]="row.quickPayEstadoClass"
                     >
-                      {{ getEstadoDisplayLabel(row.detalle.nombre_estado) }}
+                      {{ row.quickPayEstadoLabel }}
                     </span>
                   </td>
                   <td>{{ row.nombre_mostrado }}</td>
@@ -980,7 +1002,7 @@
                         class="icon-action-button pay"
                         title="Pagar"
                         aria-label="Pagar"
-                        [disabled]="!canPagarDetalle(row)"
+                        [disabled]="!row.quickPayCanPagar"
                         (click)="openPaymentModalForDetalle(row, $event)"
                       >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2137,3 +2159,4 @@
     </div>
   </main>
 </div>
+

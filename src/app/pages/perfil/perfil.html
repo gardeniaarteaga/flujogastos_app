@@ -1,4 +1,4 @@
-<div class="profile-page" [class.sidebar-collapsed]="sidebarCollapsed">
+﻿<div class="profile-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-copy">
@@ -64,7 +64,16 @@
         </div>
       </div>
 
-      <a class="nav-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Reportes</a>
+      <details class="nav-group">
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Análisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Pagos realizados</a>
+        </div>
+      </details>
 
       <a class="nav-item active" routerLink="/perfil" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Mi perfil
@@ -284,3 +293,4 @@
     </section>
   </main>
 </div>
+

@@ -5,9 +5,7 @@
     "ng": "ng",
     "prebuild": "node scripts/generate-env.js",
     "start": "ng serve",
-    "start:pago-rapido-android": "ng serve pago-rapido-android --host 0.0.0.0 --port 4300",
     "build": "ng build",
-    "build:pago-rapido-android": "node scripts/generate-env.js && ng build pago-rapido-android --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

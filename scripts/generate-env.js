@@ -12,13 +12,6 @@ const envTargets = [
       sharedApiBaseUrl ||
       'http://localhost:3001/api',
   },
-  {
-    path: join(__dirname, '..', 'projects', 'pago-rapido-android', 'public', 'env.js'),
-    apiBaseUrl:
-      process.env.MOBILE_API_BASE_URL ||
-      sharedApiBaseUrl ||
-      'https://flujogastosapi-production.up.railway.app/api',
-  },
 ];
 
 for (const target of envTargets) {
