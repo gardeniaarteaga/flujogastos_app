@@ -1014,6 +1014,79 @@ table {
   background: #ffffff;
 }
 
+.quick-pay-detail-table {
+  min-width: 110rem;
+}
+
+.quick-pay-detail-table th {
+  white-space: nowrap;
+}
+
+.quick-pay-detail-table td {
+  vertical-align: middle;
+}
+
+.quick-pay-detail-table th:nth-child(1),
+.quick-pay-detail-table td:nth-child(1) {
+  width: 4.5rem;
+}
+
+.quick-pay-detail-table th:nth-child(2),
+.quick-pay-detail-table td:nth-child(2) {
+  width: 5rem;
+}
+
+.quick-pay-detail-table th:nth-child(3),
+.quick-pay-detail-table td:nth-child(3) {
+  width: 7.25rem;
+}
+
+.quick-pay-detail-table th:nth-child(4),
+.quick-pay-detail-table td:nth-child(4) {
+  width: 18rem;
+}
+
+.quick-pay-detail-table th:nth-child(5),
+.quick-pay-detail-table td:nth-child(5) {
+  width: 7.5rem;
+}
+
+.quick-pay-detail-table th:nth-child(6),
+.quick-pay-detail-table td:nth-child(6) {
+  width: 10rem;
+}
+
+.quick-pay-detail-table th:nth-child(7),
+.quick-pay-detail-table td:nth-child(7) {
+  width: 6rem;
+}
+
+.quick-pay-detail-table th:nth-child(8),
+.quick-pay-detail-table td:nth-child(8),
+.quick-pay-detail-table th:nth-child(9),
+.quick-pay-detail-table td:nth-child(9),
+.quick-pay-detail-table th:nth-child(10),
+.quick-pay-detail-table td:nth-child(10),
+.quick-pay-detail-table th:nth-child(11),
+.quick-pay-detail-table td:nth-child(11) {
+  width: 8rem;
+}
+
+.quick-pay-detail-table th:nth-child(12),
+.quick-pay-detail-table td:nth-child(12) {
+  width: 8rem;
+}
+
+.quick-pay-detail-table th:nth-child(13),
+.quick-pay-detail-table td:nth-child(13) {
+  width: 10rem;
+}
+
+.quick-pay-detail-table th:nth-child(14),
+.quick-pay-detail-table td:nth-child(14) {
+  width: 7rem;
+}
+
 th,
 td {
   padding: 0.92rem 0.85rem;
