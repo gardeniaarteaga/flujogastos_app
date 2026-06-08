@@ -358,6 +358,13 @@ export class PagosRealizadosPage implements OnInit {
     });
   }
 
+  setAllFilters(): void {
+    this.filtrosForm.patchValue({
+      fechaDesde: '',
+      fechaHasta: '',
+    });
+  }
+
   setLastDaysRange(days: number): void {
     const end = new Date(this.today);
     const start = new Date(this.today);
@@ -385,6 +392,11 @@ export class PagosRealizadosPage implements OnInit {
       (filtros.fechaDesde ?? '') === this.todayFilterValue &&
       (filtros.fechaHasta ?? '') === this.todayFilterValue
     );
+  }
+
+  isAllRange(): boolean {
+    const filtros = this.filtrosForm.getRawValue();
+    return !filtros.fechaDesde && !filtros.fechaHasta;
   }
 
   isLastDaysRange(days: number): boolean {

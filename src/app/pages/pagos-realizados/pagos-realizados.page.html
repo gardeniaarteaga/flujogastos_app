@@ -113,6 +113,9 @@
         </div>
 
         <div class="payments-filter-presets">
+          <button type="button" class="filter-preset-button" [class.is-active]="isAllRange()" (click)="setAllFilters()">
+            Todo
+          </button>
           <button type="button" class="filter-preset-button" [class.is-active]="isTodayRange()" (click)="setTodayFilters()">
             Hoy
           </button>
