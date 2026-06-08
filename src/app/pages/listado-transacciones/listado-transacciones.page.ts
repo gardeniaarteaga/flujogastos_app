@@ -3952,7 +3952,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return this.currentUserDisplayName;
     }
 
-    return row.detalle.nombre_participante?.trim() || 'Participante';
+    return row.detalle.nombre_participante || 'Participante';
   }
 
   getDetalleRowCategoriaLabel(row: DetalleTransaccionListadoRow): string {
@@ -3964,8 +3964,8 @@ export class ListadoTransaccionesPage implements OnInit {
   getTransaccionTitle(
     transaccion: Pick<TransaccionListado, 'descripcion' | 'id_transaccion'> | null | undefined,
   ): string {
-    const descripcion = transaccion?.descripcion?.trim();
-    return descripcion && descripcion.length > 0
+    const descripcion = transaccion?.descripcion;
+    return typeof descripcion === 'string' && descripcion.length > 0
       ? descripcion
       : `Sin descripcion (${transaccion?.id_transaccion ?? '-'})`;
   }
@@ -3979,7 +3979,10 @@ export class ListadoTransaccionesPage implements OnInit {
   getTransaccionModalTitle(
     transaccion: Pick<TransaccionListado, 'descripcion' | 'id_transaccion'> | null | undefined,
   ): string {
-    const descripcion = transaccion?.descripcion?.trim() || 'Sin descripcion';
+    const descripcion =
+      typeof transaccion?.descripcion === 'string' && transaccion.descripcion.length > 0
+        ? transaccion.descripcion
+        : 'Sin descripcion';
     return `${descripcion} #${transaccion?.id_transaccion ?? '-'}`;
   }
 
@@ -4548,18 +4551,16 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private getQuickPayParticipanteGridName(detalle: ParticipanteDetalleListado): string {
-    const rawName = detalle.es_titular
-      ? (
-          this.currentUserParticipante?.nombre_participante ||
-          this.currentUserProfileValue.fullName ||
-          this.currentUserProfileValue.username ||
-          'Titular'
-        )
-      : (detalle.nombre_participante ?? 'Participante');
-    const normalizedName = rawName.replace(/\s*\(.*?\)\s*/g, ' ').trim();
-    const firstName = normalizedName.split(/\s+/)[0]?.trim();
+    if (typeof detalle.nombre_participante === 'string' && detalle.nombre_participante.length > 0) {
+      return detalle.nombre_participante;
+    }
 
-    return firstName || 'Participante';
+    return (
+      this.currentUserParticipante?.nombre_participante ||
+      this.currentUserProfileValue.fullName ||
+      this.currentUserProfileValue.username ||
+      'Participante'
+    );
   }
 
   private hasPriorityPendingSchedule(transaccion: TransaccionListado): boolean {
@@ -6911,8 +6912,8 @@ export class ListadoTransaccionesPage implements OnInit {
     methodId: number | null,
   ): string {
     const methodName =
-      transaccion.nombre_forma_pago?.trim() ||
-      detalle.nombre_forma_pago?.trim();
+      transaccion.nombre_forma_pago ||
+      detalle.nombre_forma_pago;
 
     if (methodName) {
       return methodName;
