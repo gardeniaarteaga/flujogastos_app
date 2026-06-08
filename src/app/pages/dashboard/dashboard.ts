@@ -44,7 +44,9 @@ interface ScheduledNotificationView {
 }
 
 interface ParticipanteDetalleListado {
+  id_participante?: number | null;
   id_usuario_relacionado: number | null;
+  nombre_participante?: string | null;
   monto: number;
   monto_pagado: number;
   interes_pagado: number;
@@ -74,6 +76,9 @@ interface TransaccionListado {
   nombre_subcategoria: string | null;
   descripcion: string | null;
   titular?: string | null;
+  remitente?: string | null;
+  nombre_titular?: string | null;
+  nombre_remitente?: string | null;
   participantes_detalle: ParticipanteDetalleListado[];
 }
 
@@ -893,7 +898,7 @@ export class Dashboard implements OnInit {
             transaction,
             detailDate,
             this.getExpenseDetailAmountForPeriod(detail, detailDate, selectedPeriod),
-            transaction.es_propietario ? null : (transaction.titular?.trim() || 'Sin remitente'),
+            transaction.es_propietario ? null : this.getTransactionSenderName(transaction),
             this.isOverduePendingDetail(detail, detailDate),
           ),
         );
@@ -927,7 +932,7 @@ export class Dashboard implements OnInit {
             Math.max(0, this.normalizeAmount(detail.monto)) +
               Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
               Math.max(0, this.normalizeAmount(detail.interes_pendiente)),
-            transaction.titular?.trim() || 'Sin remitente',
+            this.getTransactionSenderName(transaction),
             this.isOverduePendingDetail(detail, detailDate),
           ),
         );
@@ -960,6 +965,32 @@ export class Dashboard implements OnInit {
       amount: this.roundMoney(Math.max(0, this.normalizeAmount(amount))),
       senderName,
     };
+  }
+
+  private getTransactionSenderName(transaction: TransaccionListado): string {
+    const directSender =
+      transaction.titular?.trim() ||
+      transaction.remitente?.trim() ||
+      transaction.nombre_titular?.trim() ||
+      transaction.nombre_remitente?.trim();
+
+    if (directSender) {
+      return directSender;
+    }
+
+    const titularDetail = (Array.isArray(transaction.participantes_detalle) ? transaction.participantes_detalle : []).find(
+      (detail) => detail.es_titular && detail.nombre_participante?.trim(),
+    );
+
+    if (titularDetail?.nombre_participante?.trim()) {
+      return titularDetail.nombre_participante.trim();
+    }
+
+    const namedDetail = (Array.isArray(transaction.participantes_detalle) ? transaction.participantes_detalle : []).find(
+      (detail) => detail.nombre_participante?.trim(),
+    );
+
+    return namedDetail?.nombre_participante?.trim() || 'Sin remitente';
   }
 
   private sortDashboardTransactionModalRows(

@@ -75,8 +75,8 @@ interface PagoRealizadoRow {
   detalleId: number;
   transaccionId: number;
   descripcion: string;
-  fechaReferencia: string;
-  fechaReferenciaLabel: string;
+  fechaProgramada: string;
+  fechaProgramadaLabel: string;
   metodoPagoId: number | null;
   metodoPagoNombre: string;
   participanteKey: string;
@@ -128,6 +128,7 @@ export class PagosRealizadosPage implements OnInit {
   readonly userProfile = loadUserProfile();
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
+  readonly pageSize = 25;
   readonly filtrosForm = this.fb.group({
     fechaDesde: [this.todayFilterValue],
     fechaHasta: [this.todayFilterValue],
@@ -142,6 +143,7 @@ export class PagosRealizadosPage implements OnInit {
   loading = false;
   errorMessage = '';
   currentUserId = getCurrentUserId();
+  currentPage = 1;
   pagos: PagoRealizadoRow[] = [];
   filteredPagos: PagoRealizadoRow[] = [];
   formasPago: CatalogoFormaPago[] = [];
@@ -163,6 +165,27 @@ export class PagosRealizadosPage implements OnInit {
 
   get totalInteresesPagados(): number {
     return this.filteredPagos.reduce((sum, row) => sum + row.interesPagado, 0);
+  }
+
+  get paginationStartRecord(): number {
+    return this.filteredPagos.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get paginationEndRecord(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredPagos.length);
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredPagos.length / this.pageSize));
+  }
+
+  get paginatedFilteredPagos(): PagoRealizadoRow[] {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    return this.filteredPagos.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  get visiblePageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_value, index) => index + 1);
   }
 
   get activeFilterChips(): string[] {
@@ -254,6 +277,7 @@ export class PagosRealizadosPage implements OnInit {
     this.filtrosForm.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
+        this.currentPage = 1;
         this.applyFilters();
       });
   }
@@ -427,16 +451,35 @@ export class PagosRealizadosPage implements OnInit {
     return row.detalleId;
   }
 
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages || page === this.currentPage) {
+      return;
+    }
+
+    this.currentPage = page;
+  }
+
+  goToPreviousPage(): void {
+    this.goToPage(this.currentPage - 1);
+  }
+
+  goToNextPage(): void {
+    this.goToPage(this.currentPage + 1);
+  }
+
   private buildPagos(transacciones: TransaccionListado[]): PagoRealizadoRow[] {
     return transacciones
+      .filter((transaccion) => !this.isIncomeCategory(transaccion.nombre_categoria))
       .flatMap((transaccion) =>
         this.getParticipantesDetalleForReport(transaccion)
           .filter((detalle) => this.isDetalleVisibleEnReporte(detalle))
           .map((detalle) => this.mapPagoRow(transaccion, detalle)),
       )
       .sort((left, right) => {
-        if (left.fechaReferencia !== right.fechaReferencia) {
-          return right.fechaReferencia.localeCompare(left.fechaReferencia);
+        const fechaProgramadaComparison = this.compareByClosestDueDate(left, right);
+
+        if (fechaProgramadaComparison !== 0) {
+          return fechaProgramadaComparison;
         }
 
         if (left.transaccionId !== right.transaccionId) {
@@ -445,6 +488,34 @@ export class PagosRealizadosPage implements OnInit {
 
         return right.detalleId - left.detalleId;
       });
+  }
+
+  private compareByClosestDueDate(left: PagoRealizadoRow, right: PagoRealizadoRow): number {
+    if (!left.fechaProgramada && !right.fechaProgramada) {
+      return 0;
+    }
+
+    if (!left.fechaProgramada) {
+      return 1;
+    }
+
+    if (!right.fechaProgramada) {
+      return -1;
+    }
+
+    const today = this.todayFilterValue;
+    const leftIsUpcoming = left.fechaProgramada >= today;
+    const rightIsUpcoming = right.fechaProgramada >= today;
+
+    if (leftIsUpcoming !== rightIsUpcoming) {
+      return leftIsUpcoming ? -1 : 1;
+    }
+
+    if (leftIsUpcoming) {
+      return left.fechaProgramada.localeCompare(right.fechaProgramada);
+    }
+
+    return right.fechaProgramada.localeCompare(left.fechaProgramada);
   }
 
   private buildMetodoPagoOptions(rows: PagoRealizadoRow[]): SelectOption[] {
@@ -499,11 +570,11 @@ export class PagosRealizadosPage implements OnInit {
       this.filtrosForm.getRawValue();
 
     this.filteredPagos = this.pagos.filter((row) => {
-      if (fechaDesde && row.fechaReferencia < fechaDesde) {
+      if (fechaDesde && row.fechaProgramada < fechaDesde) {
         return false;
       }
 
-      if (fechaHasta && row.fechaReferencia > fechaHasta) {
+      if (fechaHasta && row.fechaProgramada > fechaHasta) {
         return false;
       }
 
@@ -529,6 +600,12 @@ export class PagosRealizadosPage implements OnInit {
 
       return true;
     });
+
+    this.currentPage = Math.min(this.currentPage, this.totalPages);
+
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
   }
 
   private getParticipantesDetalleForReport(
@@ -559,7 +636,7 @@ export class PagosRealizadosPage implements OnInit {
   ): PagoRealizadoRow {
     const estadoKey = this.resolveEstadoKey(detalle) ?? 'pendiente';
     const metodoPagoId = this.resolveMetodoPagoId(detalle, transaccion);
-    const fechaReferencia = this.resolveFechaReferencia(detalle, transaccion, estadoKey) ?? '';
+    const fechaProgramada = this.resolveFechaProgramada(detalle) ?? '';
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
     const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
@@ -568,8 +645,8 @@ export class PagosRealizadosPage implements OnInit {
       detalleId: detalle.id,
       transaccionId: transaccion.id_transaccion,
       descripcion: this.getTransaccionTitle(transaccion),
-      fechaReferencia,
-      fechaReferenciaLabel: this.formatDateLabel(fechaReferencia),
+      fechaProgramada,
+      fechaProgramadaLabel: this.formatDateLabel(fechaProgramada),
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       participanteKey: this.getParticipanteKey(detalle),
@@ -616,20 +693,10 @@ export class PagosRealizadosPage implements OnInit {
     return estadoKey === 'pagado' ? 'Pagado' : 'Pendiente';
   }
 
-  private resolveFechaReferencia(
-    detalle: Pick<ParticipanteDetalleListado, 'fecha_pago' | 'fecha_programada'>,
-    transaccion: Pick<TransaccionListado, 'fecha' | 'fecha_ultimo_pago'>,
-    estadoKey: EstadoReportePago,
+  private resolveFechaProgramada(
+    detalle: Pick<ParticipanteDetalleListado, 'fecha_programada'>,
   ): string | null {
-    if (estadoKey === 'pagado') {
-      return this.normalizeDateOnly(
-        detalle.fecha_pago ?? transaccion.fecha_ultimo_pago ?? detalle.fecha_programada ?? transaccion.fecha,
-      );
-    }
-
-    return this.normalizeDateOnly(
-      detalle.fecha_programada ?? detalle.fecha_pago ?? transaccion.fecha ?? transaccion.fecha_ultimo_pago,
-    );
+    return this.normalizeDateOnly(detalle.fecha_programada);
   }
 
   private resolveMetodoPagoId(
@@ -772,6 +839,10 @@ export class PagosRealizadosPage implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  private isIncomeCategory(categoryName: string | null | undefined): boolean {
+    return this.normalizeText(categoryName) === 'ingresos';
   }
 
   private normalizeDateOnly(value: string | null | undefined): string | null {

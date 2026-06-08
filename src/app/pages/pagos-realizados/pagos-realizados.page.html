@@ -234,11 +234,11 @@
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table>
+      <div class="table-wrap payments-table-wrap">
+        <table class="payments-table">
           <thead>
             <tr>
-              <th>Fecha</th>
+              <th>Fecha programada</th>
               <th>Transaccion</th>
               <th>Metodo</th>
               <th>Participante</th>
@@ -252,8 +252,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of filteredPagos; trackBy: trackPago">
-              <td>{{ row.fechaReferenciaLabel }}</td>
+            <tr *ngFor="let row of paginatedFilteredPagos; trackBy: trackPago">
+              <td>{{ row.fechaProgramadaLabel }}</td>
               <td>{{ row.descripcion }}</td>
               <td>{{ row.metodoPagoNombre }}</td>
               <td>{{ row.participanteNombre }}</td>
@@ -271,6 +271,41 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="payments-pagination" *ngIf="filteredPagos.length > 0">
+        <span class="payments-pagination-summary">
+          Mostrando {{ paginationStartRecord }} -
+          {{ paginationEndRecord }}
+          de {{ filteredPagos.length }} registros
+        </span>
+
+        <div class="payments-pagination-actions">
+          <button type="button" class="filter-preset-button" (click)="goToPreviousPage()" [disabled]="currentPage === 1">
+            Anterior
+          </button>
+
+          <div class="payments-pagination-pages">
+            <button
+              *ngFor="let page of visiblePageNumbers"
+              type="button"
+              class="filter-preset-button"
+              [class.is-active]="page === currentPage"
+              (click)="goToPage(page)"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="filter-preset-button"
+            (click)="goToNextPage()"
+            [disabled]="currentPage === totalPages"
+          >
+            Siguiente
+          </button>
+        </div>
       </div>
     </section>
   </main>

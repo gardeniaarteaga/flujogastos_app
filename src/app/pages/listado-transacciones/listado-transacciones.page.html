@@ -184,201 +184,220 @@
 
         <form [formGroup]="filtrosForm" class="filters-panel" novalidate>
           <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones">
-            <div class="quick-pay-summary-layout quick-pay-summary-layout-standalone">
-              <div class="quick-pay-summary-grid" *ngIf="quickPayFilteredSubtotalSummary as quickPaySummary">
-                <div class="quick-pay-summary-card quick-pay-summary-card-pending">
-                  <span class="stat-label">Pendiente</span>
-                  <strong>${{ quickPaySummary.pendiente | number: '1.2-2' }}</strong>
-                </div>
-                <div class="quick-pay-summary-card quick-pay-summary-card-paid">
-                  <span class="stat-label">Pagado</span>
-                  <strong>${{ quickPaySummary.pagado | number: '1.2-2' }}</strong>
-                </div>
-                <div class="quick-pay-summary-card quick-pay-summary-card-income">
-                  <span class="stat-label">Ingresos</span>
-                  <strong>${{ quickPaySummary.ingresos | number: '1.2-2' }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div class="filter-toggle-group filter-toggle-group-compact quick-pay-toggle-group">
-              <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
-                <input
-                  id="prioritariosDetalle"
-                  type="checkbox"
-                  formControlName="prioritarios"
-                  (change)="onPrioritariosToggle($event)"
-                />
-                <span>Proximos 15 dias</span>
-              </label>
-
-              <label class="checkbox-row checkbox-row-compact" for="vencidosDetalle">
-                <input
-                  id="vencidosDetalle"
-                  type="checkbox"
-                  formControlName="vencidos"
-                  (change)="onVencidosToggle($event)"
-                />
-                <span>Vencidos</span>
-              </label>
-
-              <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
-                <input
-                  id="mesActualDetalle"
-                  type="checkbox"
-                  formControlName="mesActual"
-                  (change)="onMesActualToggle($event)"
-                />
-                <span>Mes actual</span>
-              </label>
-
-              <label class="checkbox-row checkbox-row-compact" for="enviadasDetalle">
-                <input
-                  id="enviadasDetalle"
-                  type="checkbox"
-                  formControlName="enviadas"
-                  (change)="onEnviadasToggle($event)"
-                />
-                <span>Recibidos</span>
-              </label>
-
-              <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
-                <input
-                  id="compartidosDetalle"
-                  type="checkbox"
-                  formControlName="compartidos"
-                  (change)="onCompartidosToggle($event)"
-                />
-                <span>Compartidos</span>
-              </label>
-
-              <button
-                type="button"
-                class="secondary-button compact-button"
-                (click)="toggleAdvancedFilters()"
-              >
-                {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
-              </button>
-            </div>
-
-            <div class="filters-grid">
-              <div class="field quick-pay-state-field">
-                <label for="estadoDetalle">Estado</label>
-                <select id="estadoDetalle" formControlName="estado">
-                  <option [ngValue]="null">Todos</option>
-                  <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
-                    {{ estado.nombre_estado }}
-                  </option>
-                </select>
+            <div style="display:grid;gap:.85rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                <strong style="color:var(--color-heading);font-size:1rem;line-height:1.2;">Detalle programado para pago</strong>
+                <button
+                  type="button"
+                  class="compact-button"
+                  style="border:1px solid #c9d8ee;background:linear-gradient(180deg,#f8fbff 0%,#e8f0fb 100%);color:#335a8d;font-weight:800;"
+                  [attr.aria-expanded]="!quickPayFiltersCollapsed"
+                  (click)="toggleQuickPayFiltersCollapsed()"
+                >
+                  {{ quickPayFiltersCollapsed ? 'Mostrar panel' : 'Ocultar panel' }}
+                </button>
               </div>
 
-              <div class="field quick-pay-participant-field">
-                <label for="participanteDetalle">Participantes</label>
-                <select id="participanteDetalle" formControlName="idParticipante">
-                  <option [ngValue]="null">Todos</option>
-                  <option
-                    *ngFor="let participante of quickPayParticipantesFiltro"
-                    [ngValue]="participante.id_participante"
-                  >
-                    {{ getParticipanteDisplayName(participante) }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <div class="filters-search-row">
-              <div class="field">
-                <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
-                <input
-                  id="busquedaDescripcionDetalle"
-                  type="text"
-                  formControlName="busquedaDescripcion"
-                  maxlength="250"
-                  placeholder="Escribe parte de la descripcion..."
-                />
-              </div>
-            </div>
-
-            <div *ngIf="showAdvancedFilters" class="filters-grid quick-pay-advanced-grid">
-              <div class="field quick-pay-type-field">
-                <label for="tipoTransaccionDetalle">Tipo</label>
-                <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
-                  <option [ngValue]="null">Todos</option>
-                  <option value="credito">Credito</option>
-                  <option value="debito">Debito</option>
-                </select>
-              </div>
-
-              <div class="field quick-pay-date-field">
-                <label>Fecha programada</label>
-                <div class="quick-pay-date-range">
-                  <div class="date-entry">
-                    <input
-                      id="fechaDesdeDetalle"
-                      type="text"
-                      inputmode="numeric"
-                      maxlength="10"
-                      placeholder="Desde"
-                      formControlName="fechaDesde"
-                      (input)="onFiltroFechaInput('fechaDesde', $event)"
-                      (paste)="onFiltroFechaPaste('fechaDesde', $event)"
-                      (blur)="onFiltroFechaBlur('fechaDesde')"
-                    />
-                    <button
-                      type="button"
-                      class="date-picker-button"
-                      (click)="openNativeDatePicker(fechaDesdeDetalleCalendarPicker)"
-                      aria-label="Abrir calendario inicial"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                        />
-                      </svg>
-                    </button>
-                    <input
-                      #fechaDesdeDetalleCalendarPicker
-                      class="date-picker-native"
-                      type="date"
-                      [value]="fechaDesdeCalendarioValue"
-                      (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
-                      tabindex="-1"
-                      aria-hidden="true"
-                    />
+              <div style="display:grid;gap:.85rem;">
+                <div class="quick-pay-summary-layout quick-pay-summary-layout-standalone">
+                  <div class="quick-pay-summary-grid" *ngIf="quickPayFilteredSubtotalSummary as quickPaySummary">
+                    <div class="quick-pay-summary-card quick-pay-summary-card-pending">
+                      <span class="stat-label">Pendiente</span>
+                      <strong>${{ quickPaySummary.pendiente | number: '1.2-2' }}</strong>
+                    </div>
+                    <div class="quick-pay-summary-card quick-pay-summary-card-paid">
+                      <span class="stat-label">Pagado</span>
+                      <strong>${{ quickPaySummary.pagado | number: '1.2-2' }}</strong>
+                    </div>
+                    <div class="quick-pay-summary-card quick-pay-summary-card-income">
+                      <span class="stat-label">Ingresos</span>
+                      <strong>${{ quickPaySummary.ingresos | number: '1.2-2' }}</strong>
+                    </div>
                   </div>
-                  <div class="date-entry">
-                    <input
-                      id="fechaHastaDetalle"
-                      type="text"
-                      inputmode="numeric"
-                      maxlength="10"
-                      placeholder="Hasta"
-                      formControlName="fechaHasta"
-                      (input)="onFiltroFechaInput('fechaHasta', $event)"
-                      (paste)="onFiltroFechaPaste('fechaHasta', $event)"
-                      (blur)="onFiltroFechaBlur('fechaHasta')"
-                    />
+                </div>
+
+                <div *ngIf="!quickPayFiltersCollapsed" style="display:grid;gap:.85rem;">
+                  <div class="filter-toggle-group filter-toggle-group-compact quick-pay-toggle-group">
+                    <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
+                      <input
+                        id="prioritariosDetalle"
+                        type="checkbox"
+                        formControlName="prioritarios"
+                        (change)="onPrioritariosToggle($event)"
+                      />
+                      <span>Proximos 15 dias</span>
+                    </label>
+
+                    <label class="checkbox-row checkbox-row-compact" for="vencidosDetalle">
+                      <input
+                        id="vencidosDetalle"
+                        type="checkbox"
+                        formControlName="vencidos"
+                        (change)="onVencidosToggle($event)"
+                      />
+                      <span>Vencidos</span>
+                    </label>
+
+                    <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
+                      <input
+                        id="mesActualDetalle"
+                        type="checkbox"
+                        formControlName="mesActual"
+                        (change)="onMesActualToggle($event)"
+                      />
+                      <span>Mes actual</span>
+                    </label>
+
+                    <label class="checkbox-row checkbox-row-compact" for="enviadasDetalle">
+                      <input
+                        id="enviadasDetalle"
+                        type="checkbox"
+                        formControlName="enviadas"
+                        (change)="onEnviadasToggle($event)"
+                      />
+                      <span>Recibidos</span>
+                    </label>
+
+                    <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
+                      <input
+                        id="compartidosDetalle"
+                        type="checkbox"
+                        formControlName="compartidos"
+                        (change)="onCompartidosToggle($event)"
+                      />
+                      <span>Compartidos</span>
+                    </label>
+
                     <button
                       type="button"
-                      class="date-picker-button"
-                      (click)="openNativeDatePicker(fechaHastaDetalleCalendarPicker)"
-                      aria-label="Abrir calendario final"
+                      class="secondary-button compact-button"
+                      (click)="toggleAdvancedFilters()"
                     >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                        />
-                      </svg>
+                      {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
                     </button>
-                    <input
-                      #fechaHastaDetalleCalendarPicker
-                      class="date-picker-native"
-                      type="date"
-                      [value]="fechaHastaCalendarioValue"
-                      (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
-                      tabindex="-1"
-                      aria-hidden="true"
-                    />
+                  </div>
+
+                  <div class="filters-grid">
+                    <div class="field quick-pay-state-field">
+                      <label for="estadoDetalle">Estado</label>
+                      <select id="estadoDetalle" formControlName="estado">
+                        <option [ngValue]="null">Todos</option>
+                        <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
+                          {{ estado.nombre_estado }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div class="field quick-pay-participant-field">
+                      <label for="participanteDetalle">Participantes</label>
+                      <select id="participanteDetalle" formControlName="idParticipante">
+                        <option [ngValue]="null">Todos</option>
+                        <option
+                          *ngFor="let participante of quickPayParticipantesFiltro"
+                          [ngValue]="participante.id_participante"
+                        >
+                          {{ getParticipanteDisplayName(participante) }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="filters-search-row">
+                    <div class="field">
+                      <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
+                      <input
+                        id="busquedaDescripcionDetalle"
+                        type="text"
+                        formControlName="busquedaDescripcion"
+                        maxlength="250"
+                        placeholder="Escribe parte de la descripcion..."
+                      />
+                    </div>
+                  </div>
+
+                  <div *ngIf="showAdvancedFilters" class="filters-grid quick-pay-advanced-grid">
+                    <div class="field quick-pay-type-field">
+                      <label for="tipoTransaccionDetalle">Tipo</label>
+                      <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
+                        <option [ngValue]="null">Todos</option>
+                        <option value="credito">Credito</option>
+                        <option value="debito">Debito</option>
+                      </select>
+                    </div>
+
+                    <div class="field quick-pay-date-field">
+                      <label>Fecha programada</label>
+                      <div class="quick-pay-date-range">
+                        <div class="date-entry">
+                          <input
+                            id="fechaDesdeDetalle"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="10"
+                            placeholder="Desde"
+                            formControlName="fechaDesde"
+                            (input)="onFiltroFechaInput('fechaDesde', $event)"
+                            (paste)="onFiltroFechaPaste('fechaDesde', $event)"
+                            (blur)="onFiltroFechaBlur('fechaDesde')"
+                          />
+                          <button
+                            type="button"
+                            class="date-picker-button"
+                            (click)="openNativeDatePicker(fechaDesdeDetalleCalendarPicker)"
+                            aria-label="Abrir calendario inicial"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path
+                                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                              />
+                            </svg>
+                          </button>
+                          <input
+                            #fechaDesdeDetalleCalendarPicker
+                            class="date-picker-native"
+                            type="date"
+                            [value]="fechaDesdeCalendarioValue"
+                            (change)="onFiltroFechaCalendarChange('fechaDesde', $event)"
+                            tabindex="-1"
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <div class="date-entry">
+                          <input
+                            id="fechaHastaDetalle"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="10"
+                            placeholder="Hasta"
+                            formControlName="fechaHasta"
+                            (input)="onFiltroFechaInput('fechaHasta', $event)"
+                            (paste)="onFiltroFechaPaste('fechaHasta', $event)"
+                            (blur)="onFiltroFechaBlur('fechaHasta')"
+                          />
+                          <button
+                            type="button"
+                            class="date-picker-button"
+                            (click)="openNativeDatePicker(fechaHastaDetalleCalendarPicker)"
+                            aria-label="Abrir calendario final"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path
+                                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                              />
+                            </svg>
+                          </button>
+                          <input
+                            #fechaHastaDetalleCalendarPicker
+                            class="date-picker-native"
+                            type="date"
+                            [value]="fechaHastaCalendarioValue"
+                            (change)="onFiltroFechaCalendarChange('fechaHasta', $event)"
+                            tabindex="-1"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -848,8 +867,12 @@
           </div>
         </div>
 
-        <div *ngIf="!loading && isDetalleViewMode && filteredDetalleTransacciones.length > 0" class="table-wrap">
-          <table class="quick-pay-detail-table">
+        <div
+          *ngIf="!loading && isDetalleViewMode && filteredDetalleTransacciones.length > 0"
+          class="table-wrap"
+          style="max-height:70vh;overscroll-behavior:contain;"
+        >
+          <table class="quick-pay-detail-table" style="border-collapse:separate;border-spacing:0;">
             <thead>
               <tr>
                 <th>Pagar</th>

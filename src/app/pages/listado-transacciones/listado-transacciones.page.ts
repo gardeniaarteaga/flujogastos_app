@@ -376,6 +376,7 @@ export class ListadoTransaccionesPage implements OnInit {
   selectedQuickPayDetalleIds = new Set<number>();
   montoAplicarDrafts: Record<number, string> = {};
   showAdvancedFilters = false;
+  quickPayFiltersCollapsed = false;
   listadoCurrentPage = 1;
   errorMessage = '';
   successMessage = '';
@@ -1652,6 +1653,10 @@ export class ListadoTransaccionesPage implements OnInit {
 
   toggleAdvancedFilters(): void {
     this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  toggleQuickPayFiltersCollapsed(): void {
+    this.quickPayFiltersCollapsed = !this.quickPayFiltersCollapsed;
   }
 
   onSoloHoyToggle(event: Event): void {
