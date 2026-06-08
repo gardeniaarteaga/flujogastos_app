@@ -14,6 +14,7 @@ import { ListadoTransaccionesPage } from './pages/listado-transacciones/listado-
 import { TipoProductoPage } from './pages/tipo-producto/tipo-producto.page';
 import { ResumenNotificacionesPage } from './pages/resumen-notificaciones/resumen-notificaciones.page';
 import { analisisFinancieroResolver } from './pages/analisis-financiero/analisis-financiero.resolver';
+import { pagosEstadoResolver } from './pages/pagos-realizados/pagos-realizados.resolver';
 import { adminOnlyGuard } from './shared/guards/admin-only.guard';
 
 export const routes: Routes = [
@@ -65,6 +66,9 @@ export const routes: Routes = [
   },
   {
     path: 'reportes/pagos-realizados',
+    resolve: {
+      initialData: pagosEstadoResolver,
+    },
     loadComponent: () =>
       import('./pages/pagos-realizados/pagos-realizados.page').then(
         (module) => module.PagosRealizadosPage,

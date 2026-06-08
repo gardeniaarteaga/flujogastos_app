@@ -1,13 +1,14 @@
-import { NgFor, NgIf } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
+import { PagosEstadoResolvedData } from './pagos-realizados.resolver';
 import {
   CatalogoFormaPago,
   CatalogoParticipante,
@@ -16,6 +17,9 @@ import {
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
+const ESTADOS_REPORTE_PERMITIDOS = new Set(['pagado', 'pendiente']);
+
+type EstadoReportePago = 'pagado' | 'pendiente';
 
 interface ParticipanteDetalleListado {
   id: number;
@@ -71,18 +75,20 @@ interface PagoRealizadoRow {
   detalleId: number;
   transaccionId: number;
   descripcion: string;
-  fechaPago: string;
-  fechaPagoLabel: string;
+  fechaReferencia: string;
+  fechaReferenciaLabel: string;
   metodoPagoId: number | null;
   metodoPagoNombre: string;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
   montoCuota: number;
+  montoPendiente: number;
   montoPagado: number;
   interesPagado: number;
   totalPagado: number;
   estadoNombre: string;
+  estadoKey: EstadoReportePago;
 }
 
 interface SelectOption {
@@ -96,6 +102,7 @@ interface SelectOption {
     RouterLink,
     RouterLinkActive,
     ReactiveFormsModule,
+    NgClass,
     NgIf,
     NgFor,
     SessionStripComponent,
@@ -103,9 +110,10 @@ interface SelectOption {
   templateUrl: './pagos-realizados.page.html',
   styleUrl: './pagos-realizados.page.css',
 })
-export class PagosRealizadosPage {
+export class PagosRealizadosPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly apiUrl = apiUrl('transacciones');
@@ -125,6 +133,8 @@ export class PagosRealizadosPage {
     fechaHasta: [this.todayFilterValue],
     metodoPagoId: [''],
     participanteKey: [''],
+    incluirPagados: [true],
+    incluirPendientes: [false],
   });
 
   sidebarCollapsed = false;
@@ -147,25 +157,19 @@ export class PagosRealizadosPage {
     return this.filteredPagos.reduce((sum, row) => sum + row.totalPagado, 0);
   }
 
-  get totalInteresesPagados(): number {
-    return this.filteredPagos.reduce((sum, row) => sum + row.interesPagado, 0);
+  get totalPendiente(): number {
+    return this.filteredPagos.reduce((sum, row) => sum + row.montoPendiente, 0);
   }
 
-  get totalCapitalPagado(): number {
-    return this.filteredPagos.reduce((sum, row) => sum + row.montoPagado, 0);
+  get totalInteresesPagados(): number {
+    return this.filteredPagos.reduce((sum, row) => sum + row.interesPagado, 0);
   }
 
   get activeFilterChips(): string[] {
     const filtros = this.filtrosForm.getRawValue();
     const chips: string[] = [];
 
-    if (filtros.fechaDesde || filtros.fechaHasta) {
-      chips.push(
-        filtros.fechaDesde === filtros.fechaHasta
-          ? `Fecha: ${filtros.fechaDesde}`
-          : `${filtros.fechaDesde} a ${filtros.fechaHasta}`,
-      );
-    } else {
+    if (!filtros.fechaDesde && !filtros.fechaHasta) {
       chips.push('Todo');
     }
 
@@ -183,6 +187,18 @@ export class PagosRealizadosPage {
       if (participante) {
         chips.push(participante.label);
       }
+    }
+
+    if (!filtros.incluirPagados && filtros.incluirPendientes) {
+      chips.push('Pendiente');
+    }
+
+    if (filtros.incluirPagados && !filtros.incluirPendientes) {
+      chips.push('Pagado');
+    }
+
+    if (!filtros.incluirPagados && !filtros.incluirPendientes) {
+      chips.push('Sin estados');
     }
 
     return chips;
@@ -240,6 +256,16 @@ export class PagosRealizadosPage {
       .subscribe(() => {
         this.applyFilters();
       });
+  }
+
+  ngOnInit(): void {
+    const resolvedData =
+      (this.route.snapshot.data['initialData'] as PagosEstadoResolvedData | null) ?? null;
+
+    if (resolvedData) {
+      this.applyResolvedData(resolvedData);
+      return;
+    }
 
     void this.loadPage();
   }
@@ -263,21 +289,30 @@ export class PagosRealizadosPage {
         ),
       ]);
 
-      this.formasPago = catalogos.formasPago;
-      this.participantes = catalogos.participantes;
-      this.pagos = this.buildPagos(
-        Array.isArray(transacciones) ? transacciones : [],
-      );
-      this.metodoPagoOptions = this.buildMetodoPagoOptions(this.pagos);
-      this.participanteOptions = this.buildParticipanteOptions();
-      this.applyFilters();
+      this.applyResolvedData({
+        currentUserId: this.currentUserId,
+        catalogos,
+        transacciones: Array.isArray(transacciones) ? transacciones : [],
+      });
     } catch {
       this.pagos = [];
       this.filteredPagos = [];
-      this.errorMessage = 'No se pudieron cargar los pagos realizados.';
+      this.errorMessage = 'No se pudo cargar el estado de pagos.';
     } finally {
       this.loading = false;
     }
+  }
+
+  private applyResolvedData(data: PagosEstadoResolvedData): void {
+    this.currentUserId = data.currentUserId > 0 ? data.currentUserId : this.currentUserId;
+    this.formasPago = data.catalogos.formasPago;
+    this.participantes = data.catalogos.participantes;
+    this.pagos = this.buildPagos(
+      Array.isArray(data.transacciones) ? (data.transacciones as TransaccionListado[]) : [],
+    );
+    this.metodoPagoOptions = this.buildMetodoPagoOptions(this.pagos);
+    this.participanteOptions = this.buildParticipanteOptions();
+    this.applyFilters();
   }
 
   toggleMaintenanceMenu(): void {
@@ -286,10 +321,12 @@ export class PagosRealizadosPage {
 
   clearFilters(): void {
     this.filtrosForm.setValue({
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde: this.todayFilterValue,
+      fechaHasta: this.todayFilterValue,
       metodoPagoId: '',
       participanteKey: '',
+      incluirPagados: true,
+      incluirPendientes: false,
     });
   }
 
@@ -361,12 +398,12 @@ export class PagosRealizadosPage {
     return transacciones
       .flatMap((transaccion) =>
         this.getParticipantesDetalleForReport(transaccion)
-          .filter((detalle) => this.isDetallePagoRealizado(detalle, transaccion))
+          .filter((detalle) => this.isDetalleVisibleEnReporte(detalle))
           .map((detalle) => this.mapPagoRow(transaccion, detalle)),
       )
       .sort((left, right) => {
-        if (left.fechaPago !== right.fechaPago) {
-          return right.fechaPago.localeCompare(left.fechaPago);
+        if (left.fechaReferencia !== right.fechaReferencia) {
+          return right.fechaReferencia.localeCompare(left.fechaReferencia);
         }
 
         if (left.transaccionId !== right.transaccionId) {
@@ -418,15 +455,22 @@ export class PagosRealizadosPage {
   }
 
   private applyFilters(): void {
-    const { fechaDesde, fechaHasta, metodoPagoId, participanteKey } =
+    const {
+      fechaDesde,
+      fechaHasta,
+      metodoPagoId,
+      participanteKey,
+      incluirPagados,
+      incluirPendientes,
+    } =
       this.filtrosForm.getRawValue();
 
     this.filteredPagos = this.pagos.filter((row) => {
-      if (fechaDesde && row.fechaPago < fechaDesde) {
+      if (fechaDesde && row.fechaReferencia < fechaDesde) {
         return false;
       }
 
-      if (fechaHasta && row.fechaPago > fechaHasta) {
+      if (fechaHasta && row.fechaReferencia > fechaHasta) {
         return false;
       }
 
@@ -435,6 +479,18 @@ export class PagosRealizadosPage {
       }
 
       if (participanteKey && row.participanteKey !== participanteKey) {
+        return false;
+      }
+
+      if (!incluirPagados && !incluirPendientes) {
+        return false;
+      }
+
+      if (!incluirPagados && row.estadoKey === 'pagado') {
+        return false;
+      }
+
+      if (!incluirPendientes && row.estadoKey === 'pendiente') {
         return false;
       }
 
@@ -456,46 +512,91 @@ export class PagosRealizadosPage {
     );
   }
 
-  private isDetallePagoRealizado(
-    detalle: ParticipanteDetalleListado,
-    transaccion: Pick<TransaccionListado, 'fecha_ultimo_pago'>,
-  ): boolean {
+  private isDetalleVisibleEnReporte(detalle: ParticipanteDetalleListado): boolean {
     if (detalle.id_estado === ESTADO_TRANSACCION_ANULADA_ID) {
       return false;
     }
 
-    const totalPagado = Number(detalle.monto_pagado ?? 0) + Number(detalle.interes_pagado ?? 0);
-    const fechaPago = this.normalizeDateOnly(detalle.fecha_pago ?? transaccion.fecha_ultimo_pago);
-
-    return totalPagado > 0 && Boolean(fechaPago);
+    return this.resolveEstadoKey(detalle) !== null;
   }
 
   private mapPagoRow(
     transaccion: TransaccionListado,
     detalle: ParticipanteDetalleListado,
   ): PagoRealizadoRow {
+    const estadoKey = this.resolveEstadoKey(detalle) ?? 'pendiente';
     const metodoPagoId = this.resolveMetodoPagoId(detalle, transaccion);
-    const fechaPago = this.normalizeDateOnly(detalle.fecha_pago ?? transaccion.fecha_ultimo_pago) ?? '';
+    const fechaReferencia = this.resolveFechaReferencia(detalle, transaccion, estadoKey) ?? '';
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
+    const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
 
     return {
       detalleId: detalle.id,
       transaccionId: transaccion.id_transaccion,
       descripcion: this.getTransaccionTitle(transaccion),
-      fechaPago,
-      fechaPagoLabel: this.formatDateLabel(fechaPago),
+      fechaReferencia,
+      fechaReferenciaLabel: this.formatDateLabel(fechaReferencia),
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
       montoCuota: Number(detalle.monto ?? 0),
+      montoPendiente,
       montoPagado,
       interesPagado,
       totalPagado: montoPagado + interesPagado,
-      estadoNombre: detalle.nombre_estado?.trim() || 'Sin estado',
+      estadoNombre: this.resolveEstadoNombre(detalle, estadoKey),
+      estadoKey,
     };
+  }
+
+  private resolveEstadoKey(detalle: ParticipanteDetalleListado): EstadoReportePago | null {
+    const normalizedEstado = this.normalizeText(detalle.nombre_estado);
+
+    if (ESTADOS_REPORTE_PERMITIDOS.has(normalizedEstado)) {
+      return normalizedEstado as EstadoReportePago;
+    }
+
+    if (Number(detalle.saldo_pendiente ?? 0) > 0) {
+      return 'pendiente';
+    }
+
+    if (Number(detalle.monto_pagado ?? 0) + Number(detalle.interes_pagado ?? 0) > 0) {
+      return 'pagado';
+    }
+
+    return null;
+  }
+
+  private resolveEstadoNombre(
+    detalle: Pick<ParticipanteDetalleListado, 'nombre_estado'>,
+    estadoKey: EstadoReportePago,
+  ): string {
+    const estadoNombre = detalle.nombre_estado?.trim();
+
+    if (estadoNombre && ESTADOS_REPORTE_PERMITIDOS.has(this.normalizeText(estadoNombre))) {
+      return estadoNombre;
+    }
+
+    return estadoKey === 'pagado' ? 'Pagado' : 'Pendiente';
+  }
+
+  private resolveFechaReferencia(
+    detalle: Pick<ParticipanteDetalleListado, 'fecha_pago' | 'fecha_programada'>,
+    transaccion: Pick<TransaccionListado, 'fecha' | 'fecha_ultimo_pago'>,
+    estadoKey: EstadoReportePago,
+  ): string | null {
+    if (estadoKey === 'pagado') {
+      return this.normalizeDateOnly(
+        detalle.fecha_pago ?? transaccion.fecha_ultimo_pago ?? detalle.fecha_programada ?? transaccion.fecha,
+      );
+    }
+
+    return this.normalizeDateOnly(
+      detalle.fecha_programada ?? detalle.fecha_pago ?? transaccion.fecha ?? transaccion.fecha_ultimo_pago,
+    );
   }
 
   private resolveMetodoPagoId(

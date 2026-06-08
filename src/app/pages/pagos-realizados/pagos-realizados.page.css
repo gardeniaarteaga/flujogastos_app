@@ -76,7 +76,7 @@
 
 .payments-filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
@@ -113,6 +113,37 @@
 .filter-card input:focus,
 .filter-card select:focus {
   outline: none;
+}
+
+.filter-card-check {
+  align-content: center;
+}
+
+.filter-check-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-check-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.filter-check-option input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2457b8;
+}
+
+.filter-check-option strong {
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .payments-filter-foot {
@@ -219,6 +250,16 @@
 .payment-total-cell {
   color: #0f172a;
   font-weight: 900;
+}
+
+.status-pill-pagado {
+  background: #e9f9ef;
+  color: #18794e;
+}
+
+.status-pill-pendiente {
+  background: #fff4d6;
+  color: #9a6700;
 }
 
 .state-panel {

@@ -82,8 +82,8 @@
           <span class="caret">v</span>
         </summary>
         <div class="submenu">
-          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Análisis Financiero</a>
-          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Pagos realizados</a>
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Analisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Estado de pagos</a>
         </div>
       </details>
       <a class="nav-item" routerLink="/perfil">Mi perfil</a>
@@ -102,7 +102,7 @@
     <section class="panel payments-hero">
       <div>
         <span class="panel-kicker">Reportes</span>
-        <h2>Pagos realizados</h2>
+        <h2>Estado de pagos</h2>
       </div>
     </section>
 
@@ -110,8 +110,6 @@
       <div class="payments-filter-head">
         <div>
           <span class="panel-kicker">Filtros</span>
-          <h3>Buscar pagos aplicados</h3>
-          <p class="payments-filter-copy">Compacto, rapido y listo para usar.</p>
         </div>
 
         <div class="payments-filter-presets">
@@ -157,6 +155,20 @@
             </option>
           </select>
         </label>
+
+        <div class="filter-card filter-card-check">
+          <span>Estado</span>
+          <div class="filter-check-group">
+            <label class="filter-check-option">
+              <input type="checkbox" formControlName="incluirPagados" />
+              <strong>Pagado</strong>
+            </label>
+            <label class="filter-check-option">
+              <input type="checkbox" formControlName="incluirPendientes" />
+              <strong>Pendiente</strong>
+            </label>
+          </div>
+        </div>
       </form>
 
       <div class="payments-filter-foot">
@@ -165,41 +177,41 @@
         </div>
 
         <span class="payments-filter-result">
-          {{ filteredPagos.length }} pagos
+          {{ filteredPagos.length }} registros
         </span>
       </div>
     </section>
 
     <section class="payments-summary-grid">
       <article class="panel payments-summary-card payments-summary-card-total">
-        <span class="panel-kicker">Total pagado</span>
-        <strong>{{ formatCurrency(totalPagado) }}</strong>
+        <span class="panel-kicker">Total pendiente</span>
+        <strong>{{ formatCurrency(totalPendiente) }}</strong>
       </article>
       <article class="panel payments-summary-card">
-        <span class="panel-kicker">Capital pagado</span>
-        <strong>{{ formatCurrency(totalCapitalPagado) }}</strong>
+        <span class="panel-kicker">Total pagado</span>
+        <strong>{{ formatCurrency(totalPagado) }}</strong>
       </article>
       <article class="panel payments-summary-card">
         <span class="panel-kicker">Intereses pagados</span>
         <strong>{{ formatCurrency(totalInteresesPagados) }}</strong>
       </article>
       <article class="panel payments-summary-card">
-        <span class="panel-kicker">Pagos encontrados</span>
+        <span class="panel-kicker">Registros encontrados</span>
         <strong>{{ filteredPagos.length }}</strong>
       </article>
     </section>
 
     <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
-      <strong>No se pudieron cargar los pagos realizados.</strong>
+      <strong>No se pudo cargar el estado de pagos.</strong>
       <p>{{ errorMessage }}</p>
     </section>
 
     <section *ngIf="loading" class="panel state-panel">
-      <strong>Cargando pagos realizados...</strong>
+      <strong>Cargando estado de pagos...</strong>
     </section>
 
     <section *ngIf="!loading && !errorMessage && filteredPagos.length === 0" class="panel state-panel">
-      <strong>No hay pagos para los filtros seleccionados.</strong>
+      <strong>No hay registros para los filtros seleccionados.</strong>
       <p>Prueba cambiando el rango de fechas o limpiando los filtros.</p>
     </section>
 
@@ -207,7 +219,7 @@
       <div class="panel-heading">
         <div>
           <span class="panel-kicker">Detalle</span>
-          <h3>Historial de pagos</h3>
+          <h3>Estado de pagos</h3>
         </div>
       </div>
 
@@ -215,7 +227,7 @@
         <table>
           <thead>
             <tr>
-              <th>Fecha pago</th>
+              <th>Fecha</th>
               <th>Transaccion</th>
               <th>Metodo</th>
               <th>Participante</th>
@@ -223,13 +235,14 @@
               <th>Monto cuota</th>
               <th>Capital pagado</th>
               <th>Interes pagado</th>
+              <th>Saldo pendiente</th>
               <th>Total pagado</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let row of filteredPagos; trackBy: trackPago">
-              <td>{{ row.fechaPagoLabel }}</td>
+              <td>{{ row.fechaReferenciaLabel }}</td>
               <td>{{ row.descripcion }}</td>
               <td>{{ row.metodoPagoNombre }}</td>
               <td>{{ row.participanteNombre }}</td>
@@ -237,9 +250,10 @@
               <td>{{ formatCurrency(row.montoCuota) }}</td>
               <td>{{ formatCurrency(row.montoPagado) }}</td>
               <td>{{ formatCurrency(row.interesPagado) }}</td>
+              <td>{{ formatCurrency(row.montoPendiente) }}</td>
               <td class="payment-total-cell">{{ formatCurrency(row.totalPagado) }}</td>
               <td>
-                <span class="status-pill status-pill-completado">
+                <span class="status-pill" [ngClass]="row.estadoKey === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">
                   {{ row.estadoNombre }}
                 </span>
               </td>
