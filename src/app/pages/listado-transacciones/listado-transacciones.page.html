@@ -898,10 +898,17 @@
                         [attr.aria-expanded]="group.expanded"
                       >
                         <div class="quick-pay-method-group-copy">
-                          <strong [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)">{{ group.metodoPagoNombre }}</strong>
-                          <span>{{ group.rows.length }} cuotas</span>
-                          <span>{{ group.selectedCount }}/{{ group.selectableCount }} seleccionadas</span>
-                          <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
+                          <strong
+                            [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
+                            [attr.title]="group.metodoPagoNombre"
+                          >
+                            {{ group.metodoPagoNombre }}
+                          </strong>
+                          <div class="quick-pay-method-group-meta">
+                            <span>{{ group.rows.length }} cuotas</span>
+                            <span>{{ group.selectedCount }}/{{ group.selectableCount }} seleccionadas</span>
+                            <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
+                          </div>
                         </div>
                         <span
                           class="quick-pay-method-group-caret"
