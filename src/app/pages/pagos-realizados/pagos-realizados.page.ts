@@ -121,8 +121,8 @@ export class PagosRealizadosPage {
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly filtrosForm = this.fb.group({
-    fechaDesde: [''],
-    fechaHasta: [''],
+    fechaDesde: [this.todayFilterValue],
+    fechaHasta: [this.todayFilterValue],
     metodoPagoId: [''],
     participanteKey: [''],
   });
@@ -222,6 +222,14 @@ export class PagosRealizadosPage {
             participante.id_usuario === this.currentUserId ||
             participante.id_usuario_relacionado === this.currentUserId,
         )
+        .map((participante) => participante.id_participante),
+    );
+  }
+
+  get titularParticipanteIds(): Set<number> {
+    return new Set(
+      this.participantes
+        .filter((participante) => this.isTitularScopedParticipante(participante))
         .map((participante) => participante.id_participante),
     );
   }
@@ -388,20 +396,25 @@ export class PagosRealizadosPage {
   }
 
   private buildParticipanteOptions(): SelectOption[] {
-    const options = this.participantes
-      .filter((participante) => !this.isCurrentUserSystemParticipante(participante))
+    const seen = new Set<string>();
+
+    return this.participantes
+      .filter((participante) => this.isTitularScopedParticipante(participante))
       .map((participante) => ({
-        value: `participante:${participante.id_participante}`,
+        value: this.isCurrentUserTitularParticipante(participante)
+          ? `titular:${participante.id_participante}`
+          : `participante:${participante.id_participante}`,
         label: this.getParticipanteDisplayName(participante),
       }))
+      .filter((option) => {
+        if (seen.has(option.value)) {
+          return false;
+        }
+
+        seen.add(option.value);
+        return true;
+      })
       .sort((left, right) => left.label.localeCompare(right.label));
-
-    const titularRow = this.pagos.find((row) => row.participanteKey.startsWith('titular:'));
-    if (titularRow) {
-      options.unshift({ value: titularRow.participanteKey, label: 'Titular' });
-    }
-
-    return options;
   }
 
   private applyFilters(): void {
@@ -575,10 +588,39 @@ export class PagosRealizadosPage {
     transaccionEsPropietario = false,
   ): boolean {
     return (
-      detalle.id_usuario_relacionado === this.currentUserId ||
-      this.currentUserParticipanteIds.has(detalle.id_participante) ||
+      this.titularParticipanteIds.has(detalle.id_participante) ||
       (transaccionEsPropietario && detalle.es_titular)
     );
+  }
+
+  private isTitularScopedParticipante(
+    participante:
+      | Pick<CatalogoParticipante, 'id_participante' | 'id_usuario' | 'id_usuario_titular'>
+      | null
+      | undefined,
+  ): boolean {
+    return (
+      Number(participante?.id_usuario ?? 0) === this.currentUserId ||
+      Number(participante?.id_usuario_titular ?? 0) === this.currentUserId
+    );
+  }
+
+  private isCurrentUserTitularParticipante(
+    participante:
+      | Pick<
+          CatalogoParticipante,
+          'id_participante' | 'id_usuario' | 'id_usuario_relacionado' | 'id_usuario_titular'
+        >
+      | null
+      | undefined,
+  ): boolean {
+    const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
+
+    if (currentUserParticipanteId !== null) {
+      return participante?.id_participante === currentUserParticipanteId;
+    }
+
+    return this.isCurrentUserSystemParticipante(participante);
   }
 
   private getTransaccionTitle(
