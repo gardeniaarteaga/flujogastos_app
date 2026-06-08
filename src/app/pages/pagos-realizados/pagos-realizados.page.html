@@ -160,11 +160,19 @@
           <span>Estado</span>
           <div class="filter-check-group">
             <label class="filter-check-option">
-              <input type="checkbox" formControlName="incluirPagados" />
+              <input
+                type="checkbox"
+                formControlName="incluirPagados"
+                (change)="onEstadoFilterToggle('pagado', $any($event.target).checked)"
+              />
               <strong>Pagado</strong>
             </label>
             <label class="filter-check-option">
-              <input type="checkbox" formControlName="incluirPendientes" />
+              <input
+                type="checkbox"
+                formControlName="incluirPendientes"
+                (change)="onEstadoFilterToggle('pendiente', $any($event.target).checked)"
+              />
               <strong>Pendiente</strong>
             </label>
           </div>

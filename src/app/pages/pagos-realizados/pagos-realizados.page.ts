@@ -330,6 +330,27 @@ export class PagosRealizadosPage implements OnInit {
     });
   }
 
+  onEstadoFilterToggle(estado: EstadoReportePago, checked: boolean): void {
+    if (estado === 'pagado') {
+      this.filtrosForm.patchValue(
+        {
+          incluirPagados: checked,
+          incluirPendientes: !checked,
+        },
+        { emitEvent: true },
+      );
+      return;
+    }
+
+    this.filtrosForm.patchValue(
+      {
+        incluirPagados: !checked,
+        incluirPendientes: checked,
+      },
+      { emitEvent: true },
+    );
+  }
+
   setTodayFilters(): void {
     this.filtrosForm.patchValue({
       fechaDesde: this.todayFilterValue,
