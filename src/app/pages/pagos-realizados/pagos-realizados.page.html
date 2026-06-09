@@ -238,7 +238,7 @@
         <table class="payments-table">
           <thead>
             <tr>
-              <th>Fecha programada</th>
+              <th>Fecha referencia</th>
               <th>Transaccion</th>
               <th>Metodo</th>
               <th>Participante</th>
@@ -253,7 +253,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let row of paginatedFilteredPagos; trackBy: trackPago">
-              <td>{{ row.fechaProgramadaLabel }}</td>
+              <td>{{ row.fechaReferenciaLabel }}</td>
               <td>{{ row.descripcion }}</td>
               <td>{{ row.metodoPagoNombre }}</td>
               <td>{{ row.participanteNombre }}</td>

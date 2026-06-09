@@ -75,8 +75,12 @@ interface PagoRealizadoRow {
   detalleId: number;
   transaccionId: number;
   descripcion: string;
+  fechaReferencia: string;
+  fechaReferenciaLabel: string;
   fechaProgramada: string;
   fechaProgramadaLabel: string;
+  fechaPago: string;
+  fechaPagoLabel: string;
   metodoPagoId: number | null;
   metodoPagoNombre: string;
   participanteKey: string;
@@ -491,31 +495,31 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   private compareByClosestDueDate(left: PagoRealizadoRow, right: PagoRealizadoRow): number {
-    if (!left.fechaProgramada && !right.fechaProgramada) {
+    if (!left.fechaReferencia && !right.fechaReferencia) {
       return 0;
     }
 
-    if (!left.fechaProgramada) {
+    if (!left.fechaReferencia) {
       return 1;
     }
 
-    if (!right.fechaProgramada) {
+    if (!right.fechaReferencia) {
       return -1;
     }
 
     const today = this.todayFilterValue;
-    const leftIsUpcoming = left.fechaProgramada >= today;
-    const rightIsUpcoming = right.fechaProgramada >= today;
+    const leftIsUpcoming = left.fechaReferencia >= today;
+    const rightIsUpcoming = right.fechaReferencia >= today;
 
     if (leftIsUpcoming !== rightIsUpcoming) {
       return leftIsUpcoming ? -1 : 1;
     }
 
     if (leftIsUpcoming) {
-      return left.fechaProgramada.localeCompare(right.fechaProgramada);
+      return left.fechaReferencia.localeCompare(right.fechaReferencia);
     }
 
-    return right.fechaProgramada.localeCompare(left.fechaProgramada);
+    return right.fechaReferencia.localeCompare(left.fechaReferencia);
   }
 
   private buildMetodoPagoOptions(rows: PagoRealizadoRow[]): SelectOption[] {
@@ -570,11 +574,11 @@ export class PagosRealizadosPage implements OnInit {
       this.filtrosForm.getRawValue();
 
     this.filteredPagos = this.pagos.filter((row) => {
-      if (fechaDesde && row.fechaProgramada < fechaDesde) {
+      if (fechaDesde && row.fechaReferencia < fechaDesde) {
         return false;
       }
 
-      if (fechaHasta && row.fechaProgramada > fechaHasta) {
+      if (fechaHasta && row.fechaReferencia > fechaHasta) {
         return false;
       }
 
@@ -637,6 +641,9 @@ export class PagosRealizadosPage implements OnInit {
     const estadoKey = this.resolveEstadoKey(detalle) ?? 'pendiente';
     const metodoPagoId = this.resolveMetodoPagoId(detalle, transaccion);
     const fechaProgramada = this.resolveFechaProgramada(detalle) ?? '';
+    const fechaPago = this.resolveFechaPago(detalle) ?? '';
+    const fechaReferencia =
+      (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago;
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
     const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
@@ -645,8 +652,12 @@ export class PagosRealizadosPage implements OnInit {
       detalleId: detalle.id,
       transaccionId: transaccion.id_transaccion,
       descripcion: this.getTransaccionTitle(transaccion),
+      fechaReferencia,
+      fechaReferenciaLabel: this.formatDateLabel(fechaReferencia),
       fechaProgramada,
       fechaProgramadaLabel: this.formatDateLabel(fechaProgramada),
+      fechaPago,
+      fechaPagoLabel: this.formatDateLabel(fechaPago),
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       participanteKey: this.getParticipanteKey(detalle),
@@ -697,6 +708,10 @@ export class PagosRealizadosPage implements OnInit {
     detalle: Pick<ParticipanteDetalleListado, 'fecha_programada'>,
   ): string | null {
     return this.normalizeDateOnly(detalle.fecha_programada);
+  }
+
+  private resolveFechaPago(detalle: Pick<ParticipanteDetalleListado, 'fecha_pago'>): string | null {
+    return this.normalizeDateOnly(detalle.fecha_pago);
   }
 
   private resolveMetodoPagoId(
