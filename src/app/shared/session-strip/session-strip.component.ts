@@ -40,6 +40,18 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private destroyed = false;
 
+  hasUnreadReceivedPaymentNotifications(): boolean {
+    return this.notifications.some(
+      (notification) => !notification.leida && this.isReceivedPaymentNotification(notification),
+    );
+  }
+
+  hasUnreadAssignedPaymentNotifications(): boolean {
+    return this.notifications.some(
+      (notification) => !notification.leida && this.isAssignedPaymentNotification(notification),
+    );
+  }
+
   get userInitials(): string {
     return this.userProfile.fullName
       .split(' ')
@@ -151,6 +163,14 @@ export class SessionStripComponent implements OnInit, OnDestroy {
     await this.router.navigate(['/']);
   }
 
+  isReceivedPaymentNotificationItem(notification: NotificacionItem): boolean {
+    return this.isReceivedPaymentNotification(notification);
+  }
+
+  isAssignedPaymentNotificationItem(notification: NotificacionItem): boolean {
+    return this.isAssignedPaymentNotification(notification);
+  }
+
   private async loadNotifications(
     options: { preserveStateOnError?: boolean; openAfterLoad?: boolean } = {},
   ): Promise<void> {
@@ -225,7 +245,11 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   }
 
   private resolveNotificationRoute(notification: NotificacionItem): string[] {
-    if (this.isSharedPaymentNotification(notification) && notification.id_transaccion) {
+    if (
+      (this.isReceivedPaymentNotification(notification) ||
+        this.isAssignedPaymentNotification(notification)) &&
+      notification.id_transaccion
+    ) {
       return ['/resumen/detalle-transacciones'];
     }
 
@@ -235,7 +259,11 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   private resolveNotificationNavigationExtras(notification: NotificacionItem): {
     queryParams?: Record<string, string | number>;
   } {
-    if (this.isSharedPaymentNotification(notification) && notification.id_transaccion) {
+    if (
+      (this.isReceivedPaymentNotification(notification) ||
+        this.isAssignedPaymentNotification(notification)) &&
+      notification.id_transaccion
+    ) {
       return {
         queryParams: {
           openPayment: 1,
@@ -247,16 +275,24 @@ export class SessionStripComponent implements OnInit, OnDestroy {
     return {};
   }
 
-  private isSharedPaymentNotification(notification: NotificacionItem): boolean {
-    if (!notification.id_transaccion) {
-      return false;
-    }
-
+  private isReceivedPaymentNotification(notification: NotificacionItem): boolean {
     const searchableText = this.normalizeNotificationText(
       `${notification.tipo} ${notification.titulo} ${notification.mensaje}`,
     );
 
-    return searchableText.includes('compartid');
+    return searchableText.includes('pago recibido') || searchableText.includes('recibid');
+  }
+
+  private isAssignedPaymentNotification(notification: NotificacionItem): boolean {
+    const searchableText = this.normalizeNotificationText(
+      `${notification.tipo} ${notification.titulo} ${notification.mensaje}`,
+    );
+
+    return (
+      searchableText.includes('pago asignado') ||
+      searchableText.includes('cobro') ||
+      searchableText.includes('asignad')
+    );
   }
 
   private normalizeNotificationText(value: string): string {

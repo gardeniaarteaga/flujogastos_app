@@ -17,7 +17,13 @@
             </svg>
           </span>
           @if (unreadNotifications > 0) {
-            <span class="toolbar-pill alert notification-counter">{{ unreadNotifications }}</span>
+            <span
+              class="toolbar-pill alert notification-counter"
+              [class.notification-counter-received]="hasUnreadReceivedPaymentNotifications()"
+              [class.notification-counter-assigned]="!hasUnreadReceivedPaymentNotifications() && hasUnreadAssignedPaymentNotifications()"
+            >
+              {{ unreadNotifications }}
+            </span>
           }
         </button>
 
@@ -37,7 +43,12 @@
             @if (notifications.length > 0) {
               <div class="notifications-list">
                 @for (notification of notifications; track notification.id_notificacion) {
-                  <article class="notification-item" [class.is-unread]="!notification.leida">
+                  <article
+                    class="notification-item"
+                    [class.is-unread]="!notification.leida"
+                    [class.is-payment-received]="isReceivedPaymentNotificationItem(notification)"
+                    [class.is-payment-assigned]="isAssignedPaymentNotificationItem(notification)"
+                  >
                     <button
                       type="button"
                       class="notification-open"

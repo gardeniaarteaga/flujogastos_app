@@ -1847,6 +1847,10 @@
           </button>
         </header>
 
+        <p class="detail-modal-sender-text">
+          {{ getDetailModalSenderDisplay(detailModalTransaccion) }}
+        </p>
+
         <section class="payment-modal-summary">
           <article class="payment-modal-chip">
             <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha gasto' }}</span>

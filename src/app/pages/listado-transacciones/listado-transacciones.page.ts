@@ -3999,6 +3999,43 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.detailModalTransaccion.participantes_detalle ?? [];
   }
 
+  getDetailModalRelationText(
+    transaccion: Pick<
+      TransaccionListado,
+      'pagocompartido' | 'participantes_detalle' | 'es_propietario' | 'titular'
+    > | null | undefined,
+  ): string {
+    if (!transaccion?.pagocompartido) {
+      return 'Titular';
+    }
+
+    if (!transaccion.es_propietario) {
+      return `Recibido de: ${transaccion.titular?.trim() || 'Titular'}`;
+    }
+
+    const participantes = Array.from(
+      new Set(
+        this.getParticipantesDetalleSafe(transaccion)
+          .filter((detalle) => !detalle.es_titular)
+          .map((detalle) => detalle.nombre_participante?.trim() || 'Participante')
+          .filter((value) => value.length > 0),
+      ),
+    );
+
+    return participantes.length > 0
+      ? `Compartido con: ${participantes.join(', ')}`
+      : 'Titular';
+  }
+
+  getDetailModalSenderDisplay(
+    transaccion: Pick<
+      TransaccionListado,
+      'pagocompartido' | 'participantes_detalle' | 'es_propietario' | 'titular'
+    > | null | undefined,
+  ): string {
+    return this.getDetailModalRelationText(transaccion);
+  }
+
   getDetailModalCuotasTotalPages(): number {
     return Math.max(
       1,

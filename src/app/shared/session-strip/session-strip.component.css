@@ -138,6 +138,20 @@
   font-size: 0.76rem;
 }
 
+.notification-counter.notification-counter-received {
+  border-color: #dff7f1;
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 0.6rem 1.1rem rgba(5, 150, 105, 0.28);
+}
+
+.notification-counter.notification-counter-assigned {
+  border-color: #ffe2e2;
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 0.6rem 1.1rem rgba(220, 38, 38, 0.28);
+}
+
 .notifications-panel {
   position: absolute;
   top: calc(100% + 0.7rem);
@@ -188,6 +202,52 @@
 .notification-item.is-unread {
   border-color: rgba(41, 98, 255, 0.24);
   background: rgba(41, 98, 255, 0.06);
+}
+
+.notification-item.is-payment-received {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.96) 0%, rgba(240, 253, 250, 0.92) 100%);
+}
+
+.notification-item.is-unread.is-payment-received {
+  border-color: rgba(5, 150, 105, 0.34);
+  background: linear-gradient(180deg, rgba(209, 250, 229, 0.96) 0%, rgba(236, 253, 245, 0.98) 100%);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
+}
+
+.notification-item.is-payment-received strong {
+  color: #065f46;
+}
+
+.notification-item.is-payment-received p {
+  color: #0f766e;
+}
+
+.notification-item.is-payment-received span {
+  color: #0f766e;
+}
+
+.notification-item.is-payment-assigned {
+  border-color: rgba(239, 68, 68, 0.24);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.96) 0%, rgba(254, 226, 226, 0.92) 100%);
+}
+
+.notification-item.is-unread.is-payment-assigned {
+  border-color: rgba(220, 38, 38, 0.34);
+  background: linear-gradient(180deg, rgba(254, 226, 226, 0.98) 0%, rgba(254, 242, 242, 0.96) 100%);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.08);
+}
+
+.notification-item.is-payment-assigned strong {
+  color: #991b1b;
+}
+
+.notification-item.is-payment-assigned p {
+  color: #b91c1c;
+}
+
+.notification-item.is-payment-assigned span {
+  color: #b91c1c;
 }
 
 .notification-open {
