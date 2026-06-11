@@ -1,38 +1,68 @@
 import { Routes } from '@angular/router';
-import { Login } from './pages/login/login';
-import { Dashboard } from './pages/dashboard/dashboard';
-import { CategoriasPage } from './pages/categorias/categorias.page';
-import { SubcategoriasPage } from './pages/subcategorias/subcategorias.page';
-import { PerfilPage } from './pages/perfil/perfil';
-import { FormasPagoPage } from './pages/formas-pago/formas-pago.page';
-import { EntidadesFinancierasPage } from './pages/entidades-financieras/entidades-financieras.page';
-import { TipoEntidadPage } from './pages/tipo-entidad/tipo-entidad.page';
-import { ParticipantesPage } from './pages/participantes/participantes.page';
-import { UsuariosPage } from './pages/usuarios/usuarios.page';
-import { IngresoTransaccionesPage } from './pages/ingreso-transacciones/ingreso-transacciones.page';
-import { ListadoTransaccionesPage } from './pages/listado-transacciones/listado-transacciones.page';
-import { TipoProductoPage } from './pages/tipo-producto/tipo-producto.page';
-import { ResumenNotificacionesPage } from './pages/resumen-notificaciones/resumen-notificaciones.page';
 import { analisisFinancieroResolver } from './pages/analisis-financiero/analisis-financiero.resolver';
 import { pagosEstadoResolver } from './pages/pagos-realizados/pagos-realizados.resolver';
 import { adminOnlyGuard } from './shared/guards/admin-only.guard';
 
+const loadLogin = () => import('./pages/login/login').then((module) => module.Login);
+const loadDashboard = () =>
+  import('./pages/dashboard/dashboard').then((module) => module.Dashboard);
+const loadIngresoTransaccionesPage = () =>
+  import('./pages/ingreso-transacciones/ingreso-transacciones.page').then(
+    (module) => module.IngresoTransaccionesPage,
+  );
+const loadListadoTransaccionesPage = () =>
+  import('./pages/listado-transacciones/listado-transacciones.page').then(
+    (module) => module.ListadoTransaccionesPage,
+  );
+const loadResumenNotificacionesPage = () =>
+  import('./pages/resumen-notificaciones/resumen-notificaciones.page').then(
+    (module) => module.ResumenNotificacionesPage,
+  );
+const loadCategoriasPage = () =>
+  import('./pages/categorias/categorias.page').then((module) => module.CategoriasPage);
+const loadSubcategoriasPage = () =>
+  import('./pages/subcategorias/subcategorias.page').then(
+    (module) => module.SubcategoriasPage,
+  );
+const loadFormasPagoPage = () =>
+  import('./pages/formas-pago/formas-pago.page').then((module) => module.FormasPagoPage);
+const loadEntidadesFinancierasPage = () =>
+  import('./pages/entidades-financieras/entidades-financieras.page').then(
+    (module) => module.EntidadesFinancierasPage,
+  );
+const loadTipoEntidadPage = () =>
+  import('./pages/tipo-entidad/tipo-entidad.page').then(
+    (module) => module.TipoEntidadPage,
+  );
+const loadTipoProductoPage = () =>
+  import('./pages/tipo-producto/tipo-producto.page').then(
+    (module) => module.TipoProductoPage,
+  );
+const loadParticipantesPage = () =>
+  import('./pages/participantes/participantes.page').then(
+    (module) => module.ParticipantesPage,
+  );
+const loadUsuariosPage = () =>
+  import('./pages/usuarios/usuarios.page').then((module) => module.UsuariosPage);
+const loadPerfilPage = () =>
+  import('./pages/perfil/perfil').then((module) => module.PerfilPage);
+
 export const routes: Routes = [
-  { path: '', component: Login },
-  { path: 'dashboard', component: Dashboard },
+  { path: '', loadComponent: loadLogin },
+  { path: 'dashboard', loadComponent: loadDashboard },
   {
     path: 'ingresos/ingreso',
-    component: IngresoTransaccionesPage,
+    loadComponent: loadIngresoTransaccionesPage,
     data: { transactionFlow: 'income' },
   },
   {
     path: 'gastos/individual',
-    component: IngresoTransaccionesPage,
+    loadComponent: loadIngresoTransaccionesPage,
     data: { transactionFlow: 'expense', expenseMode: 'individual' },
   },
   {
     path: 'gastos/compartidos',
-    component: IngresoTransaccionesPage,
+    loadComponent: loadIngresoTransaccionesPage,
     data: { transactionFlow: 'expense', expenseMode: 'shared' },
   },
   {
@@ -42,17 +72,17 @@ export const routes: Routes = [
   },
   {
     path: 'transacciones/listado',
-    component: ListadoTransaccionesPage,
+    loadComponent: loadListadoTransaccionesPage,
     data: { viewMode: 'transacciones' },
   },
   {
     path: 'resumen/detalle-transacciones',
-    component: ListadoTransaccionesPage,
+    loadComponent: loadListadoTransaccionesPage,
     data: { viewMode: 'detalle' },
   },
   {
     path: 'resumen/notificaciones',
-    component: ResumenNotificacionesPage,
+    loadComponent: loadResumenNotificacionesPage,
   },
   {
     path: 'reportes/analisis-financiero',
@@ -74,14 +104,14 @@ export const routes: Routes = [
         (module) => module.PagosRealizadosPage,
       ),
   },
-  { path: 'categorias', component: CategoriasPage },
-  { path: 'subcategorias', component: SubcategoriasPage },
-  { path: 'formas-pago', component: FormasPagoPage },
-  { path: 'entidades-financieras', component: EntidadesFinancierasPage },
-  { path: 'tipo-entidad', component: TipoEntidadPage },
-  { path: 'tipo-producto', component: TipoProductoPage },
-  { path: 'participantes', component: ParticipantesPage },
-  { path: 'usuarios', component: UsuariosPage, canActivate: [adminOnlyGuard] },
-  { path: 'perfil', component: PerfilPage },
+  { path: 'categorias', loadComponent: loadCategoriasPage },
+  { path: 'subcategorias', loadComponent: loadSubcategoriasPage },
+  { path: 'formas-pago', loadComponent: loadFormasPagoPage },
+  { path: 'entidades-financieras', loadComponent: loadEntidadesFinancierasPage },
+  { path: 'tipo-entidad', loadComponent: loadTipoEntidadPage },
+  { path: 'tipo-producto', loadComponent: loadTipoProductoPage },
+  { path: 'participantes', loadComponent: loadParticipantesPage },
+  { path: 'usuarios', loadComponent: loadUsuariosPage, canActivate: [adminOnlyGuard] },
+  { path: 'perfil', loadComponent: loadPerfilPage },
   { path: '**', redirectTo: '' },
 ];

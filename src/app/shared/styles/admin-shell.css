@@ -1015,7 +1015,7 @@ table {
 }
 
 .quick-pay-detail-table {
-  min-width: 110rem;
+  min-width: 41.5rem;
 }
 
 .quick-pay-detail-table th {
@@ -1026,65 +1026,61 @@ table {
   vertical-align: middle;
 }
 
+.quick-pay-detail-table th,
+.quick-pay-detail-table td {
+  padding: 0.64rem 0.6rem;
+}
+
 .quick-pay-detail-table th:nth-child(1),
 .quick-pay-detail-table td:nth-child(1) {
-  width: 4.5rem;
+  width: 3.15rem;
 }
 
 .quick-pay-detail-table th:nth-child(2),
 .quick-pay-detail-table td:nth-child(2) {
-  width: 5rem;
+  width: 3.5rem;
 }
 
 .quick-pay-detail-table th:nth-child(3),
 .quick-pay-detail-table td:nth-child(3) {
-  width: 7.25rem;
+  width: 5.1rem;
 }
 
 .quick-pay-detail-table th:nth-child(4),
 .quick-pay-detail-table td:nth-child(4) {
-  width: 18rem;
+  width: 12rem;
 }
 
 .quick-pay-detail-table th:nth-child(5),
 .quick-pay-detail-table td:nth-child(5) {
-  width: 7.5rem;
+  width: 3rem;
+  text-align: center;
 }
 
 .quick-pay-detail-table th:nth-child(6),
 .quick-pay-detail-table td:nth-child(6) {
-  width: 10rem;
+  width: 5.6rem;
 }
 
 .quick-pay-detail-table th:nth-child(7),
 .quick-pay-detail-table td:nth-child(7) {
-  width: 6rem;
+  width: 5.25rem;
 }
 
 .quick-pay-detail-table th:nth-child(8),
-.quick-pay-detail-table td:nth-child(8),
+.quick-pay-detail-table td:nth-child(8) {
+  width: 6.3rem;
+}
+
 .quick-pay-detail-table th:nth-child(9),
-.quick-pay-detail-table td:nth-child(9),
-.quick-pay-detail-table th:nth-child(10),
-.quick-pay-detail-table td:nth-child(10),
-.quick-pay-detail-table th:nth-child(11),
-.quick-pay-detail-table td:nth-child(11) {
-  width: 8rem;
+.quick-pay-detail-table td:nth-child(9) {
+  width: 4.2rem;
 }
 
-.quick-pay-detail-table th:nth-child(12),
-.quick-pay-detail-table td:nth-child(12) {
-  width: 8rem;
-}
-
-.quick-pay-detail-table th:nth-child(13),
-.quick-pay-detail-table td:nth-child(13) {
-  width: 10rem;
-}
-
-.quick-pay-detail-table th:nth-child(14),
-.quick-pay-detail-table td:nth-child(14) {
-  width: 7rem;
+.quick-pay-detail-table td:nth-child(4),
+.quick-pay-detail-table td:nth-child(8) {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 th,

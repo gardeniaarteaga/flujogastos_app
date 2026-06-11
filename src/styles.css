@@ -386,6 +386,47 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   color: #9a4d00;
 }
 
+.module-page .payment-modal-pay {
+  width: min(980px, 100%);
+}
+
+.module-page .payment-modal-summary-pay {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.module-page .payment-group-summary-pay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+}
+
+.module-page .payment-group-summary-pay strong {
+  flex-basis: 100%;
+}
+
+.module-page .payment-detail-summary-pay {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem 0.9rem;
+}
+
+.module-page .payment-detail-summary-pay strong {
+  grid-column: 1 / -1;
+}
+
+.module-page .payment-modal-pay .payment-detail-row {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 230px) auto;
+  align-items: start;
+}
+
+.module-page .payment-modal-pay .payment-detail-input input {
+  min-height: 2.55rem;
+}
+
+.module-page .payment-modal-pay .payment-detail-actions {
+  align-self: center;
+}
+
 .date-entry {
   position: relative;
 }
@@ -442,6 +483,10 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
 @media (max-width: 900px) {
   .module-page .payment-detail-row,
   .module-page .payment-modal-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .module-page .payment-detail-summary-pay {
     grid-template-columns: 1fr;
   }
 

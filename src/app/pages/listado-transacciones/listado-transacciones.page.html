@@ -879,13 +879,8 @@
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Transaccion</th>
-                <th>Fecha pago</th>
-                <th>Metodo</th>
                 <th>Cuota</th>
                 <th>Monto</th>
-                <th>Intereses</th>
-                <th>Pagado</th>
-                <th>Saldo pendiente</th>
                 <th>Estado</th>
                 <th>Participante</th>
                 <th>Acciones</th>
@@ -894,7 +889,7 @@
             <tbody>
               <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index; trackBy: trackQuickPayMetodoGroup">
                 <tr class="quick-pay-method-group-row">
-                  <td colspan="14">
+                  <td colspan="9">
                     <div
                       class="quick-pay-method-group-header"
                       [style.background]="'linear-gradient(180deg,' + getQuickPayMetodoGroupSurfaceColor(groupIndex) + ' 0%, #ffffff 100%)'"
@@ -930,7 +925,7 @@
                           <div class="quick-pay-method-group-meta">
                             <span>{{ group.rows.length }} cuotas</span>
                             <span>{{ group.selectedCount }}/{{ group.selectableCount }} seleccionadas</span>
-                            <span>Saldo pendiente: ${{ group.totalPendiente | number: '1.2-2' }}</span>
+                            <span>Monto: ${{ group.totalPendiente | number: '1.2-2' }}</span>
                           </div>
                         </div>
                         <span
@@ -990,12 +985,7 @@
                       </span>
                     </div>
                   </td>
-                  <td>{{ row.quickPayFechaPagoLabel }}</td>
-                  <td>{{ row.metodo_pago || '-' }}</td>
                   <td>{{ row.detalle.numero_cuota }}/{{ row.detalle.total_cuotas }}</td>
-                  <td>{{ row.quickPayMontoLabel }}</td>
-                  <td>{{ row.quickPayInteresPendienteLabel }}</td>
-                  <td>{{ row.quickPayMontoPagadoLabel }}</td>
                   <td style="color:#0f172a;font-weight:900;">{{ row.quickPaySaldoPendienteLabel }}</td>
                   <td>
                     <span
@@ -1983,7 +1973,7 @@
       (click)="onPaymentBackdropClick($event)"
     >
       <section
-        class="payment-modal"
+        class="payment-modal payment-modal-pay"
         [formGroup]="aplicarPagosForm"
         (click)="$event.stopPropagation()"
       >
@@ -2015,17 +2005,9 @@
           </div>
         </header>
 
-        <section class="payment-modal-summary">
+        <section class="payment-modal-summary payment-modal-summary-pay">
           <article class="payment-modal-chip">
-            <span>Monto total</span>
-            <strong>${{ paymentModalTransaccion.monto | number: '1.2-2' }}</strong>
-          </article>
-          <article class="payment-modal-chip">
-            <span>Intereses</span>
-            <strong>${{ paymentModalTransaccion.intereses | number: '1.2-2' }}</strong>
-          </article>
-          <article class="payment-modal-chip">
-            <span>Deuda total</span>
+            <span>Monto</span>
             <strong>${{ paymentModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
@@ -2059,12 +2041,12 @@
             [style.--group-accent]="getPaymentGroupAccentColor(groupIndex)"
           >
               <div class="payment-group-header">
-                <div class="payment-group-summary">
+                <div class="payment-group-summary payment-group-summary-pay">
                   <strong style="color: var(--group-accent, var(--color-heading));">{{ paymentGroup.nombre_mostrado }}</strong>
                   <span class="payment-role-badge" [style.color]="getPaymentGroupAccentColor(groupIndex)">{{ paymentGroup.es_titular ? 'Titular' : 'Participante' }}</span>
                   <span>Cuotas asignadas: {{ paymentGroup.cuotas.length }}</span>
                   <span>Pagado acumulado: ${{ paymentGroup.monto_pagado_total | number: '1.2-2' }}</span>
-                  <span class="payment-saldo">Saldo pendiente total: ${{ paymentGroup.saldo_pendiente_total | number: '1.2-2' }}</span>
+                  <span class="payment-saldo">Monto total: ${{ paymentGroup.saldo_pendiente_total | number: '1.2-2' }}</span>
                 </div>
 
               <div class="payment-group-actions">
@@ -2095,24 +2077,12 @@
                 [formGroup]="pagoGroup"
               >
                 <ng-container *ngIf="pagoGroup.controls.saldo_pendiente.value > 0; else paidCuotaRow">
-                  <div class="payment-detail-summary">
+                  <div class="payment-detail-summary payment-detail-summary-pay">
                     <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }} de {{ pagoGroup.controls.total_cuotas.value }}</strong>
-                    <span>Inter&eacute;s de esta cuota: ${{ (pagoGroup.controls.interes_pagado.value + pagoGroup.controls.interes_pendiente.value) | number: '1.2-2' }}</span>
                     <span>Monto ya pagado: ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</span>
-                    <span class="payment-saldo">Saldo pendiente de esta cuota: ${{ pagoGroup.controls.saldo_pendiente.value | number: '1.2-2' }}</span>
+                    <span class="payment-saldo">Monto de esta cuota: ${{ pagoGroup.controls.saldo_pendiente.value | number: '1.2-2' }}</span>
                     <span>Fecha programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</span>
                     <span>Fecha de Pago: {{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</span>
-                  </div>
-
-                  <div class="field payment-detail-input">
-                    <label [for]="'monto_cuota_' + pagoGroup.controls.id_detalle.value">Monto cuota</label>
-                    <input
-                      style="background:#f1f4f8;border-color:#d5dde8;color:#66758a;"
-                      [id]="'monto_cuota_' + pagoGroup.controls.id_detalle.value"
-                      type="text"
-                      [value]="formatMoneyFixedDisplay(pagoGroup.controls.monto_cuota.value)"
-                      readonly
-                    />
                   </div>
 
                   <div class="field payment-detail-input">
@@ -2158,13 +2128,11 @@
 
                 <ng-template #paidCuotaRow>
                   <div style="width:100%;overflow-x:auto;border:1px solid #dbe5f1;border-radius:.65rem;background:#fff;">
-                    <table style="width:100%;min-width:760px;border-collapse:collapse;">
+                    <table style="width:100%;min-width:560px;border-collapse:collapse;">
                       <thead>
                         <tr>
                           <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Cuota</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Monto cuota</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Inter&eacute;s</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Monto pagado</th>
+                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Monto</th>
                           <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Fecha programada</th>
                           <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Fecha de pago</th>
                         </tr>
@@ -2172,8 +2140,6 @@
                       <tbody>
                         <tr>
                           <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.numero_cuota.value }}/{{ pagoGroup.controls.total_cuotas.value }}</td>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">${{ pagoGroup.controls.monto_cuota.value | number: '1.2-2' }}</td>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">${{ (pagoGroup.controls.interes_pagado.value + pagoGroup.controls.interes_pendiente.value) | number: '1.2-2' }}</td>
                           <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</td>
                           <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</td>
                           <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</td>
