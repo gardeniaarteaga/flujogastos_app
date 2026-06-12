@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
@@ -290,6 +290,7 @@ interface DashboardAnalytics {
 })
 export class Dashboard implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
@@ -352,6 +353,7 @@ export class Dashboard implements OnInit {
   sidebarCollapsed = false;
   transactionsOpen = true;
   maintenanceOpen = false;
+  reportesOpen = false;
   readonly userProfile = loadUserProfile();
   currentUserId = getCurrentUserId();
   selectedPeriodType: DashboardPeriodType = 'month';
@@ -387,6 +389,35 @@ export class Dashboard implements OnInit {
 
   get isAdminSession(): boolean {
     return isAdminUser();
+  }
+
+  isResumenMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/transacciones/listado',
+      '/resumen/detalle-transacciones',
+      '/resumen/notificaciones',
+    ]);
+  }
+
+  isMaintenanceMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/categorias',
+      '/formas-pago',
+      '/participantes',
+      '/subcategorias',
+      '/entidades-financieras',
+      '/tipo-entidad',
+      '/tipo-producto',
+      '/usuarios',
+    ]);
+  }
+
+  isReportesMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/reportes/analisis-financiero',
+      '/reportes/gastos-por-categoria',
+      '/reportes/pagos-realizados',
+    ]);
   }
 
   get dashboardQuickAccessItems(): QuickAccessItem[] {
@@ -441,6 +472,10 @@ export class Dashboard implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
   }
 
   formatCurrency(value: number): string {
@@ -577,13 +612,195 @@ export class Dashboard implements OnInit {
       currentPeriodExpense > 0 ||
       currentPeriodSharedExpenseAssigned > 0;
 
+    // Enrich transactions for detailed analysis
+    const formsById = new Map<number, CatalogoFormaPago>();
+    const entitiesById = new Map<number, string>();
+    
+    const enrichedTransactions = transacciones.map((transaction) =>
+      this.enrichTransaction(transaction, formsById, entitiesById),
+    );
+
+    // Filter transactions for current period
+    const currentPeriodKey = this.getMonthKey(this.getSelectedMonthStart());
+    const currentPeriodTransactions = enrichedTransactions.filter(
+      (t) => t.monthKey === currentPeriodKey,
+    );
+
+    // Build analytics components
+    const currentMonthExpenses = currentPeriodTransactions.filter((t) => t.type === 'expense');
+    const topCategories = this.buildRanking(
+      currentMonthExpenses,
+      currentPeriodExpense,
+      (item) => item.categoryName,
+      'categoria',
+    );
+    const topSubcategories = this.buildRanking(
+      currentMonthExpenses,
+      currentPeriodExpense,
+      (item) => item.subcategoryName,
+      'subcategoria',
+    );
+
+    const categoryDonut = this.buildDonutChart(
+      'Gasto por categoria',
+      `del ${periodSummary}`,
+      topCategories,
+      currentPeriodExpense,
+    );
+    const subcategoryDonut = this.buildDonutChart(
+      'Gasto por subcategoria',
+      `del ${periodSummary}`,
+      topSubcategories,
+      currentPeriodExpense,
+    );
+
+    // Build trend data
+    const trendMonths = this.createRollingMonths(6);
+    const trendData = trendMonths.map((month) => {
+      const monthTransactions = enrichedTransactions.filter((t) => t.monthKey === month.key);
+      const monthIncome = this.roundMoney(
+        monthTransactions
+          .filter((t) => t.type === 'income')
+          .reduce((sum, t) => sum + t.personalAmount, 0),
+      );
+      const monthExpense = this.roundMoney(
+        monthTransactions
+          .filter((t) => t.type === 'expense')
+          .reduce((sum, t) => sum + t.personalAmount, 0),
+      );
+      const monthBalance = monthIncome - monthExpense;
+      const debtDue = this.roundMoney(
+        monthTransactions
+          .filter((t) => t.type === 'expense')
+          .reduce((sum, t) => sum + t.personalDebt, 0),
+      );
+      const paymentCapacity =
+        monthIncome > 0 ? debtDue / monthIncome : debtDue > 0 ? 1 : null;
+
+      return {
+        key: month.key,
+        label: month.label,
+        income: monthIncome,
+        expense: monthExpense,
+        balance: monthBalance,
+        debtDue,
+        paymentCapacity,
+      };
+    });
+
+    const trendChart = this.buildTrendChart(trendData);
+    const trendText = this.buildTrendNarrative(trendData);
+
+    // Calculate debt metrics
+    const debtEntities = this.buildDebtEntities(enrichedTransactions);
+    const totalDebt = this.roundMoney(
+      enrichedTransactions
+        .filter((t) => t.type === 'expense')
+        .reduce((sum, t) => sum + t.personalDebt, 0),
+    );
+    const totalInterest = this.roundMoney(
+      enrichedTransactions
+        .filter((t) => t.type === 'expense')
+        .reduce((sum, t) => sum + t.pendingInterest, 0),
+    );
+    const pendingInstallments = enrichedTransactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.pendingInstallments, 0);
+    const projectedEndLabel = this.resolveProjectedEndLabel(enrichedTransactions);
+
+    const highestDebtEntity = debtEntities[0]?.entityName ?? 'Sin deuda activa';
+    const highestInterestEntity =
+      debtEntities.find((e) => e.pendingInterest > 0)?.entityName ?? 'Sin interes pendiente';
+
+    const debtSummary = {
+      totalDebt,
+      totalInterest,
+      pendingInstallments,
+      projectedEndLabel,
+      highestDebtEntity,
+      highestInterestEntity,
+    };
+
+    // Calculate capacity model
+    const currentMonthDebtDue = this.roundMoney(
+      currentPeriodTransactions
+        .filter((t) => t.type === 'expense')
+        .reduce((sum, t) => sum + t.personalDebt, 0),
+    );
+    const capacity = this.buildCapacityModel(currentPeriodIncome, currentMonthDebtDue);
+
+    // Detect spending patterns
+    const hormigas = this.detectGastosHormiga(
+      enrichedTransactions,
+      currentPeriodExpense,
+      currentPeriodIncome,
+    );
+
+    // Build recommendations
+    const currentMonthBalance = currentPeriodIncome - currentPeriodExpense;
+    const savingsRate =
+      currentPeriodIncome > 0 ? (currentMonthBalance) / currentPeriodIncome : null;
+    const expenseRatio = currentPeriodIncome > 0 ? currentPeriodExpense / currentPeriodIncome : null;
+    const paymentCapacityRatio =
+      currentPeriodIncome > 0 ? currentMonthDebtDue / currentPeriodIncome : null;
+
+    const recommendations = this.buildRecommendations(
+      {
+        income: currentPeriodIncome,
+        expense: currentPeriodExpense,
+        balance: currentMonthBalance,
+        savingsRate,
+        paymentCapacity: paymentCapacityRatio,
+        pendingInterest: totalInterest,
+        totalDebt,
+      },
+      topCategories,
+      hormigas,
+    );
+
+    // Build insights
+    const insights = this.buildInsights(
+      {
+        topCategories,
+        currentMonthBalance,
+        currentMonthIncome: currentPeriodIncome,
+        paymentCapacity: capacity,
+        pendingInterest: totalInterest,
+        trendText,
+        recommendations,
+      },
+      currentPeriodExpense,
+    );
+
+    // Build scheduled transaction details
+    const monthKey = this.getMonthKey(this.getSelectedMonthStart());
+    const scheduledDetails = this.buildScheduledTransactionDetails(enrichedTransactions, monthKey);
+
+    // Calculate health score
+    const healthScore = this.buildHealthScore(
+      expenseRatio,
+      savingsRate,
+      paymentCapacityRatio,
+      totalInterest,
+      totalDebt,
+    );
+    const healthLabel = this.resolveHealthLabel(healthScore);
+    const healthTone = this.resolveHealthTone(healthScore);
+
+    const summaryText = this.buildSummaryText(
+      currentMonthBalance,
+      paymentCapacityRatio,
+      trendText,
+      totalInterest,
+    );
+
     return {
       hasData,
       currentPeriodLabel,
-      healthScore: 0,
-      healthTone: 'neutral',
-      healthLabel: 'Resumen del titular',
-      summary: `Vista del titular y lo asignado por otros para ${selectedPeriod.descriptionLabel}, incluyendo vencidos pendientes arrastrados.`,
+      healthScore,
+      healthTone,
+      healthLabel,
+      summary: summaryText,
       kpis: [
         {
           key: 'income',
@@ -610,55 +827,18 @@ export class Dashboard implements OnInit {
           tone: currentPeriodSharedExpenseAssigned > 0 ? 'info' : 'neutral',
         },
       ],
-      capacity: {
-        ratio: null,
-        tone: 'neutral',
-        headline: 'No aplica',
-        description: '',
-        income: 0,
-        debtDue: 0,
-        progress: 0,
-      },
-      categoryDonut: {
-        title: '',
-        subtitle: '',
-        total: 0,
-        totalLabel: '',
-        empty: true,
-        segments: [],
-        legend: [],
-      },
-      subcategoryDonut: {
-        title: '',
-        subtitle: '',
-        total: 0,
-        totalLabel: '',
-        empty: true,
-        segments: [],
-        legend: [],
-      },
-      trendChart: {
-        months: [],
-        incomePoints: '',
-        expensePoints: '',
-        balancePoints: '',
-        zeroLineY: 0,
-      },
-      topCategories: [],
-      hormigas: [],
-      insights: [],
-      debtSummary: {
-        totalDebt: 0,
-        totalInterest: 0,
-        pendingInstallments: 0,
-        projectedEndLabel: '',
-        highestDebtEntity: '',
-        highestInterestEntity: '',
-      },
-      debtEntities: [],
-      recommendations: [],
-      trendTable: [],
-      scheduledDetails: [],
+      capacity,
+      categoryDonut,
+      subcategoryDonut,
+      trendChart,
+      topCategories,
+      hormigas,
+      insights,
+      debtSummary,
+      debtEntities,
+      recommendations,
+      trendTable: trendData,
+      scheduledDetails,
     };
   }
 
@@ -2328,6 +2508,11 @@ export class Dashboard implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private isCurrentRouteIn(routes: string[]): boolean {
+    const currentUrl = this.router.url.split('?')[0];
+    return routes.some((route) => currentUrl === route || currentUrl.startsWith(`${route}/`));
   }
 
   private capitalizeText(value: string): string {

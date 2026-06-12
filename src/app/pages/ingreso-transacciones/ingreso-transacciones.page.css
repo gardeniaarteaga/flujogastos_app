@@ -183,6 +183,16 @@
   gap: 1rem;
 }
 
+.variable-payment-note {
+  margin: -0.15rem 0 0.35rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #d7e7ff;
+  border-radius: 0.8rem;
+  background: #f5f9ff;
+  color: #24508f;
+  font-weight: 600;
+}
+
 .participants-summary-grid {
   display: grid;
   grid-template-columns: minmax(220px, 320px);

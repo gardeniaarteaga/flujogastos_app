@@ -5,7 +5,6 @@ import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angu
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { catchError, firstValueFrom, of, timeout } from 'rxjs';
 
-import { filterOwnedByCurrentUser } from '../../shared/catalog-visibility';
 import { apiUrl } from '../../shared/config/api.config';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { SessionStripComponent } from '../../shared/session-strip/session-strip.component';
@@ -666,7 +665,7 @@ export class FormasPagoPage implements OnInit {
       const formasResult = await this.loadCollection<FormaPago>(this.apiUrl);
 
       this.formasPago = this.sortByText(
-        filterOwnedByCurrentUser(formasResult.data, this.currentUserId),
+        formasResult.data,
         (item) => item.nombre_forma,
       );
       this.currentPage = 1;
@@ -700,11 +699,11 @@ export class FormasPagoPage implements OnInit {
       ]);
 
       this.entidades = this.sortByText(
-        filterOwnedByCurrentUser(entidadesResult.data, this.currentUserId),
+        entidadesResult.data,
         (item) => item.nombre_entidad,
       );
       this.tiposEntidad = this.sortByText(
-        filterOwnedByCurrentUser(tiposEntidadResult.data, this.currentUserId),
+        tiposEntidadResult.data,
         (item) => item.descripcion,
       );
       this.tipos = this.sortByText(tiposResult.data, (item) => item.nombre_tipo);

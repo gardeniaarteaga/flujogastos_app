@@ -6,14 +6,14 @@
 .report-body,
 .kpi-grid,
 .main-grid {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
 }
 
 .hero-report {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
-  gap: 1.2rem;
-  padding: 1.5rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.4fr);
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
   overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 24%),
@@ -24,15 +24,15 @@
 .hero-copy {
   display: grid;
   align-content: center;
-  gap: 0.95rem;
+  gap: 0.6rem;
 }
 
 .hero-kicker,
 .panel-kicker,
 .kpi-label {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -43,10 +43,10 @@
 
 .hero-report h2 {
   margin: 0;
-  max-width: 12ch;
-  font-size: clamp(2rem, 3vw, 3.1rem);
-  line-height: 1.02;
-  letter-spacing: -0.05em;
+  max-width: 14ch;
+  font-size: clamp(1.45rem, 2.1vw, 2rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
   color: #172033;
 }
 
@@ -55,46 +55,54 @@
 .state-panel p {
   margin: 0;
   color: #64748b;
-  line-height: 1.7;
+  line-height: 1.55;
+  font-size: 0.92rem;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: 0.6rem;
+}
+
+.report-refresh-button {
+  min-height: 2.35rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.88rem;
 }
 
 .hero-score {
   display: grid;
   align-content: center;
-  gap: 0.55rem;
+  gap: 0.35rem;
   justify-self: end;
-  width: min(100%, 340px);
-  min-height: 190px;
-  padding: 1.2rem 1.3rem;
-  border-radius: 1.3rem;
+  width: min(100%, 240px);
+  min-height: 126px;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
   color: #172033;
   background: linear-gradient(160deg, #eff6ff, #fff7ed);
   box-shadow: 0 1rem 2.2rem rgba(15, 23, 42, 0.1);
 }
 
 .hero-score-label {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #64748b;
 }
 
 .hero-score strong {
-  font-size: clamp(1.9rem, 3vw, 2.8rem);
-  line-height: 1;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .filter-panel {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.65rem;
+  padding: 0.95rem 1rem;
   background:
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 22%),
     linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -104,14 +112,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.8rem;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 
 .panel-heading h3 {
-  margin: 0.2rem 0 0;
+  margin: 0.1rem 0 0;
   color: #172033;
-  font-size: 1.1rem;
+  font-size: 0.98rem;
 }
 
 .score-chip,
@@ -119,10 +127,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2rem;
-  padding: 0.35rem 0.75rem;
+  min-height: 1.7rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 800;
 }
 
@@ -135,28 +143,29 @@
 .filters-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .field {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.3rem;
 }
 
 .field span {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   color: #334155;
 }
 
 .field select {
   width: 100%;
-  min-height: 2.85rem;
-  padding: 0.7rem 0.85rem;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid #d8e2ee;
-  border-radius: 0.9rem;
+  border-radius: 0.75rem;
   background: #ffffff;
   color: #172033;
+  font-size: 0.92rem;
 }
 
 .kpi-grid {
@@ -353,6 +362,22 @@
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
+.subcategory-breakdown-row-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.subcategory-breakdown-row-button:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0.7rem 1.4rem rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
 .subcategory-breakdown-copy,
 .subcategory-breakdown-metrics {
   display: grid;
@@ -371,6 +396,106 @@
 
 .subcategory-breakdown-metrics small {
   color: #7c3aed;
+}
+
+.subcategory-breakdown-action {
+  margin-top: 0.2rem;
+  font-weight: 700;
+  color: #2563eb !important;
+}
+
+.payment-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(4px);
+}
+
+.payment-modal {
+  width: min(1120px, 100%);
+  max-height: calc(100dvh - 3rem);
+  display: grid;
+  gap: 1rem;
+  overflow: auto;
+  padding: 1.35rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 1.4rem 3rem rgba(15, 23, 42, 0.28);
+}
+
+.payment-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.payment-modal-header h3 {
+  margin: 0.15rem 0 0.35rem;
+  color: #172033;
+  font-size: 1.45rem;
+}
+
+.detail-modal-sender-text {
+  margin: -0.35rem 0 0.15rem;
+  color: #7c3aed;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.subcategory-detail-modal {
+  width: min(980px, 100%);
+}
+
+.payment-modal-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.payment-modal-chip {
+  padding: 0.9rem 1rem;
+  border: 1px solid #dbe5f1;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #fbfcff 0%, #f3f7ff 100%);
+  display: grid;
+  gap: 0.22rem;
+}
+
+.payment-modal-chip span {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #6b7a90;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.payment-modal-chip strong {
+  color: #172033;
+  font-size: 1.02rem;
+}
+
+.subcategory-table-wrap table {
+  min-width: 760px;
+}
+
+.subcategory-table-wrap th,
+.subcategory-table-wrap td {
+  vertical-align: top;
+}
+
+.subcategory-row-id {
+  display: block;
+  margin-top: 0.2rem;
+  color: #6b7a90;
+  font-size: 0.8rem;
 }
 
 .state-panel {
@@ -419,8 +544,13 @@
 @media (max-width: 980px) {
   .hero-report,
   .donut-layout,
-  .detail-summary-grid {
+  .detail-summary-grid,
+  .payment-modal-summary {
     grid-template-columns: 1fr;
+  }
+
+  .payment-modal-header {
+    flex-direction: column;
   }
 
   .donut-chart {
@@ -457,7 +587,7 @@
   }
 
   .hero-report {
-    padding: 1.15rem;
+    padding: 0.95rem;
   }
 
   .hero-report h2 {

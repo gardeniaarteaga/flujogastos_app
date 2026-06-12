@@ -4,7 +4,6 @@ import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 
 import { apiUrl } from '../config/api.config';
 import {
-  filterOwnedByCurrentUser,
   filterVisibleForCurrentUser,
 } from '../catalog-visibility';
 import { getCurrentUserId, loadUserProfile, saveUserProfile } from '../user-profile';
@@ -190,12 +189,9 @@ export class CatalogosTransaccionService {
       .map((item) => item.name);
 
     return {
-      formasPago: filterOwnedByCurrentUser(formasPagoResult.data, currentUserId),
-      entidadesFinancieras: filterOwnedByCurrentUser(
-        entidadesFinancierasResult.data,
-        currentUserId,
-      ),
-      tiposEntidad: filterOwnedByCurrentUser(tiposEntidadResult.data, currentUserId),
+      formasPago: formasPagoResult.data,
+      entidadesFinancieras: entidadesFinancierasResult.data,
+      tiposEntidad: tiposEntidadResult.data,
       participantes: participantesResult.data,
       categorias: filterVisibleForCurrentUser(categoriasResult.data, currentUserId),
       subcategorias: filterVisibleForCurrentUser(subcategoriasResult.data, currentUserId),

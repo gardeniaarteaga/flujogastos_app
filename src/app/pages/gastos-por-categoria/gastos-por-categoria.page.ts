@@ -1,9 +1,9 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
@@ -105,6 +105,7 @@ interface ExpenseRecord {
   subcategoryName: string;
   description: string;
   statusName: string;
+  paymentMethodName: string;
   sourceType: ExpenseSourceType;
 }
 
@@ -117,6 +118,19 @@ interface CategorySubcategoryBreakdown {
   shareOfTotal: number;
   ownAmount: number;
   assignedAmount: number;
+}
+
+interface SubcategoryTransactionModalData {
+  categoryKey: string;
+  categoryName: string;
+  subcategoryKey: string;
+  subcategoryName: string;
+  periodLabel: string;
+  totalAmount: number;
+  ownAmount: number;
+  assignedAmount: number;
+  totalTransactions: number;
+  transactions: ExpenseRecord[];
 }
 
 interface CategoryBreakdown {
@@ -173,6 +187,7 @@ export class GastosPorCategoriaPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly apiUrl = apiUrl('transacciones');
@@ -221,10 +236,14 @@ export class GastosPorCategoriaPage implements OnInit {
   errorMessage = '';
   sidebarCollapsed = false;
   maintenanceOpen = false;
+  reportesOpen = false;
   currentUserId = getCurrentUserId();
   years: SelectOption[] = [];
   report: ExpenseCategoryReport = this.createEmptyReport();
   selectedCategoryKey = '';
+  private subcategoryDetailModalOpenState = false;
+  public subcategoryDetailModalData: SubcategoryTransactionModalData =
+    this.createEmptySubcategoryDetailModalData();
 
   private formasPago: CatalogoFormaPago[] = [];
   private participantes: CatalogoParticipante[] = [];
@@ -234,8 +253,41 @@ export class GastosPorCategoriaPage implements OnInit {
     return isAdminUser();
   }
 
+  get isResumenMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/transacciones/listado',
+      '/resumen/detalle-transacciones',
+      '/resumen/notificaciones',
+    ]);
+  }
+
+  get isMaintenanceMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/categorias',
+      '/formas-pago',
+      '/participantes',
+      '/subcategorias',
+      '/entidades-financieras',
+      '/tipo-entidad',
+      '/tipo-producto',
+      '/usuarios',
+    ]);
+  }
+
+  get isReportesMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/reportes/analisis-financiero',
+      '/reportes/gastos-por-categoria',
+      '/reportes/pagos-realizados',
+    ]);
+  }
+
   get selectedPeriodType(): ReportPeriodType {
     return this.filtrosForm.controls.periodType.value === 'quincena' ? 'quincena' : 'month';
+  }
+
+  get isSubcategoryDetailModalOpen(): boolean {
+    return this.subcategoryDetailModalOpenState;
   }
 
   get currentUserParticipante(): CatalogoParticipante | null {
@@ -319,6 +371,10 @@ export class GastosPorCategoriaPage implements OnInit {
     this.maintenanceOpen = !this.maintenanceOpen;
   }
 
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+  }
+
   formatCurrency(value: number): string {
     return this.currencyFormatter.format(Number.isFinite(value) ? value : 0);
   }
@@ -327,6 +383,33 @@ export class GastosPorCategoriaPage implements OnInit {
     return this.percentFormatter.format(Number.isFinite(value) ? value : 0);
   }
 
+  formatDate(value: Date | null | undefined): string {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+      return '-';
+    }
+
+    const day = String(value.getDate()).padStart(2, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${value.getFullYear()}`;
+  }
+
+  getExpenseSourceLabel(sourceType: ExpenseSourceType): string {
+    return sourceType === 'assigned' ? 'Asignado por otros' : 'Propio del titular';
+  }
+
+  readonly handleOpenSubcategoryDetailModal = (
+    category: CategoryBreakdown,
+    subcategory: CategorySubcategoryBreakdown,
+  ): void => {
+    this.subcategoryDetailModalData = this.buildSubcategoryDetailModalData(
+      category.key,
+      category.name,
+      subcategory.key,
+      subcategory.name,
+    );
+    this.subcategoryDetailModalOpenState = true;
+  };
+
   selectCategory(categoryKey: string): void {
     if (!categoryKey || categoryKey === this.selectedCategoryKey) {
       return;
@@ -334,6 +417,17 @@ export class GastosPorCategoriaPage implements OnInit {
 
     this.selectedCategoryKey = categoryKey;
     this.rebuildReport();
+  }
+
+  closeSubcategoryDetailModal(): void {
+    this.subcategoryDetailModalOpenState = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isSubcategoryDetailModalOpen) {
+      this.closeSubcategoryDetailModal();
+    }
   }
 
   private applyResolvedData(data: AnalisisFinancieroResolvedData): void {
@@ -360,9 +454,7 @@ export class GastosPorCategoriaPage implements OnInit {
 
   private rebuildReport(): void {
     const period = this.getSelectedPeriodRange();
-    const filteredRecords = this.records.filter((record) =>
-      this.isDateWithinPeriod(record.analysisDate, period),
-    );
+    const filteredRecords = this.getFilteredRecordsForPeriod(period);
 
     if (filteredRecords.length === 0) {
       this.report = {
@@ -370,6 +462,9 @@ export class GastosPorCategoriaPage implements OnInit {
         periodLabel: period.label,
         summary: `No hay gastos visibles para ${period.descriptionLabel}. Solo se consideran movimientos del usuario logueado y cuotas asignadas por otros usuarios al titular, sin anuladas.`,
       };
+      if (this.isSubcategoryDetailModalOpen) {
+        this.syncSubcategoryDetailModal();
+      }
       return;
     }
 
@@ -436,6 +531,10 @@ export class GastosPorCategoriaPage implements OnInit {
       categoryDonutStyle: this.buildConicGradient(categories),
       categoryDonutCenter: this.formatCurrency(totalExpense),
     };
+
+    if (this.isSubcategoryDetailModalOpen) {
+      this.syncSubcategoryDetailModal();
+    }
   }
 
   private buildExpenseRecords(transacciones: TransaccionListado[]): ExpenseRecord[] {
@@ -449,6 +548,10 @@ export class GastosPorCategoriaPage implements OnInit {
       const paymentMethod = formsById.get(transaction.id_metodo_pago);
       const categoryName = transaction.nombre_categoria?.trim() || 'Sin categoria';
       const subcategoryName = transaction.nombre_subcategoria?.trim() || 'Sin subcategoria';
+      const paymentMethodName =
+        transaction.nombre_forma_pago?.trim() ||
+        paymentMethod?.nombre_forma?.trim() ||
+        'Sin metodo de pago';
       const statusName =
         transaction.nombre_estado?.trim() ||
         transaction.nombre_estado_registro?.trim() ||
@@ -488,6 +591,7 @@ export class GastosPorCategoriaPage implements OnInit {
           subcategoryName,
           description,
           statusName: resolvedStatusName,
+          paymentMethodName,
           sourceType: transaction.es_propietario ? 'own' : 'assigned',
         });
 
@@ -559,8 +663,8 @@ export class GastosPorCategoriaPage implements OnInit {
     >();
 
     for (const record of records) {
-      const categoryKey = `${record.categoryId}::${record.categoryName}`;
-      const subcategoryKey = `${record.subcategoryId ?? 'none'}::${record.subcategoryName}`;
+      const categoryKey = this.buildCategoryKey(record.categoryId, record.categoryName);
+      const subcategoryKey = this.buildSubcategoryKey(record.subcategoryId, record.subcategoryName);
       const currentCategory = groups.get(categoryKey) ?? {
         name: record.categoryName,
         amount: 0,
@@ -717,6 +821,21 @@ export class GastosPorCategoriaPage implements OnInit {
     };
   }
 
+  private createEmptySubcategoryDetailModalData(): SubcategoryTransactionModalData {
+    return {
+      categoryKey: '',
+      categoryName: '',
+      subcategoryKey: '',
+      subcategoryName: '',
+      periodLabel: this.getSelectedPeriodRange().label,
+      totalAmount: 0,
+      ownAmount: 0,
+      assignedAmount: 0,
+      totalTransactions: 0,
+      transactions: [],
+    };
+  }
+
   private getSelectedPeriodRange(): ReportPeriodRange {
     const selectedMonth = Number(this.filtrosForm.controls.month.value ?? new Date().getMonth() + 1);
     const selectedYear = Number(this.filtrosForm.controls.year.value ?? new Date().getFullYear());
@@ -768,6 +887,72 @@ export class GastosPorCategoriaPage implements OnInit {
   private isDateWithinPeriod(date: Date, selectedPeriod: ReportPeriodRange): boolean {
     const time = date.getTime();
     return time >= selectedPeriod.start.getTime() && time <= selectedPeriod.end.getTime();
+  }
+
+  private getFilteredRecordsForPeriod(period: ReportPeriodRange): ExpenseRecord[] {
+    return this.records.filter((record) => this.isDateWithinPeriod(record.analysisDate, period));
+  }
+
+  private buildCategoryKey(categoryId: number, categoryName: string): string {
+    return `${categoryId}::${categoryName}`;
+  }
+
+  private buildSubcategoryKey(subcategoryId: number | null, subcategoryName: string): string {
+    return `${subcategoryId ?? 'none'}::${subcategoryName}`;
+  }
+
+  private buildSubcategoryDetailModalData(
+    categoryKey: string,
+    categoryName: string,
+    subcategoryKey: string,
+    subcategoryName: string,
+  ): SubcategoryTransactionModalData {
+    const period = this.getSelectedPeriodRange();
+    const transactions = this.getFilteredRecordsForPeriod(period)
+      .filter(
+        (record) =>
+          this.buildCategoryKey(record.categoryId, record.categoryName) === categoryKey &&
+          this.buildSubcategoryKey(record.subcategoryId, record.subcategoryName) === subcategoryKey,
+      )
+      .sort((left, right) => right.analysisDate.getTime() - left.analysisDate.getTime());
+
+    return {
+      categoryKey,
+      categoryName,
+      subcategoryKey,
+      subcategoryName,
+      periodLabel: period.label,
+      totalAmount: this.roundMoney(transactions.reduce((sum, item) => sum + item.amount, 0)),
+      ownAmount: this.roundMoney(
+        transactions
+          .filter((item) => item.sourceType === 'own')
+          .reduce((sum, item) => sum + item.amount, 0),
+      ),
+      assignedAmount: this.roundMoney(
+        transactions
+          .filter((item) => item.sourceType === 'assigned')
+          .reduce((sum, item) => sum + item.amount, 0),
+      ),
+      totalTransactions: transactions.length,
+      transactions,
+    };
+  }
+
+  private syncSubcategoryDetailModal(): void {
+    const { categoryKey, categoryName, subcategoryKey, subcategoryName } =
+      this.subcategoryDetailModalData;
+
+    if (!categoryKey || !subcategoryKey) {
+      this.closeSubcategoryDetailModal();
+      return;
+    }
+
+    this.subcategoryDetailModalData = this.buildSubcategoryDetailModalData(
+      categoryKey,
+      categoryName,
+      subcategoryKey,
+      subcategoryName,
+    );
   }
 
   private filterVisibleTransactions(transacciones: TransaccionListado[]): TransaccionListado[] {
@@ -880,6 +1065,11 @@ export class GastosPorCategoriaPage implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  private isCurrentRouteIn(routes: string[]): boolean {
+    const currentUrl = this.router.url.split('?')[0];
+    return routes.some((route) => currentUrl === route || currentUrl.startsWith(`${route}/`));
   }
 
   private capitalizeText(value: string): string {

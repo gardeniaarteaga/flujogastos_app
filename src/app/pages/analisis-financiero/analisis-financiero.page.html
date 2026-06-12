@@ -21,7 +21,7 @@
     <nav class="nav">
       <div class="nav-group open">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-          Resumen financiero
+          Resumen
         </a>
         <div class="submenu">
           <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
@@ -44,7 +44,7 @@
       <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Cuotas/Compartidos
       </a>
-      <div class="nav-group" [class.open]="maintenanceOpen">
+      <div class="nav-group" [class.open]="maintenanceOpen || isMaintenanceMenuOpen">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
           <span>Mantenimiento</span>
           <span class="caret">v</span>
@@ -76,7 +76,11 @@
         </div>
       </div>
 
-      <details class="nav-group" open>
+      <details
+        class="nav-group"
+        [attr.open]="reportesOpen || isReportesMenuOpen ? '' : null"
+        (toggle)="onReportesToggle($any($event.target).open)"
+      >
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>
@@ -102,12 +106,16 @@
 
     <section class="hero-finance panel">
       <div class="hero-copy">
-        <span class="hero-kicker">Reportes inteligentes</span>
-        <h2>Analisis Financiero mensual accionable.</h2>
+        <h2>Analisis financiero</h2>
         <p>{{ analysis.summary }}</p>
 
         <div class="hero-actions">
-          <button type="button" class="secondary-button" (click)="loadPage()" [disabled]="loading">
+          <button
+            type="button"
+            class="secondary-button report-refresh-button"
+            (click)="loadPage()"
+            [disabled]="loading"
+          >
             {{ loading ? 'Actualizando...' : 'Actualizar analisis' }}
           </button>
         </div>
@@ -122,7 +130,7 @@
       <div class="panel-heading">
         <div>
           <span class="panel-kicker">Parametros</span>
-          <h3>Filtros del analisis</h3>
+          <h3>Filtros</h3>
         </div>
         <span class="scope-pill">Periodo, mes y anio son obligatorios</span>
       </div>

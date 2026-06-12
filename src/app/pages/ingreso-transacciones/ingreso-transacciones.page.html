@@ -44,7 +44,7 @@
       <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Cuotas/Compartidos
       </a>
-      <div class="nav-group" [class.open]="maintenanceOpen">
+      <div class="nav-group" [class.open]="maintenanceOpen || isMaintenanceMenuOpen">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
           <span>Mantenimiento</span>
           <span class="caret">v</span>
@@ -82,7 +82,11 @@
         </div>
       </div>
 
-      <details class="nav-group">
+      <details
+        class="nav-group"
+        [attr.open]="reportesOpen || isReportesMenuOpen ? '' : null"
+        (toggle)="onReportesToggle($any($event.target).open)"
+      >
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>
@@ -498,9 +502,29 @@
                 <h4>Configura el detalle del gasto</h4>
               </div>
             </div>
+            <label class="checkbox-row">
+              <input type="checkbox" formControlName="pago_variable" />
+              <span class="label-with-help">
+                <span>Pago Variable</span>
+                <span class="help-tooltip">
+                  <span class="help-badge" tabindex="0" aria-label="Ayuda sobre Pago Variable">?</span>
+                  <span class="help-tooltip-content">
+                    Activa esta opcion cuando quieras planificar las cuotas sin conocer aun el monto real. Se crean en 0 y luego se actualizan desde el modal de edicion.
+                  </span>
+                </span>
+              </span>
+            </label>
             <label *ngIf="showCuotasSinInteresesOption" class="checkbox-row">
               <input type="checkbox" formControlName="cuotas_sin_intereses" />
-              <span>Cuotas sin intereses/Desde fecha programada</span>
+              <span class="label-with-help">
+                <span>Cuotas sin intereses/Desde fecha programada</span>
+                <span class="help-tooltip">
+                  <span class="help-badge" tabindex="0" aria-label="Ayuda sobre cuotas sin intereses">?</span>
+                  <span class="help-tooltip-content">
+                    Usa esta opcion cuando las cuotas no generen intereses antes de su fecha programada. El sistema empieza a considerar el cobro desde esa fecha.
+                  </span>
+                </span>
+              </span>
             </label>
 
             <div class="participants-list">
@@ -524,6 +548,7 @@
                   </button>
                   <p
                     *ngIf="
+                      !isVariablePaymentMode &&
                       isSharedExpenseMode &&
                       participanteGroup.controls.es_titular.value &&
                       (transaccionForm.controls.monto.value ?? 0) > sharedExpenseCalculatedTotal
@@ -536,7 +561,7 @@
                   </p>
                   <div
                     class="participant-inline-controls"
-                    *ngIf="participanteGroup.controls.es_titular.value"
+                    *ngIf="participanteGroup.controls.es_titular.value && !isVariablePaymentMode"
                   >
                     <label class="checkbox-row">
                       <input
@@ -548,7 +573,7 @@
                     </label>
                   </div>
                   <div
-                    *ngIf="participanteGroup.controls.es_titular.value"
+                    *ngIf="participanteGroup.controls.es_titular.value && !isVariablePaymentMode"
                     class="field participants-summary-field participants-summary-field--inline"
                     [formGroup]="transaccionForm"
                   >
@@ -604,7 +629,7 @@
 
                     <div
                       class="field participant-field participant-field--monto participant-highlight-field"
-                      *ngIf="!isSharedExpenseMode || !participanteGroup.controls.dividir_monto.value"
+                      *ngIf="!isVariablePaymentMode && (!isSharedExpenseMode || !participanteGroup.controls.dividir_monto.value)"
                     >
                       <label [for]="'participante_monto_' + i">{{ getParticipanteMontoLabel(participanteGroup) }}</label>
                       <input
@@ -689,7 +714,7 @@
                     </div>
 
                     <div
-                      *ngIf="isSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && getCuotasArray(participanteGroup).at(0) as cuotaUnicaGroup"
+                      *ngIf="!isVariablePaymentMode && isSharedExpenseMode && participanteGroup.controls.dividir_monto.value && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && getCuotasArray(participanteGroup).at(0) as cuotaUnicaGroup"
                       class="field participant-single-cuota-field"
                     >
                       <label [for]="'participante_cuota_monto_' + i">Monto cuota</label>
@@ -795,7 +820,7 @@
                           inputmode="decimal"
                           autocomplete="off"
                           formControlName="monto"
-                          [readonly]="isCuotaMontoReadonly(participanteGroup)"
+                          [readonly]="isVariablePaymentMode || isCuotaMontoReadonly(participanteGroup)"
                           (input)="onCuotaMontoInput(participanteGroup, cuotaItem.index, $event)"
                           (focus)="onMoneyInputActivate($event)"
                           (click)="onMoneyInputActivate($event)"
@@ -844,7 +869,7 @@
                       </div>
                     </div>
                     <small
-                      *ngIf="!isCuotasTotalValid(participanteGroup)"
+                      *ngIf="!isVariablePaymentMode && !isCuotasTotalValid(participanteGroup)"
                     >
                       La suma de cuotas debe ser igual al monto total de esta persona.
                     </small>

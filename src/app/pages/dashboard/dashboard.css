@@ -5,61 +5,69 @@
 
 .dashboard-body,
 .kpi-grid {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
 }
 
 .scheduled-notifications-panel {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
 }
 
 .compact-dashboard {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .dashboard-header-panel {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
+  padding: 0.95rem 1rem;
 }
 
 .dashboard-header-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.9rem;
+  gap: 0.7rem;
   flex-wrap: wrap;
 }
 
 .dashboard-period-filter {
   display: flex;
   align-items: end;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
 }
 
 .dashboard-period-field {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.28rem;
 }
 
 .dashboard-period-field.dashboard-period-field-wide select {
-  min-width: 160px;
+  min-width: 148px;
 }
 
 .dashboard-period-field span {
   color: #64748b;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
 .dashboard-period-field select {
-  min-width: 130px;
-  min-height: 2.6rem;
-  padding: 0.65rem 0.8rem;
+  min-width: 118px;
+  min-height: 2.3rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid #d7e0ea;
-  border-radius: 0.85rem;
+  border-radius: 0.75rem;
   background: #fff;
   color: #172033;
   font: inherit;
+  font-size: 0.92rem;
+}
+
+.dashboard-refresh-button {
+  min-height: 2.3rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.88rem;
 }
 
 .quick-links-panel {
@@ -373,13 +381,13 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 
 .panel-heading h3 {
-  margin: 0.35rem 0 0;
-  font-size: 1.3rem;
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
   letter-spacing: -0.03em;
   color: #172033;
 }

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
 
 import { apiUrl } from '../../shared/config/api.config';
@@ -118,6 +118,7 @@ export class PagosRealizadosPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly apiUrl = apiUrl('transacciones');
@@ -144,6 +145,7 @@ export class PagosRealizadosPage implements OnInit {
 
   sidebarCollapsed = false;
   maintenanceOpen = false;
+  reportesOpen = false;
   loading = false;
   errorMessage = '';
   currentUserId = getCurrentUserId();
@@ -157,6 +159,35 @@ export class PagosRealizadosPage implements OnInit {
 
   get isAdminSession(): boolean {
     return isAdminUser();
+  }
+
+  get isResumenMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/transacciones/listado',
+      '/resumen/detalle-transacciones',
+      '/resumen/notificaciones',
+    ]);
+  }
+
+  get isMaintenanceMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/categorias',
+      '/formas-pago',
+      '/participantes',
+      '/subcategorias',
+      '/entidades-financieras',
+      '/tipo-entidad',
+      '/tipo-producto',
+      '/usuarios',
+    ]);
+  }
+
+  get isReportesMenuOpen(): boolean {
+    return this.isCurrentRouteIn([
+      '/reportes/analisis-financiero',
+      '/reportes/gastos-por-categoria',
+      '/reportes/pagos-realizados',
+    ]);
   }
 
   get totalPagado(): number {
@@ -345,6 +376,10 @@ export class PagosRealizadosPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
   }
 
   clearFilters(): void {
@@ -854,6 +889,11 @@ export class PagosRealizadosPage implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  private isCurrentRouteIn(routes: string[]): boolean {
+    const currentUrl = this.router.url.split('?')[0];
+    return routes.some((route) => currentUrl === route || currentUrl.startsWith(`${route}/`));
   }
 
   private isIncomeCategory(categoryName: string | null | undefined): boolean {

@@ -21,7 +21,7 @@
     <nav class="nav">
       <div class="nav-group open">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-          Resumen financiero
+          Resumen
         </a>
         <div class="submenu">
           <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
@@ -44,7 +44,7 @@
       <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         Cuotas/Compartidos
       </a>
-      <div class="nav-group" [class.open]="maintenanceOpen">
+      <div class="nav-group" [class.open]="maintenanceOpen || isMaintenanceMenuOpen">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
           <span>Mantenimiento</span>
           <span class="caret">v</span>
@@ -76,7 +76,11 @@
         </div>
       </div>
 
-      <details class="nav-group" open>
+      <details
+        class="nav-group"
+        [attr.open]="reportesOpen || isReportesMenuOpen ? '' : null"
+        (toggle)="onReportesToggle($any($event.target).open)"
+      >
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>
@@ -102,12 +106,16 @@
 
     <section class="hero-report panel">
       <div class="hero-copy">
-        <span class="hero-kicker">Nuevo reporte</span>
-        <h2>Gasto por categoria del titular.</h2>
+        <h2>Gasto por categoria</h2>
         <p>{{ report.summary }}</p>
 
         <div class="hero-actions">
-          <button type="button" class="secondary-button" (click)="loadPage()" [disabled]="loading">
+          <button
+            type="button"
+            class="secondary-button report-refresh-button"
+            (click)="loadPage()"
+            [disabled]="loading"
+          >
             {{ loading ? 'Actualizando...' : 'Actualizar reporte' }}
           </button>
         </div>
@@ -123,7 +131,7 @@
       <div class="panel-heading">
         <div>
           <span class="panel-kicker">Parametros</span>
-          <h3>Filtros del reporte</h3>
+          <h3>Filtros</h3>
         </div>
         <span class="scope-pill">Mes, quincena y anio</span>
       </div>
@@ -238,18 +246,24 @@
           </div>
 
           <div class="subcategory-breakdown-list">
-            <article *ngFor="let subitem of selectedCategory.subcategories" class="subcategory-breakdown-row">
+            <button
+              *ngFor="let subitem of selectedCategory.subcategories"
+              type="button"
+              class="subcategory-breakdown-row subcategory-breakdown-row-button"
+              (click)="handleOpenSubcategoryDetailModal(selectedCategory, subitem)"
+            >
               <div class="subcategory-breakdown-copy">
                 <strong>{{ subitem.name }}</strong>
                 <small>{{ formatPercent(subitem.shareOfCategory) }} de {{ selectedCategory.name }}</small>
                 <small>{{ formatPercent(subitem.shareOfTotal) }} del gasto total</small>
+                <small class="subcategory-breakdown-action">Ver detalle de transacciones</small>
               </div>
               <div class="subcategory-breakdown-metrics">
                 <strong>{{ formatCurrency(subitem.amount) }}</strong>
                 <small>Propio: {{ formatCurrency(subitem.ownAmount) }}</small>
                 <small>Asignado: {{ formatCurrency(subitem.assignedAmount) }}</small>
               </div>
-            </article>
+            </button>
           </div>
         </article>
       </section>
@@ -261,5 +275,96 @@
         <p>{{ loading ? 'Estamos consolidando categorias, subcategorias y montos visibles del periodo seleccionado.' : report.summary }}</p>
       </section>
     </ng-template>
+
+    <section
+      *ngIf="isSubcategoryDetailModalOpen"
+      class="payment-modal-backdrop"
+      (click)="closeSubcategoryDetailModal()"
+    >
+      <section
+        class="payment-modal subcategory-detail-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="'Detalle de transacciones de ' + subcategoryDetailModalData.subcategoryName"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="payment-modal-header">
+          <div>
+            <p class="panel-title">Detalle de categoria</p>
+            <h3>{{ subcategoryDetailModalData.subcategoryName }}</h3>
+          </div>
+          <button
+            type="button"
+            class="secondary-button compact-button"
+            aria-label="Cerrar detalle de subcategoria"
+            (click)="closeSubcategoryDetailModal()"
+          >
+            Cerrar
+          </button>
+        </header>
+
+        <p class="detail-modal-sender-text">
+          {{ subcategoryDetailModalData.categoryName }} | {{ subcategoryDetailModalData.periodLabel }}
+        </p>
+
+        <section class="payment-modal-summary">
+          <article class="payment-modal-chip">
+            <span>Total</span>
+            <strong>{{ formatCurrency(subcategoryDetailModalData.totalAmount) }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Movimientos</span>
+            <strong>{{ subcategoryDetailModalData.totalTransactions }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Propio</span>
+            <strong>{{ formatCurrency(subcategoryDetailModalData.ownAmount) }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Asignado</span>
+            <strong>{{ formatCurrency(subcategoryDetailModalData.assignedAmount) }}</strong>
+          </article>
+        </section>
+
+        <div
+          *ngIf="subcategoryDetailModalData.transactions.length > 0; else emptySubcategoryTransactions"
+          class="table-wrap detail-table-wrap subcategory-table-wrap"
+        >
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Monto</th>
+                <th>Origen</th>
+                <th>Estado</th>
+                <th>Metodo</th>
+                <th>Descripcion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let transaction of subcategoryDetailModalData.transactions">
+                <td>{{ transaction.transactionId }}</td>
+                <td>
+                  <strong>{{ formatDate(transaction.analysisDate) }}</strong>
+                </td>
+                <td>{{ formatCurrency(transaction.amount) }}</td>
+                <td>{{ getExpenseSourceLabel(transaction.sourceType) }}</td>
+                <td>{{ transaction.statusName }}</td>
+                <td>{{ transaction.paymentMethodName }}</td>
+                <td>{{ transaction.description }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptySubcategoryTransactions>
+          <section class="state-panel">
+            <strong>Sin transacciones visibles</strong>
+            <p>Con los filtros actuales esta subcategoria no tiene movimientos para mostrar.</p>
+          </section>
+        </ng-template>
+      </section>
+    </section>
   </main>
 </div>
