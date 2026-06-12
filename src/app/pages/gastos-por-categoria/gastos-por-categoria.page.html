@@ -1,0 +1,265 @@
+<div class="dashboard-page category-report-page" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-copy">
+        <p class="eyebrow">Flujo de Gastos</p>
+        <h1>Panel</h1>
+      </div>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen financiero
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Configurar notificaciones
+          </a>
+        </div>
+      </div>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Ingresos
+      </a>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Gastos
+      </a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Cuotas/Compartidos
+      </a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias">Categorias</a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Formas de Pago
+          </a>
+          <a class="submenu-item" routerLink="/participantes" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Participantes
+          </a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias">Subcategorias</a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras">Entidades financieras</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad">Tipo de entidad</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto">Tipo de producto</a>
+            </div>
+          </details>
+          <a *ngIf="isAdminSession" class="submenu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Usuarios
+          </a>
+        </div>
+      </div>
+
+      <details class="nav-group" open>
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Analisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/gastos-por-categoria" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos por categoria</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Estado de pagos</a>
+        </div>
+      </details>
+      <a class="nav-item" routerLink="/perfil">Mi perfil</a>
+    </nav>
+
+    <section class="sidebar-card">
+      <span class="sidebar-label">Ubicacion</span>
+      <strong>{{ userProfile.country || 'Sin pais definido' }}</strong>
+      <p>{{ userProfile.notificationsLabel }}</p>
+    </section>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <section class="hero-report panel">
+      <div class="hero-copy">
+        <span class="hero-kicker">Nuevo reporte</span>
+        <h2>Gasto por categoria del titular.</h2>
+        <p>{{ report.summary }}</p>
+
+        <div class="hero-actions">
+          <button type="button" class="secondary-button" (click)="loadPage()" [disabled]="loading">
+            {{ loading ? 'Actualizando...' : 'Actualizar reporte' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-score">
+        <span class="hero-score-label">Periodo activo</span>
+        <strong>{{ report.periodLabel }}</strong>
+      </div>
+    </section>
+
+    <section class="panel filter-panel">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Parametros</span>
+          <h3>Filtros del reporte</h3>
+        </div>
+        <span class="scope-pill">Mes, quincena y anio</span>
+      </div>
+
+      <form class="filters-grid" [formGroup]="filtrosForm">
+        <label class="field">
+          <span>Periodo</span>
+          <select formControlName="periodType">
+            <option *ngFor="let item of periodTypeOptions" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Mes</span>
+          <select formControlName="month">
+            <option *ngFor="let item of monthOptions" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Anio</span>
+          <select formControlName="year">
+            <option *ngFor="let item of years" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+
+        <label *ngIf="selectedPeriodType === 'quincena'" class="field">
+          <span>Quincena</span>
+          <select formControlName="quincena">
+            <option *ngFor="let item of quincenaOptions" [value]="item.value">{{ item.label }}</option>
+          </select>
+        </label>
+      </form>
+    </section>
+
+    <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
+      <strong>No se pudo generar el reporte.</strong>
+      <p>{{ errorMessage }}</p>
+    </section>
+
+    <section *ngIf="!loading && report.hasData; else loadingOrEmpty" class="report-body">
+      <section class="kpi-grid">
+        <article *ngFor="let card of report.kpis" class="kpi-card panel" [ngClass]="'tone-' + card.tone">
+          <span class="kpi-label">{{ card.label }}</span>
+          <strong>{{ card.displayValue || formatCurrency(card.value) }}</strong>
+          <p>{{ card.helper }}</p>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Distribucion</span>
+              <h3>Participacion por categoria</h3>
+            </div>
+            <span class="score-chip">{{ report.categoriesCount }} categorias</span>
+          </div>
+
+          <div class="donut-layout">
+            <div class="donut-chart" [style.background]="report.categoryDonutStyle">
+              <div class="donut-center">
+                <span>Total gasto</span>
+                <strong>{{ report.categoryDonutCenter }}</strong>
+              </div>
+            </div>
+
+            <div class="legend-list">
+              <button
+                *ngFor="let item of report.categories"
+                type="button"
+                class="legend-row legend-row-button"
+                [class.active]="item.key === selectedCategoryKey"
+                (click)="selectCategory(item.key)"
+              >
+                <span class="legend-dot" [style.background]="item.color"></span>
+                <div class="legend-copy">
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.count }} movimientos</small>
+                </div>
+                <div class="legend-metrics">
+                  <strong>{{ formatCurrency(item.amount) }}</strong>
+                  <small>{{ formatPercent(item.share) }}</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel detail-panel" *ngIf="report.selectedCategory as selectedCategory">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Desglose activo</span>
+              <h3>{{ selectedCategory.name }}</h3>
+            </div>
+            <span class="score-chip">{{ formatPercent(selectedCategory.share) }} del total</span>
+          </div>
+
+          <div class="detail-summary-grid">
+            <article class="metric-chip">
+              <span>Total categoria</span>
+              <strong>{{ formatCurrency(selectedCategory.amount) }}</strong>
+            </article>
+            <article class="metric-chip">
+              <span>Propio del titular</span>
+              <strong>{{ formatCurrency(selectedCategory.ownAmount) }}</strong>
+            </article>
+            <article class="metric-chip">
+              <span>Asignado por otros</span>
+              <strong>{{ formatCurrency(selectedCategory.assignedAmount) }}</strong>
+            </article>
+          </div>
+
+          <div class="subcategory-breakdown-list">
+            <article *ngFor="let subitem of selectedCategory.subcategories" class="subcategory-breakdown-row">
+              <div class="subcategory-breakdown-copy">
+                <strong>{{ subitem.name }}</strong>
+                <small>{{ formatPercent(subitem.shareOfCategory) }} de {{ selectedCategory.name }}</small>
+                <small>{{ formatPercent(subitem.shareOfTotal) }} del gasto total</small>
+              </div>
+              <div class="subcategory-breakdown-metrics">
+                <strong>{{ formatCurrency(subitem.amount) }}</strong>
+                <small>Propio: {{ formatCurrency(subitem.ownAmount) }}</small>
+                <small>Asignado: {{ formatCurrency(subitem.assignedAmount) }}</small>
+              </div>
+            </article>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <ng-template #loadingOrEmpty>
+      <section class="panel state-panel">
+        <strong>{{ loading ? 'Construyendo reporte de gastos por categoria...' : 'Sin movimientos suficientes para este corte.' }}</strong>
+        <p>{{ loading ? 'Estamos consolidando categorias, subcategorias y montos visibles del periodo seleccionado.' : report.summary }}</p>
+      </section>
+    </ng-template>
+  </main>
+</div>

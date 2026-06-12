@@ -6,6 +6,10 @@ import { adminOnlyGuard } from './shared/guards/admin-only.guard';
 const loadLogin = () => import('./pages/login/login').then((module) => module.Login);
 const loadDashboard = () =>
   import('./pages/dashboard/dashboard').then((module) => module.Dashboard);
+const loadGastosPorCategoriaPage = () =>
+  import('./pages/gastos-por-categoria/gastos-por-categoria.page').then(
+    (module) => module.GastosPorCategoriaPage,
+  );
 const loadIngresoTransaccionesPage = () =>
   import('./pages/ingreso-transacciones/ingreso-transacciones.page').then(
     (module) => module.IngresoTransaccionesPage,
@@ -103,6 +107,13 @@ export const routes: Routes = [
       import('./pages/pagos-realizados/pagos-realizados.page').then(
         (module) => module.PagosRealizadosPage,
       ),
+  },
+  {
+    path: 'reportes/gastos-por-categoria',
+    resolve: {
+      initialData: analisisFinancieroResolver,
+    },
+    loadComponent: loadGastosPorCategoriaPage,
   },
   { path: 'categorias', loadComponent: loadCategoriasPage },
   { path: 'subcategorias', loadComponent: loadSubcategoriasPage },
