@@ -351,9 +351,6 @@ WHERE monto_pagado IS NULL
 ALTER TABLE detalle_transacciones
 ADD COLUMN IF NOT EXISTS id_usuario_relacionado INTEGER;
 
-ALTER TABLE detalle_transacciones
-ADD COLUMN IF NOT EXISTS porcentaje_base NUMERIC(12, 6) NULL;
-
 CREATE INDEX IF NOT EXISTS idx_detalle_transacciones_id_usuario_relacionado
 ON detalle_transacciones (id_usuario_relacionado);
 

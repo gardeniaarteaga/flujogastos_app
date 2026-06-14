@@ -115,7 +115,6 @@ interface ParticipanteDetalleListado {
   interes_pagado: number;
   interes_pendiente: number;
   saldo_pendiente: number;
-  porcentaje: number;
   fecha_pago: string | null;
   fecha_programada: string | null;
   numero_cuota: number;
@@ -207,7 +206,6 @@ interface UpdateTransaccionPayload {
   participantes_detalle?: Array<{
     id_participante: number;
     monto: number;
-    porcentaje?: number | null;
     cantidad_cuotas: number;
     cuotas: CuotaPayload[];
   }>;
@@ -885,7 +883,7 @@ export class ListadoTransaccionesPage implements OnInit {
         oldestScheduledDate: fechaProgramada,
         rows: [row],
         totalPendiente: this.roundMoneyValue(saldoPendiente),
-        expanded: this.quickPayMetodoGroupExpansionState[groupKey] ?? groups.size === 0,
+        expanded: this.quickPayMetodoGroupExpansionState[groupKey] ?? false,
         selectableCount: 0,
         selectedCount: 0,
         selectionDisabled: false,
@@ -1472,6 +1470,13 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.ensureZeroBalancePeriodPercentages(group)[periodIndex] ?? 0;
   }
 
+  canEditZeroBalancePeriodParticipantMonto(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): boolean {
+    return this.canEditParticipanteMonto(group) && !this.isCuotaBloqueadaEnEditor(group, periodIndex);
+  }
+
   onZeroBalanceGeneralCuotasInput(event: Event): void {
     const input = event.target as HTMLInputElement | null;
     const rawValue = input?.value ?? '';
@@ -1549,6 +1554,46 @@ export class ListadoTransaccionesPage implements OnInit {
     this.setZeroBalancePeriodTotal(periodIndex, this.getZeroBalancePeriodTotal(periodIndex));
   }
 
+  onZeroBalancePeriodParticipantMontoInput(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+    event?: Event,
+  ): void {
+    if (!this.canEditZeroBalancePeriodParticipantMonto(group, periodIndex)) {
+      return;
+    }
+
+    if (this.isMoneyInputPendingDecimal(event)) {
+      return;
+    }
+
+    const input = event?.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    if (!rawValue.trim()) {
+      return;
+    }
+
+    const normalizedValue = this.normalizeDecimalValue(Number(rawValue));
+
+    if (Number.isNaN(normalizedValue)) {
+      return;
+    }
+
+    this.applyZeroBalancePeriodParticipantMonto(group, periodIndex, normalizedValue);
+  }
+
+  normalizeZeroBalancePeriodParticipantMontoInput(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): void {
+    this.applyZeroBalancePeriodParticipantMonto(
+      group,
+      periodIndex,
+      this.getZeroBalancePeriodParticipantMonto(group, periodIndex),
+    );
+  }
+
   onZeroBalancePeriodPercentageInput(
     group: ParticipanteDetalleForm,
     periodIndex: number,
@@ -1579,6 +1624,17 @@ export class ListadoTransaccionesPage implements OnInit {
       periodIndex,
       this.getZeroBalancePeriodParticipantPercentage(group, periodIndex),
     );
+  }
+
+  private resolveDetallePercentageFromMonto(
+    transaccionMonto: number,
+    detalleMonto: number,
+  ): number {
+    if (transaccionMonto <= 0) {
+      return 0;
+    }
+
+    return this.normalizePercentageValue((detalleMonto * 100) / transaccionMonto);
   }
 
   getParticipantePorcentajeSugerido(group: ParticipanteDetalleForm): number | null {
@@ -3128,6 +3184,12 @@ export class ListadoTransaccionesPage implements OnInit {
         cuotasParticipante,
         this.normalizeDateOnly(transaccion.fecha),
       );
+      const montoParticipante = this.resolveEditorParticipanteMontoBase(
+        transaccion,
+        detalle,
+        cuotasParticipante,
+        modoCuotas,
+      );
 
       this.participantesDetalleArray.push(
         this.registerParticipanteDetalleGroup(this.fb.group({
@@ -3158,16 +3220,11 @@ export class ListadoTransaccionesPage implements OnInit {
           }),
           dia_programado: this.fb.control<number | null>(programacion.dia),
           porcentaje: this.fb.control<number | null>(
-            detalle.porcentaje,
+            this.resolveDetallePercentageFromMonto(Number(transaccion.monto ?? 0), montoParticipante),
             this.getPorcentajeValidatorsForEditor(),
           ),
           monto: this.fb.control<number | null>(
-            this.resolveEditorParticipanteMontoBase(
-              transaccion,
-              detalle,
-              cuotasParticipante,
-              modoCuotas,
-            ),
+            montoParticipante,
             this.getEditorParticipanteMontoValidators(detalle.es_titular),
           ),
           cuotas: this.createCuotasArray(cuotasParticipante, detalle.monto, detalle.total_cuotas),
@@ -3765,11 +3822,6 @@ export class ListadoTransaccionesPage implements OnInit {
       payload.participantes_detalle = participantesDetalle.map((detalle) => ({
         id_participante: detalle.id_participante as number,
         monto: Number(detalle.monto),
-        porcentaje: Number(
-          this.participantesDetalleArray.controls.find(
-            (group) => group.controls.id_participante.value === detalle.id_participante,
-          )?.controls.porcentaje.value ?? 0,
-        ),
         cantidad_cuotas: Number(detalle.cantidad_cuotas),
         cuotas: detalle.cuotas,
       }));
@@ -5291,9 +5343,6 @@ export class ListadoTransaccionesPage implements OnInit {
           existing.saldo_pendiente + detalle.saldo_pendiente,
         );
         existing.total_cuotas += 1;
-        existing.porcentaje = this.normalizePercentageValue(
-          Number(existing.porcentaje ?? detalle.porcentaje ?? 0),
-        );
         continue;
       }
 
@@ -6782,51 +6831,7 @@ export class ListadoTransaccionesPage implements OnInit {
     });
 
     this.getZeroBalancePeriodIndexes().forEach((periodIndex) => {
-      const periodGroups = this.getZeroBalanceGroupsForPeriod(periodIndex);
-
-      if (!periodGroups.length) {
-        return;
-      }
-
-      const totalCentavos = periodGroups.reduce((sum, group) => {
-        const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
-        return sum + this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
-      }, 0);
-
-      if (totalCentavos <= 0) {
-        const fallbackWeights = this.getZeroBalanceDistributionWeights(periodGroups);
-        let assignedFallback = 0;
-
-        periodGroups.forEach((group, index) => {
-          const percentages = this.ensureZeroBalancePeriodPercentages(group);
-          const nextPercentage =
-            index === periodGroups.length - 1
-              ? this.normalizePercentageValue(Math.max(0, 100 - assignedFallback))
-              : this.normalizePercentageValue((fallbackWeights[index] ?? 0) * 100);
-
-          assignedFallback = this.normalizePercentageValue(assignedFallback + nextPercentage);
-          percentages[periodIndex] = nextPercentage;
-          this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
-        });
-
-        return;
-      }
-
-      let assignedPercentage = 0;
-
-      periodGroups.forEach((group, index) => {
-        const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
-        const cuotaCentavos = this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
-        const percentages = this.ensureZeroBalancePeriodPercentages(group);
-        const nextPercentage =
-          index === periodGroups.length - 1
-            ? this.normalizePercentageValue(Math.max(0, 100 - assignedPercentage))
-            : this.normalizePercentageValue((cuotaCentavos * 100) / totalCentavos);
-
-        assignedPercentage = this.normalizePercentageValue(assignedPercentage + nextPercentage);
-        percentages[periodIndex] = nextPercentage;
-        this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
-      });
+      this.syncZeroBalancePeriodPercentagesFromCurrentMontos(periodIndex);
     });
   }
 
@@ -7100,6 +7105,25 @@ export class ListadoTransaccionesPage implements OnInit {
     this.syncZeroBalanceSharedStateFromPeriods();
   }
 
+  private applyZeroBalancePeriodParticipantMonto(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+    monto: number,
+  ): void {
+    const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+
+    if (!cuotaGroup || !this.canEditZeroBalancePeriodParticipantMonto(group, periodIndex)) {
+      return;
+    }
+
+    cuotaGroup.controls.monto.setValue(this.normalizeDecimalValue(Number(monto ?? 0)), {
+      emitEvent: false,
+    });
+    cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
+    this.syncZeroBalancePeriodPercentagesFromCurrentMontos(periodIndex);
+    this.syncZeroBalanceSharedStateFromPeriods();
+  }
+
   private applyZeroBalanceGeneralCuotasCount(requestedCount: number): void {
     const groups = this.getZeroBalanceParticipantGroups();
 
@@ -7248,6 +7272,7 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.ensureZeroBalancePeriodPercentagesForAll();
+    this.syncZeroBalanceParticipantBasePercentages();
 
     groups.forEach((group) => {
       const montoTotal = this.getCuotasTotal(group);
@@ -7269,6 +7294,54 @@ export class ListadoTransaccionesPage implements OnInit {
     this.transaccionForm.controls.monto.setValue(montoTransaccion, { emitEvent: false });
     this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
     this.refreshEstadoTransaccionForEdit();
+  }
+
+  private syncZeroBalancePeriodPercentagesFromCurrentMontos(periodIndex: number): void {
+    const periodGroups = this.getZeroBalanceGroupsForPeriod(periodIndex);
+
+    if (!periodGroups.length) {
+      return;
+    }
+
+    const totalCentavos = periodGroups.reduce((sum, group) => {
+      const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+      return sum + this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
+    }, 0);
+
+    if (totalCentavos <= 0) {
+      const fallbackWeights = this.getZeroBalanceDistributionWeights(periodGroups);
+      let assignedFallback = 0;
+
+      periodGroups.forEach((group, index) => {
+        const percentages = this.ensureZeroBalancePeriodPercentages(group);
+        const nextPercentage =
+          index === periodGroups.length - 1
+            ? this.normalizePercentageValue(Math.max(0, 100 - assignedFallback))
+            : this.normalizePercentageValue((fallbackWeights[index] ?? 0) * 100);
+
+        assignedFallback = this.normalizePercentageValue(assignedFallback + nextPercentage);
+        percentages[periodIndex] = nextPercentage;
+        this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+      });
+
+      return;
+    }
+
+    let assignedPercentage = 0;
+
+    periodGroups.forEach((group, index) => {
+      const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+      const cuotaCentavos = this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
+      const percentages = this.ensureZeroBalancePeriodPercentages(group);
+      const nextPercentage =
+        index === periodGroups.length - 1
+          ? this.normalizePercentageValue(Math.max(0, 100 - assignedPercentage))
+          : this.normalizePercentageValue((cuotaCentavos * 100) / totalCentavos);
+
+      assignedPercentage = this.normalizePercentageValue(assignedPercentage + nextPercentage);
+      percentages[periodIndex] = nextPercentage;
+      this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+    });
   }
 
   private redistributeZeroBalancePeriodsFromPercentages(): void {

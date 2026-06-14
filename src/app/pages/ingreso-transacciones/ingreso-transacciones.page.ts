@@ -86,7 +86,6 @@ interface CreateTransaccionPayload {
   participantes_detalle?: Array<{
     id_participante: number;
     monto: number;
-    porcentaje?: number | null;
     cantidad_cuotas: number;
     cuotas: CuotaPayload[];
   }>;
@@ -1420,10 +1419,6 @@ export class IngresoTransaccionesPage implements OnInit {
       payload.participantes_detalle = participantesDetalle.map((detalle) => ({
         id_participante: detalle.id_participante as number,
         monto: Number(detalle.monto),
-        porcentaje:
-          detalle.porcentaje === null || detalle.porcentaje === undefined
-            ? null
-            : Number(detalle.porcentaje),
         cantidad_cuotas: Number(detalle.cantidad_cuotas),
         cuotas: detalle.cuotas,
       }));

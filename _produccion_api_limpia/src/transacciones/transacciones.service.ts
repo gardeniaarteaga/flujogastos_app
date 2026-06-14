@@ -42,7 +42,6 @@ type TransaccionDetalleResponse = {
   interes_pagado: number;
   interes_pendiente: number;
   saldo_pendiente: number;
-  porcentaje: number;
   fecha_pago: string | null;
   fecha_programada: string | null;
   fecha_inicio_interes: string | null;
@@ -1581,12 +1580,6 @@ export class TransaccionesService {
           interes_pagado: interesPagadoDetalle,
           interes_pendiente: interesPendienteDetalle,
           saldo_pendiente: saldoPendiente,
-          porcentaje:
-            Number(transaccion.monto) > 0
-              ? Number(
-                  ((montoDetalle / Number(transaccion.monto)) * 100).toFixed(2),
-                )
-              : 0,
           fecha_pago: detalle.fecha_pago,
           fecha_programada: detalle.fecha_programada,
           fecha_inicio_interes: detalle.fecha_inicio_interes,
