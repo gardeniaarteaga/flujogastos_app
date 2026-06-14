@@ -259,6 +259,11 @@ export class TransaccionesSchemaBootstrapService implements OnModuleInit {
     `);
 
     await this.dataSource.query(`
+      ALTER TABLE detalle_transacciones
+      ADD COLUMN IF NOT EXISTS porcentaje_base NUMERIC(12, 6) NULL
+    `);
+
+    await this.dataSource.query(`
       CREATE INDEX IF NOT EXISTS idx_detalle_transacciones_id_usuario_relacionado
       ON detalle_transacciones (id_usuario_relacionado)
     `);
