@@ -1,0 +1,2 @@
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS fecha_ult_password TIMESTAMP NULL;
