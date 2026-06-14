@@ -5,6 +5,101 @@
 BEGIN;
 
 -- =========================
+-- catalogos usados por transacciones
+-- =========================
+
+ALTER TABLE categorias
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE categorias
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE subcategorias
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE subcategorias
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE tipo_entidad
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE tipo_entidad
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE tipo_producto
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE tipo_producto
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE tipo_producto
+ADD COLUMN IF NOT EXISTS pago_inmediato BOOLEAN DEFAULT TRUE;
+
+UPDATE tipo_producto
+SET pago_inmediato = COALESCE(pago_inmediato, TRUE)
+WHERE pago_inmediato IS NULL;
+
+ALTER TABLE entidades_financieras
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE entidades_financieras
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE entidades_financieras
+ADD COLUMN IF NOT EXISTS pais VARCHAR(100);
+
+ALTER TABLE entidades_financieras
+ADD COLUMN IF NOT EXISTS sitio_web VARCHAR(200);
+
+ALTER TABLE entidades_financieras
+ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(50);
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS id_usuario INTEGER;
+
+UPDATE metodos_pago
+SET id_usuario = 1
+WHERE id_usuario IS NULL;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS tasa_anual NUMERIC(10, 2);
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS calcula_interes BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS recibe_estado_cuenta BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS aplica_membresia BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS mes_pago_membresia INTEGER;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS dia_corte INTEGER;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS dia_ultimo_pago INTEGER;
+
+ALTER TABLE metodos_pago
+ADD COLUMN IF NOT EXISTS dias_gracia INTEGER;
+
+UPDATE metodos_pago
+SET
+  calcula_interes = COALESCE(calcula_interes, FALSE),
+  recibe_estado_cuenta = COALESCE(recibe_estado_cuenta, FALSE),
+  aplica_membresia = COALESCE(aplica_membresia, FALSE)
+WHERE calcula_interes IS NULL
+   OR recibe_estado_cuenta IS NULL
+   OR aplica_membresia IS NULL;
+
+-- =========================
 -- usuarios
 -- =========================
 
