@@ -35,6 +35,8 @@ type TipoTransaccionId = number;
 type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
 type ModoCuotas = 'fijas' | 'divididas';
 type ExpenseMode = 'individual' | 'shared';
+const TIPO_CUOTA_FIJA_ID = 1;
+const TIPO_CUOTA_VARIABLE_ID = 2;
 
 interface CuotaPayload {
   monto: number;
@@ -68,6 +70,7 @@ interface CuotaPageItem {
 interface CreateTransaccionPayload {
   fecha: string;
   monto: number;
+  id_tipo_cuota: number;
   id_tipo_transaccion: TipoTransaccionId;
   id_metodo_pago: number;
   id_categoria: number;
@@ -83,6 +86,7 @@ interface CreateTransaccionPayload {
   participantes_detalle?: Array<{
     id_participante: number;
     monto: number;
+    porcentaje?: number | null;
     cantidad_cuotas: number;
     cuotas: CuotaPayload[];
   }>;
@@ -214,8 +218,12 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isSharedExpenseMode && Boolean(this.transaccionForm.controls.pago_variable.value);
   }
 
+  get isSharedExpenseCuotasDesdeFechaProgramadaMode(): boolean {
+    return this.isSharedExpenseMode && Boolean(this.transaccionForm.controls.cuotas_sin_intereses.value);
+  }
+
   get isSharedExpenseTotalEditable(): boolean {
-    if (this.isVariablePaymentMode) {
+    if (this.isVariablePaymentMode || this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
       return false;
     }
 
@@ -533,6 +541,7 @@ export class IngresoTransaccionesPage implements OnInit {
           return;
         }
 
+        this.applySharedExpenseCuotaDrivenMode();
         this.syncSharedExpenseCalculatedMonto();
         this.updateEstadoRegistroPreview();
       });
@@ -628,6 +637,15 @@ export class IngresoTransaccionesPage implements OnInit {
   onCuotasAccordionToggle(group: ParticipanteDetalleForm, event: Event): void {
     const detailsElement = event.target as HTMLDetailsElement | null;
 
+    if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      if (detailsElement && !detailsElement.open) {
+        detailsElement.open = true;
+      }
+
+      this.openCuotasGroups.add(group);
+      return;
+    }
+
     if (!detailsElement?.open) {
       this.openCuotasGroups.delete(group);
       return;
@@ -642,6 +660,10 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     if (this.isSharedExpenseMode) {
+      if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+        return false;
+      }
+
       return this.isIncomeTitularGroup(group);
     }
 
@@ -1034,6 +1056,7 @@ export class IngresoTransaccionesPage implements OnInit {
     );
     this.updateParticipantAmountValidators();
     this.titularManualOverride = false;
+    this.refreshProgramacionForAllGroups();
     this.syncSharedExpenseCalculatedMonto();
     this.updateEstadoRegistroPreview();
   }
@@ -1084,6 +1107,7 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateParticipantAmountValidators();
     this.showMontoRequiredForParticipantMessage = false;
     this.applyDismissedTitularDefaultShare(newGroup);
+    this.refreshProgramacionForAllGroups();
     this.syncSharedExpenseCalculatedMonto();
     this.updateEstadoRegistroPreview();
   }
@@ -1369,6 +1393,7 @@ export class IngresoTransaccionesPage implements OnInit {
     const payload: CreateTransaccionPayload = {
       fecha: normalizedFecha,
       monto: montoTotal,
+      id_tipo_cuota: this.isVariablePaymentMode ? TIPO_CUOTA_VARIABLE_ID : TIPO_CUOTA_FIJA_ID,
       id_tipo_transaccion: formValue.id_tipo_transaccion as TipoTransaccionId,
       id_metodo_pago: formValue.forma_pago as number,
       id_categoria: formValue.id_categoria as number,
@@ -1395,6 +1420,10 @@ export class IngresoTransaccionesPage implements OnInit {
       payload.participantes_detalle = participantesDetalle.map((detalle) => ({
         id_participante: detalle.id_participante as number,
         monto: Number(detalle.monto),
+        porcentaje:
+          detalle.porcentaje === null || detalle.porcentaje === undefined
+            ? null
+            : Number(detalle.porcentaje),
         cantidad_cuotas: Number(detalle.cantidad_cuotas),
         cuotas: detalle.cuotas,
       }));
@@ -1881,6 +1910,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   onDividirMontoChange(group: ParticipanteDetalleForm): void {
+    if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return;
+    }
+
     const gruposObjetivo =
       this.isSharedExpenseMode && group.controls.es_titular.value
         ? this.participantesDetalleArray.controls
@@ -2417,6 +2450,15 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     if (this.isSharedExpenseMode) {
+      if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+        this.participantesDetalleArray.controls.forEach((group) =>
+          this.syncSharedExpenseGroupMontoControlFromCuotas(group),
+        );
+        this.syncSharedExpenseCalculatedMonto();
+        this.updateEstadoRegistroPreview();
+        return;
+      }
+
       const participantesAdicionales = this.getAdditionalParticipants();
 
       participantesAdicionales.forEach((group) => {
@@ -3673,6 +3715,10 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private shouldRebalanceCounterpart(group: ParticipanteDetalleForm): boolean {
+    if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return false;
+    }
+
     if (this.usesIndependentSharedExpenseAmounts) {
       return false;
     }
@@ -3846,7 +3892,11 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseCounterpart(group: ParticipanteDetalleForm): void {
-    if (!this.isSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
+    if (
+      !this.isSharedExpenseMode ||
+      this.usesIndependentSharedExpenseAmounts ||
+      this.isSharedExpenseCuotasDesdeFechaProgramadaMode
+    ) {
       return;
     }
 
@@ -3859,13 +3909,17 @@ export class IngresoTransaccionesPage implements OnInit {
     this.rebalanceMontoDistributionToGroup(counterpartGroup);
   }
 
-  private syncSharedExpenseGroupFromCuotas(group: ParticipanteDetalleForm): void {
+  private syncSharedExpenseGroupMontoControlFromCuotas(group: ParticipanteDetalleForm): void {
     const montoActual = this.getCuotasTotal(group);
 
     group.controls.monto.setValue(this.getMontoInputValueForTarget(group, montoActual), {
       emitEvent: false,
     });
     group.controls.monto.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private syncSharedExpenseGroupFromCuotas(group: ParticipanteDetalleForm): void {
+    this.syncSharedExpenseGroupMontoControlFromCuotas(group);
 
     if (this.shouldRebalanceCounterpart(group)) {
       this.syncSharedExpenseCounterpart(group);
@@ -4047,7 +4101,11 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseTitularResidual(): void {
-    if (!this.isSharedExpenseMode || this.usesIndependentSharedExpenseAmounts) {
+    if (
+      !this.isSharedExpenseMode ||
+      this.usesIndependentSharedExpenseAmounts ||
+      this.isSharedExpenseCuotasDesdeFechaProgramadaMode
+    ) {
       return;
     }
 
@@ -4170,6 +4228,20 @@ export class IngresoTransaccionesPage implements OnInit {
     } finally {
       this.syncingSharedExpenseCalculatedMonto = false;
     }
+  }
+
+  private applySharedExpenseCuotaDrivenMode(): void {
+    if (!this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return;
+    }
+
+    this.participantesDetalleArray.controls.forEach((group) => {
+      group.controls.dividir_monto.setValue(true, { emitEvent: false });
+      group.controls.dividir_monto.updateValueAndValidity({ emitEvent: false });
+      group.controls.modo_cuotas.setValue('divididas', { emitEvent: false });
+      group.controls.modo_cuotas.updateValueAndValidity({ emitEvent: false });
+      this.syncSharedExpenseGroupMontoControlFromCuotas(group);
+    });
   }
 
   private isIncomeTitularGroup(group: ParticipanteDetalleForm): boolean {
@@ -4376,6 +4448,7 @@ export class IngresoTransaccionesPage implements OnInit {
       });
     });
 
+    this.refreshProgramacionForAllGroups();
     this.updateEstadoRegistroPreview();
   }
 

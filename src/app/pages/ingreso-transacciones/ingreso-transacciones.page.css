@@ -225,6 +225,14 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
+.participants-summary-input--disabled {
+  color: #5b6472 !important;
+  border: 1px solid #cfd6df !important;
+  background: linear-gradient(180deg, #f1f4f8 0%, #dfe5ec 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  cursor: not-allowed;
+}
+
 .participant-block {
   position: relative;
   display: grid;
@@ -334,6 +342,25 @@
   background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);
 }
 
+.participant-single-cuota-field input.cuota-input--programmed-mode,
+.cuota-row > input.cuota-input--programmed-mode {
+  font-weight: 800;
+  color: #2955c8;
+  border: 1px solid rgba(63, 106, 216, 0.28);
+  background: linear-gradient(180deg, #fafdff 0%, #e8f0ff 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 0 0 0.1rem rgba(63, 106, 216, 0.06);
+}
+
+.participant-single-cuota-field input.cuota-input--programmed-mode:focus,
+.cuota-row > input.cuota-input--programmed-mode:focus {
+  border-color: #3f6ad8;
+  box-shadow:
+    0 0 0 0.2rem rgba(63, 106, 216, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
 .participant-highlight-field label {
   color: #8a3d00;
 }
@@ -420,6 +447,10 @@
   color: var(--color-heading);
   background: rgba(214, 226, 240, 0.55);
   border-bottom: 1px solid rgba(194, 207, 223, 0.9);
+}
+
+.cuotas-accordion--locked summary {
+  cursor: default;
 }
 
 .cuotas-summary-meta {

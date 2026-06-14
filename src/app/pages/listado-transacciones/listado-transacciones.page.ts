@@ -48,6 +48,8 @@ import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/use
 type TipoTransaccionId = number;
 type ProgramacionCuotaTipo = 'ninguna' | 'dia_mes' | 'quincenal' | 'fin_mes';
 type ModoCuotas = 'fijas' | 'divididas';
+const TIPO_CUOTA_FIJA_ID = 1;
+const TIPO_CUOTA_VARIABLE_ID = 2;
 const ESTADO_TRANSACCION_ANULADA_ID = 2;
 const PRIORITY_WINDOW_DAYS = 7;
 const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
@@ -136,6 +138,7 @@ interface TransaccionListado {
   tasa_interes_anual?: number | null;
   saldo_pendiente: number;
   id_tipo_transaccion: TipoTransaccionId;
+  id_tipo_cuota?: number | null;
   nombre_tipo_transaccion: string | null;
   id_metodo_pago: number;
   nombre_forma_pago: string | null;
@@ -188,6 +191,8 @@ interface DetalleTransaccionListadoRow {
 interface UpdateTransaccionPayload {
   fecha: string;
   monto: number;
+  id_tipo_cuota: number;
+  pago_variable?: boolean;
   intereses?: number;
   cuotas_sin_intereses: boolean;
   id_tipo_transaccion: TipoTransaccionId;
@@ -202,6 +207,7 @@ interface UpdateTransaccionPayload {
   participantes_detalle?: Array<{
     id_participante: number;
     monto: number;
+    porcentaje?: number | null;
     cantidad_cuotas: number;
     cuotas: CuotaPayload[];
   }>;
@@ -302,6 +308,10 @@ export class ListadoTransaccionesPage implements OnInit {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  private readonly monthYearFormatter = new Intl.DateTimeFormat('es-SV', {
+    month: 'long',
+    year: 'numeric',
+  });
   readonly viewMode =
     this.route.snapshot.data['viewMode'] === 'detalle' ? 'detalle' : 'transacciones';
   readonly today = new Date();
@@ -396,6 +406,10 @@ export class ListadoTransaccionesPage implements OnInit {
   private readonly manualAmountGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly pendingDismissedTitularFullShareGroups = new WeakSet<ParticipanteDetalleForm>();
   private readonly cuotasPageByGroup = new WeakMap<ParticipanteDetalleForm, number>();
+  private readonly zeroBalancePeriodPercentagesByGroup = new WeakMap<
+    ParticipanteDetalleForm,
+    number[]
+  >();
   private autoOpenPaymentHandledKey: string | null = null;
   private readonly quickPayMetodoGroupExpansionState: Record<string, boolean> = {};
   readonly listadoPageSize = 10;
@@ -515,6 +529,7 @@ export class ListadoTransaccionesPage implements OnInit {
           return;
         }
 
+        this.applySharedExpenseCuotaDrivenModeForEdit();
         this.syncCalculatedExpenseMontoForEdit();
       });
 
@@ -1019,9 +1034,16 @@ export class ListadoTransaccionesPage implements OnInit {
     return !this.isEditingIncomeMode && Boolean(this.usarParticipantesControl.value);
   }
 
+  get isEditingSharedExpenseCuotasDesdeFechaProgramadaMode(): boolean {
+    return this.isEditingSharedExpenseMode && Boolean(this.transaccionForm.controls.cuotas_sin_intereses.value);
+  }
+
   get isEditingSharedExpenseTotalEditable(): boolean {
     return Boolean(
-      this.isEditingSharedExpenseMode && this.titularDetalleGroup?.controls.dividir_monto.value,
+      this.isEditingSharedExpenseMode &&
+        !this.isEditingSharedExpenseCuotasDesdeFechaProgramadaMode &&
+        !this.showZeroBalancePeriodGrouping &&
+        this.titularDetalleGroup?.controls.dividir_monto.value,
     );
   }
 
@@ -1049,6 +1071,109 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return this.isEditingIncomeMode ? 'Monto' : 'Monto total';
+  }
+
+  get editModalTransactionKindLabel(): string {
+    if (this.isEditingIncomeMode) {
+      return 'Ingreso';
+    }
+
+    return this.usarParticipantesControl.value ? 'Compartido' : 'Individual';
+  }
+
+  get hasMultipleCuotasInEditor(): boolean {
+    return this.participantesDetalleArray.controls.some(
+      (group) => this.getGroupCuotasCount(group) > 1,
+    );
+  }
+
+  get isVariablePaymentTransactionInEditor(): boolean {
+    if (!this.isEditingSharedExpenseMode) {
+      return false;
+    }
+
+    return (
+      Number(this.selectedTransaccion?.id_tipo_cuota ?? 0) === TIPO_CUOTA_VARIABLE_ID ||
+      this.hasLegacyZeroBalanceCuotasInEditor
+    );
+  }
+
+  private get hasLegacyZeroBalanceCuotasInEditor(): boolean {
+    return this.editorDetallesOriginales.some((detalle) =>
+      this.isZeroBalancePlannedDetail(detalle),
+    );
+  }
+
+  get hasZeroBalanceCuotasInEditor(): boolean {
+    return this.isVariablePaymentTransactionInEditor;
+  }
+
+  get showZeroBalancePeriodGrouping(): boolean {
+    return Boolean(
+      this.isEditingSharedExpenseMode &&
+      this.hasZeroBalanceCuotasInEditor &&
+      this.usarParticipantesControl.value,
+    );
+  }
+
+  get editModalCuotasKindLabel(): string {
+    if (this.isVariablePaymentTransactionInEditor) {
+      return 'Pago variable';
+    }
+
+    if (this.hasLegacyZeroBalanceCuotasInEditor) {
+      return 'Saldos en 0.00';
+    }
+
+    if (this.hasMultipleCuotasInEditor) {
+      return 'Edita por mes';
+    }
+
+    return this.usarParticipantesControl.value ? 'Con cuotas' : 'Cuota unica';
+  }
+
+  get participantsEditorTitle(): string {
+    if (this.isEditingSharedExpenseMode) {
+      return 'Participantes y cuotas';
+    }
+
+    if (this.hasMultipleCuotasInEditor || this.hasZeroBalanceCuotasInEditor) {
+      return 'Cuotas';
+    }
+
+    return 'Detalle';
+  }
+
+  get participantsEditorHint(): string {
+    if (this.isEditingSharedExpenseMode && this.isVariablePaymentTransactionInEditor) {
+      return 'Esta transaccion esta marcada como pago variable. Configura las cuotas una sola vez y cambia el monto desde cada mes.';
+    }
+
+    if (this.isEditingSharedExpenseMode) {
+      return 'El modal ya detecto que esta transaccion es compartida.';
+    }
+
+    if (this.hasZeroBalanceCuotasInEditor) {
+      return 'Esta transaccion viene planificada en 0.00 y aqui puedes ajustar cada mes.';
+    }
+
+    if (this.hasMultipleCuotasInEditor) {
+      return 'Edita las cuotas del titular sin abrir campos extra.';
+    }
+
+    return 'Abre el detalle solo si necesitas dividir cuotas o agregar participantes.';
+  }
+
+  get shouldShowCompactParticipantsLauncher(): boolean {
+    return !Boolean(this.usarParticipantesControl.value);
+  }
+
+  get participantsLauncherLabel(): string {
+    if (this.isEditingIncomeMode) {
+      return 'Editar cuotas';
+    }
+
+    return 'Editar cuotas y participantes';
   }
 
   get dividirMontoLabel(): string {
@@ -1232,6 +1357,230 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.getGroupMontoTarget(group);
   }
 
+  private getEditorParticipanteMontoValidators(esTitular: boolean): ValidatorFn[] {
+    const minimumAmount =
+      !esTitular && this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor
+        ? 0
+        : (esTitular ? 0 : 0.01);
+
+    return [
+      Validators.required,
+      Validators.min(minimumAmount),
+      this.maxTwoDecimalsValidator(),
+    ];
+  }
+
+  shouldStartCuotasExpanded(group: ParticipanteDetalleForm): boolean {
+    return this.hasZeroBalanceCuotasInEditor || !this.isCuotasTotalValid(group);
+  }
+
+  get zeroBalanceConfigGroup(): ParticipanteDetalleForm | null {
+    return this.titularDetalleGroup ?? this.getZeroBalanceParticipantGroups()[0] ?? null;
+  }
+
+  get shouldShowZeroBalanceGeneralDaySelector(): boolean {
+    return (
+      this.getZeroBalanceGeneralTipoProgramacion() === 'dia_mes' &&
+      this.getZeroBalanceGeneralCuotasCount() > 1
+    );
+  }
+
+  get canAddZeroBalanceGeneralCuota(): boolean {
+    return this.getZeroBalanceParticipantGroups().length > 0;
+  }
+
+  getZeroBalanceParticipantGroups(): ParticipanteDetalleForm[] {
+    return this.participantesDetalleArray.controls.filter((group) =>
+      this.shouldShowTitularSection(group),
+    );
+  }
+
+  getZeroBalancePeriodIndexes(): number[] {
+    const maxCuotas = this.getZeroBalanceParticipantGroups().reduce(
+      (max, group) => Math.max(max, this.getCuotasArray(group).length),
+      0,
+    );
+
+    return Array.from({ length: maxCuotas }, (_value, index) => index);
+  }
+
+  getZeroBalanceGeneralCuotasCount(): number {
+    return this.getZeroBalancePeriodIndexes().length;
+  }
+
+  getZeroBalanceGeneralTipoProgramacion(): ProgramacionCuotaTipo {
+    return this.zeroBalanceConfigGroup?.controls.tipo_programacion.value ?? 'ninguna';
+  }
+
+  getZeroBalanceGeneralDiaProgramado(): number | null {
+    return this.zeroBalanceConfigGroup?.controls.dia_programado.value ?? null;
+  }
+
+  getZeroBalanceGroupsForPeriod(periodIndex: number): ParticipanteDetalleForm[] {
+    return this.getZeroBalanceParticipantGroups().filter(
+      (group) => this.getCuotasArray(group).length > periodIndex,
+    );
+  }
+
+  getZeroBalancePeriodTotal(periodIndex: number): number {
+    return this.centsToAmount(
+      this.getZeroBalanceGroupsForPeriod(periodIndex).reduce((sum, group) => {
+        const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+
+        if (!cuotaGroup) {
+          return sum;
+        }
+
+        return sum + this.toCents(this.getCuotaMontoForPayload(group, cuotaGroup, periodIndex));
+      }, 0),
+    );
+  }
+
+  getZeroBalancePeriodTitle(periodIndex: number): string {
+    const isoDate = this.getZeroBalancePeriodDateIso(periodIndex);
+
+    if (!isoDate) {
+      return `Mes ${periodIndex + 1}`;
+    }
+
+    const formatted = this.monthYearFormatter.format(this.parseIsoDate(isoDate));
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  getZeroBalancePeriodDateLabel(periodIndex: number): string {
+    return this.getFechaProgramadaDisplay(this.getZeroBalancePeriodDateIso(periodIndex));
+  }
+
+  getZeroBalanceParticipantLabel(group: ParticipanteDetalleForm): string {
+    return group.controls.es_titular.value
+      ? (group.controls.nombre_mostrado.value || this.currentUserDisplayName)
+      : (group.controls.nombre_mostrado.value || 'Participante por definir');
+  }
+
+  getZeroBalancePeriodParticipantMonto(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): number {
+    const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+    return this.normalizeDecimalValue(Number(cuotaGroup?.controls.monto.value ?? 0));
+  }
+
+  getZeroBalancePeriodParticipantPercentage(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): number {
+    return this.ensureZeroBalancePeriodPercentages(group)[periodIndex] ?? 0;
+  }
+
+  onZeroBalanceGeneralCuotasInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    if (!rawValue.trim()) {
+      return;
+    }
+
+    const normalizedValue = Math.trunc(Number(rawValue));
+
+    if (Number.isNaN(normalizedValue)) {
+      return;
+    }
+
+    this.applyZeroBalanceGeneralCuotasCount(normalizedValue);
+    this.cdr.detectChanges();
+  }
+
+  normalizeZeroBalanceGeneralCuotasInput(): void {
+    this.applyZeroBalanceGeneralCuotasCount(this.getZeroBalanceGeneralCuotasCount());
+  }
+
+  onZeroBalanceGeneralTipoProgramacionChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement | null)?.value;
+    const tipoProgramacion: ProgramacionCuotaTipo =
+      value === 'dia_mes' || value === 'quincenal' || value === 'fin_mes' || value === 'ninguna'
+        ? value
+        : 'ninguna';
+
+    this.applyZeroBalanceGeneralProgramacionConfig(
+      tipoProgramacion,
+      this.getZeroBalanceGeneralDiaProgramado(),
+    );
+  }
+
+  onZeroBalanceGeneralDiaProgramadoChange(event: Event): void {
+    const value = Number((event.target as HTMLSelectElement | null)?.value ?? null);
+    const diaProgramado = Number.isNaN(value)
+      ? this.getDefaultDiaProgramado()
+      : this.normalizeDiaProgramado(value);
+
+    this.applyZeroBalanceGeneralProgramacionConfig(
+      this.getZeroBalanceGeneralTipoProgramacion(),
+      diaProgramado,
+    );
+  }
+
+  addZeroBalanceGeneralCuota(): void {
+    if (!this.canAddZeroBalanceGeneralCuota) {
+      return;
+    }
+
+    this.applyZeroBalanceGeneralCuotasCount(this.getZeroBalanceGeneralCuotasCount() + 1);
+    this.cdr.detectChanges();
+  }
+
+  onZeroBalancePeriodMontoInput(periodIndex: number, event?: Event): void {
+    const input = event?.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    if (!rawValue.trim()) {
+      return;
+    }
+
+    const normalizedValue = this.normalizeDecimalValue(Number(rawValue));
+
+    if (Number.isNaN(normalizedValue)) {
+      return;
+    }
+
+    this.setZeroBalancePeriodTotal(periodIndex, normalizedValue);
+  }
+
+  normalizeZeroBalancePeriodMontoInput(periodIndex: number): void {
+    this.setZeroBalancePeriodTotal(periodIndex, this.getZeroBalancePeriodTotal(periodIndex));
+  }
+
+  onZeroBalancePeriodPercentageInput(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+    event?: Event,
+  ): void {
+    const input = event?.target as HTMLInputElement | null;
+    const rawValue = input?.value ?? '';
+
+    if (!rawValue.trim()) {
+      return;
+    }
+
+    const normalizedValue = this.normalizePercentageValue(Number(rawValue));
+
+    if (Number.isNaN(normalizedValue)) {
+      return;
+    }
+
+    this.applyZeroBalancePeriodPercentage(group, periodIndex, normalizedValue);
+  }
+
+  normalizeZeroBalancePeriodPercentageInput(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): void {
+    this.applyZeroBalancePeriodPercentage(
+      group,
+      periodIndex,
+      this.getZeroBalancePeriodParticipantPercentage(group, periodIndex),
+    );
+  }
+
   getParticipantePorcentajeSugerido(group: ParticipanteDetalleForm): number | null {
     const participante = this.getCatalogParticipanteForGroup(group);
     const porcentaje = participante?.porcentaje_participacion;
@@ -1258,6 +1607,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   canEditParticipanteMonto(group: ParticipanteDetalleForm): boolean {
+    if (this.isEditingSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return false;
+    }
+
     if (!this.hasAppliedPagosInEditor) {
       return true;
     }
@@ -2815,11 +3168,7 @@ export class ListadoTransaccionesPage implements OnInit {
               cuotasParticipante,
               modoCuotas,
             ),
-            [
-              Validators.required,
-              Validators.min(detalle.es_titular ? 0 : 0.01),
-              this.maxTwoDecimalsValidator(),
-            ],
+            this.getEditorParticipanteMontoValidators(detalle.es_titular),
           ),
           cuotas: this.createCuotasArray(cuotasParticipante, detalle.monto, detalle.total_cuotas),
         })),
@@ -2878,11 +3227,17 @@ export class ListadoTransaccionesPage implements OnInit {
       this.addTitularDetalle();
     }
 
+    if (this.showZeroBalancePeriodGrouping) {
+      this.initializeZeroBalanceBasePercentagesFromCurrentContext();
+      this.initializeZeroBalanceGeneralProgramacionFromCurrentCuotas();
+      this.initializeZeroBalancePeriodPercentagesFromCurrentCuotas();
+    }
+
     if (this.isEditingSharedExpenseMode) {
+      this.applySharedExpenseCuotaDrivenModeForEdit();
       this.syncCalculatedExpenseMontoForEdit();
     }
 
-    this.refreshProgramacionForAllGroups();
     this.onFormaPagoChange();
     this.onCategoriaChange();
     this.refreshEstadoTransaccionForEdit();
@@ -2905,10 +3260,22 @@ export class ListadoTransaccionesPage implements OnInit {
 
   onUsarParticipantesChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.usarParticipantesControl.setValue(checked);
+    this.setParticipantesEditorEnabled(checked);
+  }
+
+  enableParticipantesEditor(): void {
+    if (this.hasAppliedPagosInEditor) {
+      return;
+    }
+
+    this.setParticipantesEditorEnabled(true);
+  }
+
+  private setParticipantesEditorEnabled(enabled: boolean): void {
+    this.usarParticipantesControl.setValue(enabled);
     this.updateEditingMontoValidators();
 
-    if (checked) {
+    if (enabled) {
       this.titularManualOverride = false;
       if (this.participantesDetalleArray.length === 0) {
         this.addTitularDetalle();
@@ -2958,11 +3325,10 @@ export class ListadoTransaccionesPage implements OnInit {
           titularPorcentajeInicial,
           this.getPorcentajeValidatorsForEditor(),
         ),
-        monto: this.fb.control<number | null>(titularMontoInicial, [
-          Validators.required,
-          Validators.min(0),
-          this.maxTwoDecimalsValidator(),
-        ]),
+        monto: this.fb.control<number | null>(
+          titularMontoInicial,
+          this.getEditorParticipanteMontoValidators(true),
+        ),
         cuotas: this.createCuotasArray(undefined, titularMontoInicial, 1),
       })),
     );
@@ -2976,6 +3342,18 @@ export class ListadoTransaccionesPage implements OnInit {
 
     const dividirMontoInicial = this.titularDetalleGroup?.controls.dividir_monto.value ?? true;
     const modoCuotasInicial: ModoCuotas = dividirMontoInicial ? 'divididas' : 'fijas';
+    const cuotasTitularIniciales = this.normalizeCuotasCountValue(
+      this.titularDetalleGroup as ParticipanteDetalleForm,
+      this.titularDetalleGroup?.controls.cantidad_cuotas.value ?? 1,
+    );
+    const tipoProgramacionInicial =
+      cuotasTitularIniciales > 1
+        ? (this.titularDetalleGroup?.controls.tipo_programacion.value ?? 'dia_mes')
+        : 'ninguna';
+    const diaProgramadoInicial =
+      cuotasTitularIniciales > 1
+        ? (this.titularDetalleGroup?.controls.dia_programado.value ?? this.getDefaultDiaProgramado())
+        : null;
 
     const newGroup = this.registerParticipanteDetalleGroup(this.fb.group({
       id_participante: this.fb.control<number | null>(null, [Validators.required]),
@@ -2983,29 +3361,35 @@ export class ListadoTransaccionesPage implements OnInit {
       es_titular: this.fb.control(false, { nonNullable: true }),
       dividir_monto: this.fb.control(dividirMontoInicial, { nonNullable: true }),
       modo_cuotas: this.fb.control<ModoCuotas>(modoCuotasInicial, { nonNullable: true }),
-      cantidad_cuotas: this.fb.control<number | null>(1, [
+      cantidad_cuotas: this.fb.control<number | null>(cuotasTitularIniciales, [
         Validators.required,
         Validators.min(1),
         this.wholeNumberValidator(),
       ]),
-      tipo_programacion: this.fb.control<ProgramacionCuotaTipo>('ninguna', {
+      tipo_programacion: this.fb.control<ProgramacionCuotaTipo>(tipoProgramacionInicial, {
         nonNullable: true,
       }),
-      dia_programado: this.fb.control<number | null>(null),
+      dia_programado: this.fb.control<number | null>(diaProgramadoInicial),
       porcentaje: this.fb.control<number | null>(
         this.isEditingSharedExpenseMode ? 0 : null,
         this.getPorcentajeValidatorsForEditor(),
       ),
-      monto: this.fb.control<number | null>(this.isEditingSharedExpenseMode ? 0 : null, [
-        Validators.required,
-        Validators.min(0.01),
-        this.maxTwoDecimalsValidator(),
-      ]),
-      cuotas: this.createCuotasArray(undefined, 0, 1),
+      monto: this.fb.control<number | null>(
+        this.isEditingSharedExpenseMode ? 0 : null,
+        this.getEditorParticipanteMontoValidators(false),
+      ),
+      cuotas: this.createCuotasArray(undefined, 0, cuotasTitularIniciales),
     }));
 
     this.participantesDetalleArray.push(newGroup);
     this.applyDismissedTitularDefaultShare(newGroup);
+
+    if (this.showZeroBalancePeriodGrouping) {
+      this.applyZeroBalanceGeneralCuotasCount(this.getZeroBalanceGeneralCuotasCount());
+      this.syncZeroBalanceSharedStateFromPeriods();
+      return;
+    }
+
     this.syncCalculatedExpenseMontoForEdit();
   }
 
@@ -3014,6 +3398,11 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (!this.getAdditionalParticipants().length) {
       this.titularManualOverride = false;
+    }
+
+    if (this.showZeroBalancePeriodGrouping) {
+      this.redistributeZeroBalancePeriodsFromPercentages();
+      return;
     }
 
     if (this.isEditingSharedExpenseMode) {
@@ -3258,8 +3647,14 @@ export class ListadoTransaccionesPage implements OnInit {
       this.addTitularDetalle();
     }
 
-    if (this.usarParticipantesControl.value && !this.hasAppliedPagosInEditor) {
+    if (
+      this.usarParticipantesControl.value &&
+      !this.hasAppliedPagosInEditor &&
+      !this.showZeroBalancePeriodGrouping
+    ) {
       this.refreshParticipantesMontos();
+    } else if (this.showZeroBalancePeriodGrouping) {
+      this.syncZeroBalanceSharedStateFromPeriods();
     }
 
     this.transaccionForm.markAllAsTouched();
@@ -3343,6 +3738,11 @@ export class ListadoTransaccionesPage implements OnInit {
     const payload: UpdateTransaccionPayload = {
       fecha: this.normalizeDateInputValue(formValue.fecha_transaccion ?? '') ?? '',
       monto: montoTotal,
+      id_tipo_cuota:
+        this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor
+          ? TIPO_CUOTA_VARIABLE_ID
+          : TIPO_CUOTA_FIJA_ID,
+      pago_variable: this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor,
       cuotas_sin_intereses:
         this.showCuotasSinInteresesOption && Boolean(formValue.cuotas_sin_intereses),
       id_tipo_transaccion: formValue.id_tipo_transaccion as TipoTransaccionId,
@@ -3365,6 +3765,11 @@ export class ListadoTransaccionesPage implements OnInit {
       payload.participantes_detalle = participantesDetalle.map((detalle) => ({
         id_participante: detalle.id_participante as number,
         monto: Number(detalle.monto),
+        porcentaje: Number(
+          this.participantesDetalleArray.controls.find(
+            (group) => group.controls.id_participante.value === detalle.id_participante,
+          )?.controls.porcentaje.value ?? 0,
+        ),
         cantidad_cuotas: Number(detalle.cantidad_cuotas),
         cuotas: detalle.cuotas,
       }));
@@ -3555,6 +3960,12 @@ export class ListadoTransaccionesPage implements OnInit {
     const rawValue = control.value;
 
     if (this.isEditingSharedExpenseMode) {
+      if (this.showZeroBalancePeriodGrouping) {
+        this.clearDismissedTitularFullShareDefault(group);
+        this.recalculateZeroBalanceSharedPercentageDistribution(group);
+        return;
+      }
+
       if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
         this.titularManualOverride = true;
       }
@@ -3668,7 +4079,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   onDividirMontoChange(group: ParticipanteDetalleForm): void {
-    if (this.hasAppliedPagosInEditor) {
+    if (
+      this.hasAppliedPagosInEditor ||
+      this.isEditingSharedExpenseCuotasDesdeFechaProgramadaMode
+    ) {
       return;
     }
 
@@ -3746,6 +4160,12 @@ export class ListadoTransaccionesPage implements OnInit {
       group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
 
       if (this.isEditingSharedExpenseMode) {
+        if (this.showZeroBalancePeriodGrouping) {
+          this.clearDismissedTitularFullShareDefault(group);
+          this.recalculateZeroBalanceSharedPercentageDistribution(group);
+          return;
+        }
+
         if (!this.isEditingIncomeMode && group.controls.es_titular.value) {
           this.titularManualOverride = true;
         }
@@ -3909,13 +4329,26 @@ export class ListadoTransaccionesPage implements OnInit {
       participante?.porcentaje_participacion !== null &&
       participante?.porcentaje_participacion !== undefined
     ) {
-      group.controls.porcentaje.setValue(participante.porcentaje_participacion, {
+      const porcentajeParticipante = this.normalizePercentageValue(
+        Number(participante.porcentaje_participacion),
+      );
+
+      group.controls.porcentaje.setValue(porcentajeParticipante, {
         emitEvent: false,
       });
       this.markGroupAmountAsAutomatic(group);
 
       if (this.isEditingSharedExpenseMode) {
-        this.recalculateSharedExpensePercentageDistribution(group);
+        if (this.showZeroBalancePeriodGrouping) {
+          const percentages = this.ensureZeroBalancePeriodPercentages(group);
+          for (let index = 0; index < percentages.length; index += 1) {
+            percentages[index] = porcentajeParticipante;
+          }
+          this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+          this.recalculateZeroBalanceSharedPercentageDistribution(group);
+        } else {
+          this.recalculateSharedExpensePercentageDistribution(group);
+        }
       } else {
         this.updateMontoFromPorcentaje(group, this.shouldRebalanceCounterpart(group));
       }
@@ -4349,9 +4782,13 @@ export class ListadoTransaccionesPage implements OnInit {
   private getParticipantesDetalleForEditor(
     transaccion: Pick<TransaccionListado, 'participantes_detalle'> | null | undefined,
   ): ParticipanteDetalleListado[] {
-    return this.getParticipantesDetalleSafe(transaccion).filter(
-      (detalle) => detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID,
-    );
+    return this.getParticipantesDetalleSafe(transaccion)
+      .filter((detalle) => detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID)
+      .map((detalle) => ({
+        ...detalle,
+        fecha_pago: this.normalizeDateOnly(detalle.fecha_pago),
+        fecha_programada: this.normalizeDateOnly(detalle.fecha_programada),
+      }));
   }
 
   private getParticipantesDetalleForPayment(
@@ -4790,7 +5227,19 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return detalles.some(
-      (detalle) => !detalle.es_titular || detalle.total_cuotas > 1 || detalle.numero_cuota > 1,
+      (detalle) =>
+        !detalle.es_titular ||
+        detalle.total_cuotas > 1 ||
+        detalle.numero_cuota > 1 ||
+        this.isZeroBalancePlannedDetail(detalle),
+    );
+  }
+
+  private isZeroBalancePlannedDetail(detalle: ParticipanteDetalleListado): boolean {
+    return Boolean(
+      !this.detalleTienePagosAplicados(detalle) &&
+      this.toCents(Number(detalle.monto ?? 0)) === 0 &&
+      this.toCents(Number(detalle.saldo_pendiente ?? 0)) === 0,
     );
   }
 
@@ -4842,7 +5291,9 @@ export class ListadoTransaccionesPage implements OnInit {
           existing.saldo_pendiente + detalle.saldo_pendiente,
         );
         existing.total_cuotas += 1;
-        existing.porcentaje = this.normalizePercentageValue(existing.porcentaje + detalle.porcentaje);
+        existing.porcentaje = this.normalizePercentageValue(
+          Number(existing.porcentaje ?? detalle.porcentaje ?? 0),
+        );
         continue;
       }
 
@@ -4865,7 +5316,7 @@ export class ListadoTransaccionesPage implements OnInit {
       .sort((left, right) => left.numero_cuota - right.numero_cuota)
       .map((detalle) => ({
         monto: this.normalizeDecimalValue(Number(detalle.monto ?? 0)),
-        fecha_programada: detalle.fecha_programada ?? null,
+        fecha_programada: this.normalizeDateOnly(detalle.fecha_programada) || null,
       }));
   }
 
@@ -4989,31 +5440,53 @@ export class ListadoTransaccionesPage implements OnInit {
       return { tipo: 'ninguna', dia: null };
     }
 
-    const fechasProgramadas = cuotas.map((cuota) => cuota.fecha_programada).filter(Boolean) as string[];
+    const fechasProgramadas = cuotas
+      .map((cuota) => this.normalizeDateOnly(cuota.fecha_programada))
+      .filter(Boolean) as string[];
 
-    if (fechasProgramadas.length !== cuotas.length) {
+    return this.inferProgramacionFromFechas(
+      fechasProgramadas,
+      fechaBaseIso,
+      cuotas.length,
+    );
+  }
+
+  private inferProgramacionFromFechas(
+    fechasProgramadas: string[],
+    fechaBaseIso: string,
+    cantidadCuotas = fechasProgramadas.length,
+  ): { tipo: ProgramacionCuotaTipo; dia: number | null } {
+    const fechasNormalizadas = fechasProgramadas
+      .map((value) => this.normalizeDateOnly(value))
+      .filter(Boolean);
+
+    if (cantidadCuotas <= 1) {
+      return { tipo: 'ninguna', dia: null };
+    }
+
+    if (fechasNormalizadas.length !== cantidadCuotas) {
       return { tipo: 'dia_mes', dia: this.getDefaultDiaProgramado() };
     }
 
-    const quincenales = this.buildFechasQuincenales(fechaBaseIso, cuotas.length);
-    if (this.areProgramadasEqual(fechasProgramadas, quincenales)) {
+    const quincenales = this.buildFechasQuincenales(fechaBaseIso, cantidadCuotas);
+    if (this.areProgramadasEqual(fechasNormalizadas, quincenales)) {
       return { tipo: 'quincenal', dia: null };
     }
 
-    const finMes = this.buildFechasFinMes(fechaBaseIso, cuotas.length);
-    if (this.areProgramadasEqual(fechasProgramadas, finMes)) {
+    const finMes = this.buildFechasFinMes(fechaBaseIso, cantidadCuotas);
+    if (this.areProgramadasEqual(fechasNormalizadas, finMes)) {
       return { tipo: 'fin_mes', dia: null };
     }
 
     for (const dia of this.diasProgramacion) {
-      const fechasDiaMes = this.buildFechasDiaMes(fechaBaseIso, cuotas.length, dia);
+      const fechasDiaMes = this.buildFechasDiaMes(fechaBaseIso, cantidadCuotas, dia);
 
-      if (this.areProgramadasEqual(fechasProgramadas, fechasDiaMes)) {
+      if (this.areProgramadasEqual(fechasNormalizadas, fechasDiaMes)) {
         return { tipo: 'dia_mes', dia };
       }
     }
 
-    return { tipo: 'dia_mes', dia: this.normalizeDiaProgramado(Number(fechasProgramadas[0]?.slice(8, 10))) };
+    return { tipo: 'ninguna', dia: null };
   }
 
   private areProgramadasEqual(left: string[], right: string[]): boolean {
@@ -6190,7 +6663,7 @@ export class ListadoTransaccionesPage implements OnInit {
       cuotas && cuotas.length > 0
         ? cuotas.map((cuota) => ({
             monto: this.normalizeDecimalValue(Number(cuota.monto)),
-            fecha_programada: cuota.fecha_programada,
+            fecha_programada: this.normalizeDateOnly(cuota.fecha_programada) || null,
           }))
         : this.distributeMontoEnCuotas(montoTotal, cantidadCuotas).map((monto) => ({
             monto,
@@ -6224,6 +6697,637 @@ export class ListadoTransaccionesPage implements OnInit {
     group.controls.cantidad_cuotas.setValue(siguienteCantidad, { emitEvent: false });
     group.controls.cantidad_cuotas.updateValueAndValidity({ emitEvent: false });
     this.syncCuotasCount(group);
+  }
+
+  private getZeroBalancePeriodDateIso(periodIndex: number): string | null {
+    for (const group of this.getZeroBalanceGroupsForPeriod(periodIndex)) {
+      const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+      const fechaProgramada =
+        this.normalizeDateOnly(cuotaGroup?.controls.fecha_programada.value ?? null) || null;
+
+      if (fechaProgramada) {
+        return fechaProgramada;
+      }
+    }
+
+    return null;
+  }
+
+  private getZeroBalanceGeneralMinimumCuotasCount(): number {
+    let minimumCount = 0;
+
+    this.getZeroBalanceParticipantGroups().forEach((group) => {
+      this.getCuotasArray(group).controls.forEach((_cuotaGroup, index) => {
+        if (this.isCuotaBloqueadaEnEditor(group, index)) {
+          minimumCount = Math.max(minimumCount, index + 1);
+        }
+      });
+    });
+
+    return minimumCount;
+  }
+
+  private resolveZeroBalanceDefaultPercentage(group: ParticipanteDetalleForm): number {
+    const currentValue = group.controls.porcentaje.value;
+
+    if (currentValue !== null && currentValue !== undefined) {
+      return this.normalizePercentageValue(Number(currentValue));
+    }
+
+    const suggestedValue = this.getParticipantePorcentajeSugerido(group);
+
+    if (suggestedValue !== null && suggestedValue !== undefined) {
+      return this.normalizePercentageValue(Number(suggestedValue));
+    }
+
+    return this.getZeroBalanceParticipantGroups().length <= 1 ? 100 : 0;
+  }
+
+  private ensureZeroBalancePeriodPercentages(group: ParticipanteDetalleForm): number[] {
+    const desiredCount = this.getCuotasArray(group).length;
+    const current = [...(this.zeroBalancePeriodPercentagesByGroup.get(group) ?? [])];
+    const defaultValue = this.resolveZeroBalanceDefaultPercentage(group);
+
+    while (current.length < desiredCount) {
+      current.push(defaultValue);
+    }
+
+    if (current.length > desiredCount) {
+      current.length = desiredCount;
+    }
+
+    const normalized = current.map((value) =>
+      this.normalizePercentageValue(Number(value ?? defaultValue)),
+    );
+    this.zeroBalancePeriodPercentagesByGroup.set(group, normalized);
+    return normalized;
+  }
+
+  private ensureZeroBalancePeriodPercentagesForAll(): void {
+    this.getZeroBalanceParticipantGroups().forEach((group) => {
+      this.ensureZeroBalancePeriodPercentages(group);
+    });
+  }
+
+  private initializeZeroBalancePeriodPercentagesFromCurrentCuotas(): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    if (!groups.length) {
+      return;
+    }
+
+    groups.forEach((group) => {
+      this.zeroBalancePeriodPercentagesByGroup.delete(group);
+      this.ensureZeroBalancePeriodPercentages(group);
+    });
+
+    this.getZeroBalancePeriodIndexes().forEach((periodIndex) => {
+      const periodGroups = this.getZeroBalanceGroupsForPeriod(periodIndex);
+
+      if (!periodGroups.length) {
+        return;
+      }
+
+      const totalCentavos = periodGroups.reduce((sum, group) => {
+        const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+        return sum + this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
+      }, 0);
+
+      if (totalCentavos <= 0) {
+        const fallbackWeights = this.getZeroBalanceDistributionWeights(periodGroups);
+        let assignedFallback = 0;
+
+        periodGroups.forEach((group, index) => {
+          const percentages = this.ensureZeroBalancePeriodPercentages(group);
+          const nextPercentage =
+            index === periodGroups.length - 1
+              ? this.normalizePercentageValue(Math.max(0, 100 - assignedFallback))
+              : this.normalizePercentageValue((fallbackWeights[index] ?? 0) * 100);
+
+          assignedFallback = this.normalizePercentageValue(assignedFallback + nextPercentage);
+          percentages[periodIndex] = nextPercentage;
+          this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+        });
+
+        return;
+      }
+
+      let assignedPercentage = 0;
+
+      periodGroups.forEach((group, index) => {
+        const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+        const cuotaCentavos = this.toCents(Number(cuotaGroup?.controls.monto.value ?? 0));
+        const percentages = this.ensureZeroBalancePeriodPercentages(group);
+        const nextPercentage =
+          index === periodGroups.length - 1
+            ? this.normalizePercentageValue(Math.max(0, 100 - assignedPercentage))
+            : this.normalizePercentageValue((cuotaCentavos * 100) / totalCentavos);
+
+        assignedPercentage = this.normalizePercentageValue(assignedPercentage + nextPercentage);
+        percentages[periodIndex] = nextPercentage;
+        this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+      });
+    });
+  }
+
+  private initializeZeroBalanceBasePercentagesFromCurrentContext(): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    if (!groups.length) {
+      return;
+    }
+
+    const desiredPercentages = groups.map((group) => {
+      const currentPercentage = this.normalizePercentageValue(
+        Number(group.controls.porcentaje.value ?? 0),
+      );
+
+      if (currentPercentage > 0) {
+        return currentPercentage;
+      }
+
+      const suggestedPercentage = this.getParticipantePorcentajeSugerido(group);
+      return suggestedPercentage !== null && suggestedPercentage !== undefined
+        ? this.normalizePercentageValue(Number(suggestedPercentage))
+        : null;
+    });
+    const assignedPercentage = desiredPercentages.reduce<number>(
+      (sum, value) => sum + this.normalizePercentageValue(Number(value ?? 0)),
+      0,
+    );
+
+    if (assignedPercentage > 100) {
+      groups.forEach((group, index) => {
+        const sourcePercentage = this.normalizePercentageValue(
+          Number(desiredPercentages[index] ?? 0),
+        );
+        const normalizedPercentage = this.normalizePercentageValue(
+          (sourcePercentage * 100) / assignedPercentage,
+        );
+
+        group.controls.porcentaje.setValue(normalizedPercentage, { emitEvent: false });
+        group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+      });
+      return;
+    }
+
+    const pendingIndexes = desiredPercentages.reduce<number[]>((indexes, value, index) => {
+      if (value === null || value === undefined) {
+        indexes.push(index);
+      }
+
+      return indexes;
+    }, []);
+    const remainingPercentage = this.normalizePercentageValue(
+      Math.max(0, 100 - assignedPercentage),
+    );
+
+    groups.forEach((group, index) => {
+      let nextPercentage = desiredPercentages[index];
+
+      if (nextPercentage === null || nextPercentage === undefined) {
+        if (pendingIndexes.length === 0) {
+          nextPercentage = 0;
+        } else if (pendingIndexes.length === 1) {
+          nextPercentage = remainingPercentage;
+        } else {
+          const pendingPosition = pendingIndexes.indexOf(index);
+          const distributedPercentage = this.normalizePercentageValue(
+            remainingPercentage / pendingIndexes.length,
+          );
+          const assignedPendingPercentage =
+            pendingPosition <= 0 ? 0 : distributedPercentage * pendingPosition;
+
+          nextPercentage =
+            pendingPosition === pendingIndexes.length - 1
+              ? this.normalizePercentageValue(
+                  Math.max(0, remainingPercentage - assignedPendingPercentage),
+                )
+              : distributedPercentage;
+        }
+      }
+
+      group.controls.porcentaje.setValue(
+        this.normalizePercentageValue(Number(nextPercentage ?? 0)),
+        { emitEvent: false },
+      );
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private initializeZeroBalanceGeneralProgramacionFromCurrentCuotas(): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+    const programacion = this.resolveZeroBalanceGeneralProgramacionFromCurrentCuotas();
+
+    if (!groups.length || !programacion) {
+      return;
+    }
+
+    groups.forEach((group) => {
+      group.controls.tipo_programacion.setValue(programacion.tipo, { emitEvent: false });
+      group.controls.tipo_programacion.updateValueAndValidity({ emitEvent: false });
+      group.controls.dia_programado.setValue(programacion.dia, { emitEvent: false });
+      group.controls.dia_programado.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private resolveZeroBalanceGeneralProgramacionFromCurrentCuotas():
+    | { tipo: ProgramacionCuotaTipo; dia: number | null }
+    | null {
+    const cantidadCuotas = this.getZeroBalanceGeneralCuotasCount();
+
+    if (cantidadCuotas <= 1) {
+      return null;
+    }
+
+    const fechaBaseIso =
+      this.normalizeDateInputValue(this.transaccionForm.controls.fecha_transaccion.value ?? '') ??
+      this.formatDateInput(this.today);
+    const candidateFechas: string[][] = [];
+    const fechasGenerales = this.getZeroBalancePeriodIndexes()
+      .map((periodIndex) => this.getZeroBalancePeriodDateIso(periodIndex))
+      .filter((value): value is string => Boolean(value));
+
+    if (fechasGenerales.length === cantidadCuotas) {
+      candidateFechas.push(fechasGenerales);
+    }
+
+    this.getZeroBalanceParticipantGroups().forEach((group) => {
+      const fechasGrupo = this.getCuotasArray(group).controls
+        .map((cuotaGroup) => cuotaGroup.controls.fecha_programada.value)
+        .filter((value): value is string => Boolean(value));
+
+      if (fechasGrupo.length === cantidadCuotas) {
+        candidateFechas.push(fechasGrupo);
+      }
+    });
+
+    for (const fechasProgramadas of candidateFechas) {
+      const programacion = this.inferProgramacionFromFechas(
+        fechasProgramadas,
+        fechaBaseIso,
+        cantidadCuotas,
+      );
+
+      if (programacion.tipo !== 'ninguna') {
+        return programacion;
+      }
+    }
+
+    if (candidateFechas.length > 0) {
+      return this.inferProgramacionFromFechas(
+        candidateFechas[0],
+        fechaBaseIso,
+        cantidadCuotas,
+      );
+    }
+
+    return null;
+  }
+
+  private syncZeroBalanceParticipantBasePercentages(): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    groups.forEach((group) => {
+      const percentages = this.ensureZeroBalancePeriodPercentages(group);
+      const average =
+        percentages.length > 0
+          ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length
+          : this.resolveZeroBalanceDefaultPercentage(group);
+      const normalizedAverage = this.normalizePercentageValue(average);
+
+      group.controls.porcentaje.setValue(normalizedAverage, { emitEvent: false });
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private rebalanceZeroBalancePeriodPercentages(
+    periodIndex: number,
+    editedGroup?: ParticipanteDetalleForm,
+  ): void {
+    const groups = this.getZeroBalanceGroupsForPeriod(periodIndex);
+
+    if (!groups.length) {
+      return;
+    }
+
+    if (groups.length === 1) {
+      const singlePercentages = this.ensureZeroBalancePeriodPercentages(groups[0]);
+      singlePercentages[periodIndex] = 100;
+      this.zeroBalancePeriodPercentagesByGroup.set(groups[0], singlePercentages);
+      return;
+    }
+
+    const otherGroups = editedGroup ? groups.filter((group) => group !== editedGroup) : groups.slice(0, -1);
+    const residualGroup = editedGroup
+      ? groups.find((group) => group !== editedGroup && !otherGroups.slice(0, -1).includes(group)) ?? groups[groups.length - 1]
+      : groups[groups.length - 1];
+
+    if (!residualGroup) {
+      return;
+    }
+
+    const editedPercentage = editedGroup
+      ? this.getZeroBalancePeriodParticipantPercentage(editedGroup, periodIndex)
+      : null;
+    const sourceGroups = editedGroup ? otherGroups : groups.slice(0, -1);
+    const totalSourcePercentages = sourceGroups.reduce(
+      (sum, group) => sum + this.getZeroBalancePeriodParticipantPercentage(group, periodIndex),
+      0,
+    );
+    let assigned = editedPercentage ?? 0;
+
+    sourceGroups.forEach((group, index) => {
+      if (editedGroup && group === residualGroup) {
+        return;
+      }
+
+      if (!editedGroup && group === residualGroup) {
+        return;
+      }
+
+      const percentages = this.ensureZeroBalancePeriodPercentages(group);
+      const isLastAdjustable = index === sourceGroups.length - 1;
+      let nextPercentage = this.getZeroBalancePeriodParticipantPercentage(group, periodIndex);
+
+      if (editedGroup) {
+        if (isLastAdjustable) {
+          nextPercentage = this.normalizePercentageValue(Math.max(0, 100 - assigned));
+        } else if (totalSourcePercentages > 0) {
+          nextPercentage = this.normalizePercentageValue(
+            ((100 - (editedPercentage ?? 0)) *
+              this.getZeroBalancePeriodParticipantPercentage(group, periodIndex)) /
+              totalSourcePercentages,
+          );
+          assigned = this.normalizePercentageValue(assigned + nextPercentage);
+        } else {
+          nextPercentage = this.normalizePercentageValue((100 - (editedPercentage ?? 0)) / sourceGroups.length);
+          assigned = this.normalizePercentageValue(assigned + nextPercentage);
+        }
+      }
+
+      percentages[periodIndex] = nextPercentage;
+      this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+    });
+
+    const residualPercentages = this.ensureZeroBalancePeriodPercentages(residualGroup);
+    const residualValue = this.normalizePercentageValue(
+      Math.max(
+        0,
+        100 -
+          groups
+            .filter((group) => group !== residualGroup)
+            .reduce(
+              (sum, group) => sum + this.getZeroBalancePeriodParticipantPercentage(group, periodIndex),
+              0,
+            ),
+      ),
+    );
+    residualPercentages[periodIndex] = residualValue;
+    this.zeroBalancePeriodPercentagesByGroup.set(residualGroup, residualPercentages);
+  }
+
+  private applyZeroBalancePeriodPercentage(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+    porcentaje: number,
+  ): void {
+    const percentages = this.ensureZeroBalancePeriodPercentages(group);
+    percentages[periodIndex] = this.normalizePercentageValue(porcentaje);
+    this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+    this.rebalanceZeroBalancePeriodPercentages(periodIndex, group);
+    this.setZeroBalancePeriodTotal(periodIndex, this.getZeroBalancePeriodTotal(periodIndex), false);
+    this.syncZeroBalanceSharedStateFromPeriods();
+  }
+
+  private applyZeroBalanceGeneralCuotasCount(requestedCount: number): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    if (!groups.length) {
+      return;
+    }
+
+    const normalizedCount = Math.max(
+      this.getZeroBalanceGeneralMinimumCuotasCount(),
+      Math.max(0, Math.trunc(Number(requestedCount) || 0)),
+    );
+
+    groups.forEach((group) => {
+      const cuotasArray = this.getCuotasArray(group);
+
+      while (cuotasArray.length < normalizedCount) {
+        cuotasArray.push(this.createCuotaGroup(0, null));
+      }
+
+      while (cuotasArray.length > normalizedCount) {
+        cuotasArray.removeAt(cuotasArray.length - 1);
+      }
+
+      group.controls.cantidad_cuotas.setValue(normalizedCount, { emitEvent: false });
+      group.controls.cantidad_cuotas.updateValueAndValidity({ emitEvent: false });
+      this.syncCuotasPage(group);
+    });
+
+    this.ensureZeroBalancePeriodPercentagesForAll();
+
+    this.applyZeroBalanceGeneralProgramacionConfig(
+      this.getZeroBalanceGeneralTipoProgramacion(),
+      this.getZeroBalanceGeneralDiaProgramado(),
+      false,
+    );
+    this.syncZeroBalanceSharedStateFromPeriods();
+  }
+
+  private applyZeroBalanceGeneralProgramacionConfig(
+    tipoProgramacion: ProgramacionCuotaTipo,
+    diaProgramado: number | null,
+    syncState = true,
+  ): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+    const cuotasCount = this.getZeroBalanceGeneralCuotasCount();
+    const resolvedTipo = cuotasCount <= 1 ? 'ninguna' : tipoProgramacion;
+    const resolvedDia =
+      resolvedTipo === 'dia_mes' && cuotasCount > 1
+        ? this.normalizeDiaProgramado(Number(diaProgramado ?? this.getDefaultDiaProgramado()))
+        : null;
+
+    groups.forEach((group) => {
+      group.controls.tipo_programacion.setValue(resolvedTipo, { emitEvent: false });
+      group.controls.tipo_programacion.updateValueAndValidity({ emitEvent: false });
+      group.controls.dia_programado.setValue(resolvedDia, { emitEvent: false });
+      group.controls.dia_programado.updateValueAndValidity({ emitEvent: false });
+      this.refreshProgramacionCuotas(group);
+    });
+
+    if (syncState) {
+      this.syncZeroBalanceSharedStateFromPeriods();
+    }
+  }
+
+  private getZeroBalanceDistributionWeights(
+    groups: ParticipanteDetalleForm[],
+    periodIndex?: number,
+  ): number[] {
+    if (!groups.length) {
+      return [];
+    }
+
+    const percentages = groups.map((group) =>
+      periodIndex === undefined
+        ? this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0))
+        : this.getZeroBalancePeriodParticipantPercentage(group, periodIndex),
+    );
+    const totalPercentage = percentages.reduce((sum, value) => sum + value, 0);
+
+    if (totalPercentage > 0) {
+      return percentages.map((value) => value / totalPercentage);
+    }
+
+    const fallbackWeight = 1 / groups.length;
+    return groups.map(() => fallbackWeight);
+  }
+
+  private setZeroBalancePeriodTotal(
+    periodIndex: number,
+    montoTotal: number,
+    syncState = true,
+  ): void {
+    const groups = this.getZeroBalanceGroupsForPeriod(periodIndex);
+
+    if (!groups.length) {
+      return;
+    }
+
+    const blockedTotalCentavos = groups.reduce((sum, group) => {
+      if (!this.isCuotaBloqueadaEnEditor(group, periodIndex)) {
+        return sum;
+      }
+
+      return sum + this.toCents(this.getZeroBalancePeriodParticipantMonto(group, periodIndex));
+    }, 0);
+    const targetTotalCentavos = Math.max(
+      blockedTotalCentavos,
+      this.toCents(this.normalizeDecimalValue(Number(montoTotal ?? 0))),
+    );
+    const editableGroups = groups.filter(
+      (group) => !this.isCuotaBloqueadaEnEditor(group, periodIndex),
+    );
+    const editableTargetCentavos = Math.max(0, targetTotalCentavos - blockedTotalCentavos);
+    const weights = this.getZeroBalanceDistributionWeights(editableGroups, periodIndex);
+    let assignedCentavos = 0;
+
+    editableGroups.forEach((group, index) => {
+      const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
+
+      if (!cuotaGroup) {
+        return;
+      }
+
+      const cuotaCentavos =
+        index === editableGroups.length - 1
+          ? Math.max(0, editableTargetCentavos - assignedCentavos)
+          : Math.max(0, Math.floor(editableTargetCentavos * (weights[index] ?? 0)));
+
+      assignedCentavos += cuotaCentavos;
+      cuotaGroup.controls.monto.setValue(this.centsToAmount(cuotaCentavos), {
+        emitEvent: false,
+      });
+      cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
+    });
+
+    if (syncState) {
+      this.syncZeroBalanceSharedStateFromPeriods();
+    }
+  }
+
+  private syncZeroBalanceSharedStateFromPeriods(): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    if (!groups.length) {
+      return;
+    }
+
+    this.ensureZeroBalancePeriodPercentagesForAll();
+
+    groups.forEach((group) => {
+      const montoTotal = this.getCuotasTotal(group);
+
+      group.controls.monto.setValue(this.getMontoInputValueForTarget(group, montoTotal), {
+        emitEvent: false,
+      });
+      group.controls.monto.updateValueAndValidity({ emitEvent: false });
+      group.controls.cantidad_cuotas.setValue(this.getCuotasArray(group).length, {
+        emitEvent: false,
+      });
+      group.controls.cantidad_cuotas.updateValueAndValidity({ emitEvent: false });
+    });
+
+    const montoTransaccion = this.normalizeDecimalValue(
+      groups.reduce((sum, group) => sum + this.getCuotasTotal(group), 0),
+    );
+
+    this.transaccionForm.controls.monto.setValue(montoTransaccion, { emitEvent: false });
+    this.transaccionForm.controls.monto.updateValueAndValidity({ emitEvent: false });
+    this.refreshEstadoTransaccionForEdit();
+  }
+
+  private redistributeZeroBalancePeriodsFromPercentages(): void {
+    const periodTotals = this.getZeroBalancePeriodIndexes().map((periodIndex) =>
+      this.getZeroBalancePeriodTotal(periodIndex),
+    );
+
+    periodTotals.forEach((montoTotal, periodIndex) =>
+      this.setZeroBalancePeriodTotal(periodIndex, montoTotal, false),
+    );
+
+    this.syncZeroBalanceSharedStateFromPeriods();
+  }
+
+  private recalculateZeroBalanceSharedPercentageDistribution(
+    editedGroup: ParticipanteDetalleForm,
+  ): void {
+    const groups = this.getZeroBalanceParticipantGroups();
+
+    if (groups.length === 0) {
+      return;
+    }
+
+    const otherGroups = groups.filter((group) => group !== editedGroup);
+    const editedPercentage =
+      otherGroups.length === 0
+        ? 100
+        : this.normalizePercentageValue(Number(editedGroup.controls.porcentaje.value ?? 0));
+
+    editedGroup.controls.porcentaje.setValue(editedPercentage, { emitEvent: false });
+    editedGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+
+    const totalOtherPercentage = otherGroups.reduce(
+      (sum, group) =>
+        sum + this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0)),
+      0,
+    );
+    let assignedPercentage = editedPercentage;
+
+    otherGroups.forEach((group, index) => {
+      const isLastGroup = index === otherGroups.length - 1;
+      let nextPercentage = 0;
+
+      if (isLastGroup) {
+        nextPercentage = this.normalizePercentageValue(Math.max(0, 100 - assignedPercentage));
+      } else if (totalOtherPercentage > 0) {
+        nextPercentage = this.normalizePercentageValue(
+          ((100 - editedPercentage) *
+            this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0))) /
+            totalOtherPercentage,
+        );
+        assignedPercentage = this.normalizePercentageValue(assignedPercentage + nextPercentage);
+      }
+
+      group.controls.porcentaje.setValue(nextPercentage, { emitEvent: false });
+      group.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    });
+
+    this.redistributeZeroBalancePeriodsFromPercentages();
   }
 
   private getCuotasPayload(group: ParticipanteDetalleForm): CuotaPayload[] {
@@ -6395,6 +7499,7 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
+    this.alignCuotasToGroupTarget(group);
     this.refreshProgramacionCuotas(group);
     this.refreshEstadoTransaccionForEdit();
   }
@@ -6419,6 +7524,7 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
+    this.alignCuotasToGroupTarget(group);
     this.refreshProgramacionCuotas(group);
 
     if (this.isEditingSharedExpenseMode) {
@@ -6576,6 +7682,39 @@ export class ListadoTransaccionesPage implements OnInit {
     ultimaCuota?.controls.monto.updateValueAndValidity({ emitEvent: false });
     this.refreshProgramacionCuotas(group);
     this.refreshEstadoTransaccionForEdit();
+  }
+
+  private alignCuotasToGroupTarget(group: ParticipanteDetalleForm): void {
+    const cuotasArray = this.getCuotasArray(group);
+
+    if (cuotasArray.length === 0) {
+      return;
+    }
+
+    const diffCentavos =
+      this.toCents(this.getGroupMontoTarget(group)) - this.toCents(this.getCuotasTotal(group));
+
+    if (diffCentavos === 0) {
+      return;
+    }
+
+    const editableCuotas = cuotasArray.controls
+      .map((cuotaGroup, index) => ({ cuotaGroup, index }))
+      .filter(({ index }) => !this.isCuotaBloqueadaEnEditor(group, index));
+
+    const cuotaObjetivo = editableCuotas[editableCuotas.length - 1]?.cuotaGroup;
+
+    if (!cuotaObjetivo) {
+      return;
+    }
+
+    const montoActualCentavos = this.toCents(
+      this.normalizeDecimalValue(Number(cuotaObjetivo.controls.monto.value ?? 0)),
+    );
+    const montoAjustado = this.centsToAmount(Math.max(0, montoActualCentavos + diffCentavos));
+
+    cuotaObjetivo.controls.monto.setValue(montoAjustado, { emitEvent: false });
+    cuotaObjetivo.controls.monto.updateValueAndValidity({ emitEvent: false });
   }
 
   private validateCuotasConfiguration(): boolean {
@@ -7323,6 +8462,49 @@ export class ListadoTransaccionesPage implements OnInit {
       interesesControl.updateValueAndValidity({ emitEvent: false });
     }
 
+    if (this.showZeroBalancePeriodGrouping) {
+      this.participantesDetalleArray.controls.forEach((group) => {
+        if (
+          group.controls.cantidad_cuotas.value !== null &&
+          group.controls.cantidad_cuotas.value !== undefined
+        ) {
+          const cuotasNormalizadas = Math.max(
+            1,
+            Math.trunc(Number(group.controls.cantidad_cuotas.value)),
+          );
+          group.controls.cantidad_cuotas.setValue(cuotasNormalizadas, {
+            emitEvent: false,
+          });
+          group.controls.cantidad_cuotas.updateValueAndValidity({
+            emitEvent: false,
+          });
+        }
+
+        if (group.controls.monto.value !== null && group.controls.monto.value !== undefined) {
+          const montoNormalizado = this.normalizeDecimalValue(
+            Number(group.controls.monto.value),
+          );
+          group.controls.monto.setValue(montoNormalizado, { emitEvent: false });
+          group.controls.monto.updateValueAndValidity({ emitEvent: false });
+        }
+
+        this.getCuotasArray(group).controls.forEach((cuotaGroup) => {
+          const montoCuota = cuotaGroup.controls.monto.value;
+
+          if (montoCuota === null || montoCuota === undefined) {
+            return;
+          }
+
+          const montoNormalizado = this.normalizeDecimalValue(Number(montoCuota));
+          cuotaGroup.controls.monto.setValue(montoNormalizado, { emitEvent: false });
+          cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
+        });
+      });
+
+      this.syncZeroBalanceSharedStateFromPeriods();
+      return;
+    }
+
     this.participantesDetalleArray.controls.forEach((group) => {
       if (
         !this.isEditingSharedExpenseMode &&
@@ -7619,6 +8801,11 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (this.showZeroBalancePeriodGrouping) {
+      this.syncZeroBalanceSharedStateFromPeriods();
+      return;
+    }
+
     this.syncingSharedExpenseCalculatedMonto = true;
 
     try {
@@ -7649,6 +8836,19 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.refreshEstadoTransaccionForEdit();
+  }
+
+  private applySharedExpenseCuotaDrivenModeForEdit(): void {
+    if (!this.isEditingSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return;
+    }
+
+    this.participantesDetalleArray.controls.forEach((group) => {
+      group.controls.dividir_monto.setValue(true, { emitEvent: false });
+      group.controls.dividir_monto.updateValueAndValidity({ emitEvent: false });
+      group.controls.modo_cuotas.setValue('divididas', { emitEvent: false });
+      group.controls.modo_cuotas.updateValueAndValidity({ emitEvent: false });
+    });
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {

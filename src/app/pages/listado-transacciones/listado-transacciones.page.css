@@ -342,6 +342,134 @@
   margin-bottom: 0;
 }
 
+.edit-modal {
+  width: min(1040px, 100%);
+  gap: 0.7rem;
+  padding: 0.9rem 0.95rem 1rem;
+}
+
+.edit-modal-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.edit-modal-top-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem .75rem; align-items:end; }
+
+.edit-modal-overview {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.edit-modal-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.22rem 0.58rem;
+  border: 1px solid #d9e3f0;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #3354b8;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.edit-modal-tag-soft {
+  background: #fffaf0;
+  border-color: #f2d6a2;
+  color: #9a5b0f;
+}
+
+.edit-modal .payment-modal-header h3 {
+  font-size: 1.22rem;
+  margin-bottom: 0.12rem;
+}
+
+.edit-modal .field label {
+  margin-bottom: 0.22rem;
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.edit-modal input,
+.edit-modal select,
+.edit-modal textarea {
+  min-height: 2.05rem;
+  padding: 0.38rem 0.62rem;
+  font-size: 0.89rem;
+}
+
+.participants-section--compact {
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.participants-section-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.participants-section-hint {
+  margin: 0;
+  color: #5f6f82;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.participants-section-toolbar-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex: 1 1 320px;
+  flex-wrap: wrap;
+}
+
+.participants-zero-hint {
+  margin: 0;
+  padding: 0.48rem 0.68rem;
+  border: 1px solid #f2d6a2;
+  border-radius: 0.7rem;
+  background: #fff9ef;
+  color: #9a5b0f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.edit-modal .participants-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.edit-modal .participant-block {
+  gap: 0.55rem;
+  padding: 0.7rem 0.75rem;
+}
+
+.edit-modal .participant-row {
+  gap: 0.55rem;
+  grid-template-columns:
+    minmax(0, 1.02fr)
+    minmax(0, 0.4fr)
+    minmax(0, 0.92fr)
+    minmax(0, 0.5fr)
+    minmax(0, 0.92fr)
+    auto;
+}
+
+.edit-modal .cuotas-accordion summary {
+  cursor: pointer;
+  padding: 0.6rem 0.75rem;
+}
+
 .payment-icon {
   display: inline-flex;
   align-items: center;
@@ -398,6 +526,7 @@
 
   .filters-grid,
   .field-grid-5,
+  .edit-modal-top-grid,
   .participant-row,
   .cuota-row,
   .transactions-layout {
@@ -440,6 +569,16 @@
 
   .payment-modal-header {
     flex-direction: column;
+  }
+
+  .participants-section-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .participants-launcher-button {
+    width: 100%;
+    min-width: 0;
   }
 
   .table-pagination {

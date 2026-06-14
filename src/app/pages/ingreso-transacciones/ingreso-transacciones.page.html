@@ -567,6 +567,7 @@
                       <input
                         type="checkbox"
                         formControlName="dividir_monto"
+                        [disabled]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
                         (change)="onDividirMontoChange(participanteGroup)"
                       />
                       <span>{{ dividirMontoLabel }}</span>
@@ -585,6 +586,7 @@
                       autocomplete="off"
                       formControlName="monto"
                       [readonly]="isMontoPrincipalReadonly"
+                      [class.participants-summary-input--disabled]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
                       (input)="onMontoInput($event)"
                       (focus)="onMoneyInputActivate($event)"
                       (click)="onMoneyInputActivate($event)"
@@ -629,7 +631,7 @@
 
                     <div
                       class="field participant-field participant-field--monto participant-highlight-field"
-                      *ngIf="!isVariablePaymentMode && (!isSharedExpenseMode || !participanteGroup.controls.dividir_monto.value)"
+                      *ngIf="!isVariablePaymentMode && !isSharedExpenseCuotasDesdeFechaProgramadaMode && (!isSharedExpenseMode || !participanteGroup.controls.dividir_monto.value)"
                     >
                       <label [for]="'participante_monto_' + i">{{ getParticipanteMontoLabel(participanteGroup) }}</label>
                       <input
@@ -723,6 +725,7 @@
                         type="text"
                         [formControl]="cuotaUnicaGroup.controls.monto"
                         [readonly]="isCuotaMontoReadonly(participanteGroup)"
+                        [class.cuota-input--programmed-mode]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
                         (input)="onCuotaMontoInput(participanteGroup, 0, $event)"
                         (focus)="onMoneyInputActivate($event)"
                         (click)="onMoneyInputActivate($event)"
@@ -761,7 +764,9 @@
                   <details
                     class="cuotas-accordion"
                     *ngIf="shouldShowTitularSection(participanteGroup) && participanteGroup.controls.cantidad_cuotas.value && participanteGroup.controls.cantidad_cuotas.value > 1"
-                    [attr.open]="getCuotasArray(participanteGroup).length > 1 ? '' : null"
+                    [attr.open]="isSharedExpenseCuotasDesdeFechaProgramadaMode || getCuotasArray(participanteGroup).length > 1 ? '' : null"
+                    [class.cuotas-accordion--locked]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
+                    (toggle)="onCuotasAccordionToggle(participanteGroup, $event)"
                   >
                     <summary>
                       <span>Cuotas</span>
@@ -821,6 +826,7 @@
                           autocomplete="off"
                           formControlName="monto"
                           [readonly]="isVariablePaymentMode || isCuotaMontoReadonly(participanteGroup)"
+                          [class.cuota-input--programmed-mode]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
                           (input)="onCuotaMontoInput(participanteGroup, cuotaItem.index, $event)"
                           (focus)="onMoneyInputActivate($event)"
                           (click)="onMoneyInputActivate($event)"

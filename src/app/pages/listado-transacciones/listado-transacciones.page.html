@@ -1089,8 +1089,17 @@
           </div>
         </header>
 
-        <form [formGroup]="transaccionForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
-          <div class="field-grid field-grid-5">
+        <div class="edit-modal-overview">
+          <span class="edit-modal-tag">{{ editModalTransactionKindLabel }}</span>
+          <span class="edit-modal-tag">{{ editModalCuotasKindLabel }}</span>
+          <span *ngIf="shouldShowEntidadFinancieraNote" class="edit-modal-tag edit-modal-tag-soft">
+            {{ transaccionForm.controls.entidad_financiera.value }}
+          </span>
+        </div>
+
+        <form [formGroup]="transaccionForm" (ngSubmit)="onSubmit()" class="categoria-form edit-modal-form" novalidate>
+          <section class="participants-section participants-section--compact" style="padding:.7rem .75rem .6rem;">
+            <div class="edit-modal-top-grid">
             <div class="field">
               <label for="edit_fecha_transaccion">Fecha</label>
               <div class="date-entry">
@@ -1141,7 +1150,21 @@
               </select>
             </div>
 
-            <div class="field" *ngIf="!isEditingSharedExpenseMode">
+            <div class="field">
+              <label for="edit_intereses">Intereses</label>
+              <input
+                id="edit_intereses"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                formControlName="intereses"
+                (keydown)="onMontoKeydown($event)"
+                (paste)="onMontoPaste($event)"
+              />
+            </div>
+
+            <div class="field" *ngIf="!isEditingSharedExpenseMode; else topSectionSpacer">
               <label for="edit_monto">{{ editingMontoLabel }}</label>
               <input
                 id="edit_monto"
@@ -1160,25 +1183,10 @@
                 {{ editingIncomeMontoHint }}
               </small>
             </div>
-          </div>
+            <ng-template #topSectionSpacer>
+              <div aria-hidden="true" style="min-height:0;"></div>
+            </ng-template>
 
-          <div class="field-grid field-grid-5">
-            <div class="field">
-              <label for="edit_intereses">Intereses</label>
-              <input
-                id="edit_intereses"
-                type="number"
-                min="0"
-                step="0.01"
-                inputmode="decimal"
-                formControlName="intereses"
-                (keydown)="onMontoKeydown($event)"
-                (paste)="onMontoPaste($event)"
-              />
-            </div>
-          </div>
-
-          <div class="field-grid field-grid-5">
             <div class="field">
               <label for="edit_id_tipo_transaccion">Tipo de transaccion</label>
               <select id="edit_id_tipo_transaccion" formControlName="id_tipo_transaccion" [disabled]="hasAppliedPagosInEditor">
@@ -1197,9 +1205,6 @@
                   {{ forma.nombre_forma }}
                 </option>
               </select>
-              <small class="user-hint">
-                Entidad financiera: {{ transaccionForm.controls.entidad_financiera.value || 'Sin entidad financiera' }}
-              </small>
             </div>
 
             <div class="field">
@@ -1211,9 +1216,7 @@
                 </option>
               </select>
             </div>
-          </div>
 
-          <div class="field-grid field-grid-5">
             <div class="field">
               <label for="edit_id_subcategoria">Subcategoria</label>
               <select id="edit_id_subcategoria" formControlName="id_subcategoria">
@@ -1228,87 +1231,312 @@
               <label for="edit_tipo_entidad">Tipo de entidad</label>
               <input id="edit_tipo_entidad" type="text" formControlName="tipo_entidad" readonly />
             </div>
-          </div>
 
-          <label *ngIf="showCuotasSinInteresesOption" class="checkbox-row">
-            <input
-              type="checkbox"
-              formControlName="cuotas_sin_intereses"
-              [disabled]="hasAppliedPagosInEditor"
-            />
-            <span>Cuotas sin intereses/Desde fecha programada</span>
-          </label>
-
-          <section class="participants-section">
-            <div
-              *ngIf="isEditingSharedExpenseMode"
-              style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;"
-            >
-              <div>
-                <p class="panel-title" style="margin:0;">Cuotas y participantes</p>
-                <h4 style="margin:.35rem 0 0;">Configura el detalle del gasto</h4>
-                <label class="checkbox-row" for="edit_usar_participantes" style="margin-top:.9rem;">
-                  <input
-                    id="edit_usar_participantes"
-                    type="checkbox"
-                    [checked]="usarParticipantesControl.value"
-                    [disabled]="hasAppliedPagosInEditor"
-                    (change)="onUsarParticipantesChange($event)"
-                  />
-                  <span>Editar participantes y cuotas</span>
-                </label>
-              </div>
-              <div
-                *ngIf="titularDetalleGroup as titularGroup"
-                class="participant-inline-controls"
-                [formGroup]="titularGroup"
-                style="margin:0 auto;min-width:min(420px,100%);"
-              >
-                <label class="checkbox-row">
-                  <input
-                    type="checkbox"
-                    formControlName="dividir_monto"
-                    [disabled]="hasAppliedPagosInEditor"
-                    (change)="onDividirMontoChange(titularGroup)"
-                  />
-                  <span>{{ dividirMontoLabel }}</span>
-                </label>
-              </div>
-              <div
-                *ngIf="titularDetalleGroup"
-                class="field participants-summary-field participants-summary-field--inline"
-                [formGroup]="transaccionForm"
-              >
-                <label for="edit_monto">{{ editingMontoLabel }}</label>
-                <input
-                  id="edit_monto"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  formControlName="monto"
-                  [readonly]="!isEditingSharedExpenseTotalEditable"
-                  [disabled]="hasAppliedPagosInEditor"
-                  (input)="onMontoInput($event)"
-                  (focus)="onMoneyInputActivate($event)"
-                  (click)="onMoneyInputActivate($event)"
-                  (keydown)="onMontoKeydown($event)"
-                  (paste)="onMontoPaste($event)"
-                  (blur)="normalizeMoneyInput('monto')"
-                />
-              </div>
-            </div>
-            <label *ngIf="!isEditingSharedExpenseMode" class="checkbox-row" for="edit_usar_participantes">
+            <label *ngIf="showCuotasSinInteresesOption && !showZeroBalancePeriodGrouping" class="checkbox-row" style="align-self:end;min-height:2.05rem;margin:0;">
               <input
-                id="edit_usar_participantes"
                 type="checkbox"
-                [checked]="usarParticipantesControl.value"
+                formControlName="cuotas_sin_intereses"
                 [disabled]="hasAppliedPagosInEditor"
-                (change)="onUsarParticipantesChange($event)"
               />
-              <span>Editar participantes y cuotas</span>
+              <span>Cuotas sin intereses/Desde fecha programada</span>
             </label>
+            </div>
+          </section>
+
+          <section class="participants-section participants-section--compact">
+            <div class="participants-section-toolbar">
+              <div class="participants-section-copy">
+                <p class="panel-title">{{ participantsEditorTitle }}</p>
+                <p class="participants-section-hint">{{ participantsEditorHint }}</p>
+              </div>
+
+              <button
+                *ngIf="shouldShowCompactParticipantsLauncher"
+                type="button"
+                class="secondary-button compact-button participants-launcher-button"
+                [disabled]="hasAppliedPagosInEditor"
+                (click)="enableParticipantesEditor()"
+              >
+                {{ participantsLauncherLabel }}
+              </button>
+
+              <ng-container *ngIf="titularDetalleGroup as titularGroup">
+                <div
+                  *ngIf="isEditingSharedExpenseMode"
+                  class="participants-section-toolbar-actions"
+                >
+                  <div
+                    *ngIf="!showZeroBalancePeriodGrouping"
+                    class="participant-inline-controls"
+                    [formGroup]="titularGroup"
+                  >
+                    <label class="checkbox-row checkbox-row-compact">
+                      <input
+                        type="checkbox"
+                        formControlName="dividir_monto"
+                        [disabled]="hasAppliedPagosInEditor || isEditingSharedExpenseCuotasDesdeFechaProgramadaMode"
+                        (change)="onDividirMontoChange(titularGroup)"
+                      />
+                      <span>{{ dividirMontoLabel }}</span>
+                    </label>
+                  </div>
+                  <div
+                    class="field participants-summary-field participants-summary-field--inline"
+                    [formGroup]="transaccionForm"
+                  >
+                    <label for="edit_monto">{{ editingMontoLabel }}</label>
+                    <input
+                      id="edit_monto"
+                      type="text"
+                      inputmode="decimal"
+                      autocomplete="off"
+                      formControlName="monto"
+                      [readonly]="!isEditingSharedExpenseTotalEditable"
+                      [disabled]="hasAppliedPagosInEditor"
+                      (input)="onMontoInput($event)"
+                      (focus)="onMoneyInputActivate($event)"
+                      (click)="onMoneyInputActivate($event)"
+                      (keydown)="onMontoKeydown($event)"
+                      (paste)="onMontoPaste($event)"
+                      (blur)="normalizeMoneyInput('monto')"
+                    />
+                  </div>
+                </div>
+              </ng-container>
+            </div>
 
             <div *ngIf="usarParticipantesControl.value" class="participants-list">
+              <p *ngIf="hasZeroBalanceCuotasInEditor" class="participants-zero-hint">
+                {{ selectedTransaccion.id_tipo_cuota === 2
+                  ? 'Esta transaccion esta marcada como pago variable. Configura las cuotas una sola vez y cambia el monto desde cada mes.'
+                  : 'Esta transaccion llega con saldos en 0.00. Configura las cuotas una vez y cambia el monto desde cada mes.' }}
+              </p>
+
+              <ng-container *ngIf="showZeroBalancePeriodGrouping; else participantCardsEditor">
+                <div *ngIf="zeroBalanceConfigGroup" class="payment-group-card" style="gap:.55rem;">
+                  <div class="zero-balance-general-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;align-items:end;">
+                    <div class="field">
+                      <label for="zero_general_cuotas">Cuotas generales</label>
+                      <input
+                        id="zero_general_cuotas"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputmode="numeric"
+                        [value]="getZeroBalanceGeneralCuotasCount()"
+                        (input)="onZeroBalanceGeneralCuotasInput($event)"
+                        (change)="onZeroBalanceGeneralCuotasInput($event)"
+                        (blur)="normalizeZeroBalanceGeneralCuotasInput()"
+                      />
+                    </div>
+
+                    <div class="field">
+                      <label for="zero_general_programacion">Programacion</label>
+                      <select
+                        id="zero_general_programacion"
+                        [value]="getZeroBalanceGeneralTipoProgramacion()"
+                        [disabled]="getZeroBalanceGeneralCuotasCount() <= 1"
+                        (change)="onZeroBalanceGeneralTipoProgramacionChange($event)"
+                      >
+                        <option value="ninguna">Sin programacion</option>
+                        <option *ngFor="let tipo of tiposProgramacionCuota" [value]="tipo.value">
+                          {{ tipo.label }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div class="field" *ngIf="shouldShowZeroBalanceGeneralDaySelector">
+                      <label for="zero_general_dia">Dia del mes</label>
+                      <select
+                        id="zero_general_dia"
+                        [value]="getZeroBalanceGeneralDiaProgramado()"
+                        (change)="onZeroBalanceGeneralDiaProgramadoChange($event)"
+                      >
+                        <option *ngFor="let dia of diasProgramacion" [value]="dia">
+                          Dia {{ dia }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div style="display:flex;align-items:end;justify-content:flex-end;">
+                      <button
+                        type="button"
+                        class="secondary-button table-button"
+                        [disabled]="!canAddZeroBalanceGeneralCuota"
+                        (click)="addZeroBalanceGeneralCuota()"
+                      >
+                        Agregar cuota
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="zero-balance-summary-grid" style="display:grid;gap:.65rem;">
+                  <div
+                    *ngFor="let participanteGroup of getZeroBalanceParticipantGroups(); let i = index"
+                    class="participant-block payment-group-card"
+                    [formGroup]="participanteGroup"
+                    [style.--group-accent]="getPaymentGroupAccentColor(i)"
+                    style="gap:.55rem;"
+                  >
+                    <div class="participant-block-header payment-group-header">
+                      <div class="participant-block-title payment-group-summary">
+                        <span class="payment-role-badge" [style.color]="getPaymentGroupAccentColor(i)">
+                          {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
+                        </span>
+                        <strong [style.color]="getPaymentGroupAccentColor(i)">
+                          {{ getZeroBalanceParticipantLabel(participanteGroup) }}
+                        </strong>
+                        <span>
+                          {{ participanteGroup.controls.cantidad_cuotas.value ?? 0 }}
+                          {{ (participanteGroup.controls.cantidad_cuotas.value ?? 0) === 1 ? 'cuota' : 'cuotas' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.55rem;align-items:end;">
+                      <div class="field participant-field participant-field--identity">
+                        <label [for]="'zero_participante_' + i">
+                          {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
+                        </label>
+                        <input
+                          *ngIf="participanteGroup.controls.es_titular.value"
+                          [id]="'zero_participante_' + i"
+                          type="text"
+                          formControlName="nombre_mostrado"
+                          readonly
+                        />
+                        <select
+                          *ngIf="!participanteGroup.controls.es_titular.value"
+                          [id]="'zero_participante_' + i"
+                          formControlName="id_participante"
+                          [disabled]="hasAppliedPagosInEditor"
+                          (change)="onParticipanteSelectionChange(participanteGroup)"
+                        >
+                          <option [ngValue]="null">Seleccione un participante</option>
+                          <option
+                            *ngFor="let participante of selectableParticipantes"
+                            [ngValue]="participante.id_participante"
+                            [disabled]="isParticipanteOptionDisabled(participante.id_participante, participanteGroup)"
+                          >
+                            {{ getParticipanteDisplayName(participante) }}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div class="field">
+                        <label>Porcentaje base</label>
+                        <input
+                          type="text"
+                          [value]="participanteGroup.controls.porcentaje.value ?? 0"
+                          readonly
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label>Monto acumulado</label>
+                        <input
+                          type="text"
+                          [value]="getEditorParticipanteMontoTotal(participanteGroup) | number: '1.2-2'"
+                          style="font-weight:800;text-align:right;"
+                          readonly
+                        />
+                      </div>
+
+                      <div style="display:flex;align-items:end;justify-content:flex-end;">
+                        <button
+                          *ngIf="!participanteGroup.controls.es_titular.value"
+                          type="button"
+                          class="secondary-button table-button"
+                          [disabled]="hasAppliedPagosInEditor"
+                          (click)="removeParticipanteDetalle(participantesDetalleArray.controls.indexOf(participanteGroup))"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="zero-balance-periods" style="display:grid;gap:.65rem;">
+                  <div
+                    *ngFor="let periodIndex of getZeroBalancePeriodIndexes(); let periodNumber = index"
+                    class="payment-group-card"
+                    style="gap:.55rem;"
+                  >
+                    <div class="payment-group-header" style="align-items:end;gap:.8rem;">
+                      <div class="payment-group-summary">
+                        <strong>{{ getZeroBalancePeriodTitle(periodIndex) }}</strong>
+                        <span>Cuota {{ periodNumber + 1 }}/{{ getZeroBalanceGeneralCuotasCount() }}</span>
+                        <span *ngIf="getZeroBalancePeriodDateLabel(periodIndex)">
+                          Fecha: {{ getZeroBalancePeriodDateLabel(periodIndex) }}
+                        </span>
+                      </div>
+
+                      <div class="field" style="min-width:min(100%,220px);">
+                        <label [for]="'zero_period_total_' + periodIndex">Monto del mes</label>
+                        <input
+                          [id]="'zero_period_total_' + periodIndex"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputmode="decimal"
+                          [value]="getZeroBalancePeriodTotal(periodIndex)"
+                          style="font-weight:800;text-align:right;"
+                          (input)="onZeroBalancePeriodMontoInput(periodIndex, $event)"
+                          (change)="onZeroBalancePeriodMontoInput(periodIndex, $event)"
+                          (blur)="normalizeZeroBalancePeriodMontoInput(periodIndex)"
+                        />
+                      </div>
+                    </div>
+
+                    <div style="display:grid;gap:.45rem;">
+                      <div
+                        *ngFor="let participanteGroup of getZeroBalanceGroupsForPeriod(periodIndex); let participantPeriodIndex = index"
+                        style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;align-items:center;padding:.65rem .75rem;border:1px solid #dde8f3;border-radius:.75rem;background:#f8fbff;"
+                      >
+                        <div style="display:grid;gap:.15rem;">
+                          <strong [style.color]="participanteGroup.controls.es_titular.value ? '#2457b8' : '#c2410c'">
+                            {{ getZeroBalanceParticipantLabel(participanteGroup) }}
+                          </strong>
+                          <span style="color:#64748b;font-size:.78rem;font-weight:700;">Configuracion del periodo</span>
+                        </div>
+
+                        <div class="field" style="margin:0;min-width:0;">
+                          <label [for]="'zero_period_percentage_' + periodIndex + '_' + participantPeriodIndex" style="margin-bottom:.15rem;color:#64748b;font-size:.78rem;font-weight:700;">Porcentaje</label>
+                          <input
+                            [id]="'zero_period_percentage_' + periodIndex + '_' + participantPeriodIndex"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.000001"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            class="percentage-spinner-input"
+                            data-decimals="6"
+                            data-sanitize="percentage"
+                            [value]="getZeroBalancePeriodParticipantPercentage(participanteGroup, periodIndex)"
+                            [disabled]="!canEditParticipantePorcentaje(participanteGroup)"
+                            (focus)="onMoneyInputActivate($event)"
+                            (click)="onMoneyInputActivate($event)"
+                            (keydown)="onMontoKeydown($event)"
+                            (paste)="onMontoPaste($event)"
+                            (input)="onZeroBalancePeriodPercentageInput(participanteGroup, periodIndex, $event)"
+                            (blur)="normalizeZeroBalancePeriodPercentageInput(participanteGroup, periodIndex)"
+                          />
+                        </div>
+
+                        <div style="display:grid;gap:.15rem;text-align:right;">
+                          <span style="color:#64748b;font-size:.78rem;font-weight:700;">Monto asignado</span>
+                          <strong style="color:#8a3d00;">${{ getZeroBalancePeriodParticipantMonto(participanteGroup, periodIndex) | number: '1.2-2' }}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-template #participantCardsEditor>
               <div *ngFor="let participanteGroup of participantesDetalleControls; let i = index">
                 <div
                   *ngIf="shouldShowTitularSection(participanteGroup)"
@@ -1396,7 +1624,7 @@
                     </div>
                     <div
                       class="field participant-field participant-field--monto participant-highlight-field"
-                      *ngIf="!isEditingSharedExpenseMode || !participanteGroup.controls.dividir_monto.value"
+                      *ngIf="(!isEditingSharedExpenseMode || !participanteGroup.controls.dividir_monto.value) && !isEditingSharedExpenseCuotasDesdeFechaProgramadaMode"
                     >
                       <label [for]="'edit_participante_monto_' + i">
                         {{ getEditorParticipanteMontoLabel(participanteGroup) }}
@@ -1535,7 +1763,7 @@
                   <details
                     class="cuotas-accordion"
                     *ngIf="participanteGroup.controls.cantidad_cuotas.value && participanteGroup.controls.cantidad_cuotas.value > 1"
-                    [attr.open]="getCuotasArray(participanteGroup).length > 1 ? '' : null"
+                    [attr.open]="shouldStartCuotasExpanded(participanteGroup) ? '' : null"
                     style="padding:.8rem;border:1px solid #e3e8ee;border-radius:.75rem;"
                   >
                     <summary>
@@ -1789,6 +2017,7 @@
                   </details>
                 </div>
               </div>
+              </ng-template>
 
               <div class="form-actions">
                 <button type="button" class="secondary-button" [disabled]="hasAppliedPagosInEditor" (click)="addParticipanteDetalle()">
@@ -1800,7 +2029,7 @@
 
           <div class="field">
             <label for="edit_descripcion">Descripcion</label>
-            <textarea id="edit_descripcion" rows="4" maxlength="250" formControlName="descripcion" style="min-height:6.25rem;"></textarea>
+            <textarea id="edit_descripcion" rows="3" maxlength="250" formControlName="descripcion" style="min-height:4.5rem;"></textarea>
           </div>
 
           <div class="form-actions">
