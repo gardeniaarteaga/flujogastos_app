@@ -371,6 +371,7 @@ export class PagosRealizadosPage implements OnInit {
     );
     this.metodoPagoOptions = this.buildMetodoPagoOptions(this.pagos);
     this.participanteOptions = this.buildParticipanteOptions();
+    this.applyDefaultParticipanteFilter();
     this.applyFilters();
   }
 
@@ -387,7 +388,7 @@ export class PagosRealizadosPage implements OnInit {
       fechaDesde: this.todayFilterValue,
       fechaHasta: this.todayFilterValue,
       metodoPagoId: '',
-      participanteKey: '',
+      participanteKey: this.getDefaultParticipanteKey(),
       incluirPagados: true,
       incluirPendientes: false,
     });
@@ -595,6 +596,42 @@ export class PagosRealizadosPage implements OnInit {
         return true;
       })
       .sort((left, right) => left.label.localeCompare(right.label));
+  }
+
+  private applyDefaultParticipanteFilter(): void {
+    const participanteKeyControl = this.filtrosForm.controls.participanteKey;
+
+    if (participanteKeyControl.value) {
+      return;
+    }
+
+    const defaultParticipanteKey = this.getDefaultParticipanteKey();
+
+    if (!defaultParticipanteKey) {
+      return;
+    }
+
+    participanteKeyControl.patchValue(defaultParticipanteKey, { emitEvent: false });
+  }
+
+  private getDefaultParticipanteKey(): string {
+    const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
+
+    if (currentUserParticipanteId === null) {
+      return '';
+    }
+
+    const preferredKeys = [
+      `titular:${currentUserParticipanteId}`,
+      `participante:${currentUserParticipanteId}`,
+    ];
+
+    const availableKeys = new Set([
+      ...this.participanteOptions.map((option) => option.value),
+      ...this.pagos.map((row) => row.participanteKey),
+    ]);
+
+    return preferredKeys.find((key) => availableKeys.has(key)) ?? '';
   }
 
   private applyFilters(): void {

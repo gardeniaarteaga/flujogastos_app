@@ -385,7 +385,8 @@
               <details
                 class="cuotas-accordion"
                 *ngIf="titularGroup.controls.cantidad_cuotas.value && titularGroup.controls.cantidad_cuotas.value > 1"
-                [attr.open]="getCuotasArray(titularGroup).length > 1 ? '' : null"
+                [open]="isCuotasAccordionOpen(titularGroup)"
+                (toggle)="onCuotasAccordionToggle(titularGroup, $event)"
               >
                 <summary>
                   <span>Cuotas</span>
@@ -764,7 +765,10 @@
                   <details
                     class="cuotas-accordion"
                     *ngIf="shouldShowTitularSection(participanteGroup) && participanteGroup.controls.cantidad_cuotas.value && participanteGroup.controls.cantidad_cuotas.value > 1"
-                    [attr.open]="isSharedExpenseCuotasDesdeFechaProgramadaMode || getCuotasArray(participanteGroup).length > 1 ? '' : null"
+                    [open]="
+                      isSharedExpenseCuotasDesdeFechaProgramadaMode ||
+                      isCuotasAccordionOpen(participanteGroup)
+                    "
                     [class.cuotas-accordion--locked]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
                     (toggle)="onCuotasAccordionToggle(participanteGroup, $event)"
                   >
