@@ -87,6 +87,7 @@ interface PagoRealizadoRow {
   metodoPagoNombre: string;
   enviadorNombre: string | null;
   esParticipanteAsignado: boolean;
+  usuarioNombre: string;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -744,6 +745,7 @@ export class PagosRealizadosPage implements OnInit {
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
       esParticipanteAsignado: !detalle.es_titular,
+      usuarioNombre: this.resolveUsuarioNombre(transaccion, detalle),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
@@ -831,7 +833,9 @@ export class PagosRealizadosPage implements OnInit {
       : `participante:${detalle.id_participante}`;
   }
 
-  private getParticipanteNombre(detalle: ParticipanteDetalleListado): string {
+  private getParticipanteNombre(
+    detalle: Pick<ParticipanteDetalleListado, 'es_titular' | 'nombre_participante' | 'id_participante'>,
+  ): string {
     if (detalle.es_titular) {
       return (
         this.currentUserParticipante?.nombre_participante ||
@@ -879,6 +883,29 @@ export class PagosRealizadosPage implements OnInit {
     );
 
     return ownAliases.has(normalizedSender) ? null : directSender;
+  }
+
+  private resolveUsuarioNombre(
+    transaccion: Pick<TransaccionListado, 'enviado_por' | 'titular'>,
+    detalle: Pick<ParticipanteDetalleListado, 'es_titular' | 'nombre_participante' | 'id_participante'>,
+  ): string {
+    if (detalle.es_titular) {
+      return this.resolveTransactionSenderFirstName(transaccion, detalle) ?? this.getTitularUsuarioNombre(transaccion);
+    }
+
+    return this.getParticipanteNombre(detalle);
+  }
+
+  private getTitularUsuarioNombre(
+    transaccion: Pick<TransaccionListado, 'titular'>,
+  ): string {
+    return (
+      this.currentUserParticipante?.nombre_participante?.trim() ||
+      this.userProfile.fullName?.trim() ||
+      this.userProfile.username?.trim() ||
+      transaccion.titular?.trim() ||
+      'Titular'
+    );
   }
 
   private isTitularFilterKey(participanteKey: string | null | undefined): boolean {
