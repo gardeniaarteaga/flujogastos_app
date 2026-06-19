@@ -263,7 +263,7 @@
 }
 
 .payments-table {
-  min-width: 92rem;
+  min-width: 84rem;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -293,9 +293,22 @@
   min-width: 17rem;
 }
 
-.payments-table th:nth-child(3),
-.payments-table td:nth-child(3) {
-  min-width: 8.5rem;
+.payments-transaction-cell {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.payments-transaction-sender {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 0.18rem 0.56rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #335a8d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 

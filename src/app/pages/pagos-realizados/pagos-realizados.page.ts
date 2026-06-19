@@ -86,7 +86,7 @@ interface PagoRealizadoRow {
   fechaPagoLabel: string;
   metodoPagoId: number | null;
   metodoPagoNombre: string;
-  enviadorNombre: string;
+  enviadorNombre: string | null;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -662,8 +662,14 @@ export class PagosRealizadosPage implements OnInit {
         return false;
       }
 
-      if (participanteKey && row.participanteKey !== participanteKey) {
-        return false;
+      if (participanteKey) {
+        if (this.isTitularFilterKey(participanteKey)) {
+          if (!this.isRowWithinTitularScope(row)) {
+            return false;
+          }
+        } else if (row.participanteKey !== participanteKey) {
+          return false;
+        }
       }
 
       if (!incluirPagados && !incluirPendientes) {
@@ -736,7 +742,7 @@ export class PagosRealizadosPage implements OnInit {
       fechaPagoLabel: this.formatDateLabel(fechaPago),
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
-      enviadorNombre: this.resolveTransactionSenderFirstName(transaccion),
+      enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
@@ -847,7 +853,12 @@ export class PagosRealizadosPage implements OnInit {
       TransaccionListado,
       'titular' | 'remitente' | 'nombre_titular' | 'nombre_remitente' | 'participantes_detalle'
     >,
-  ): string {
+    detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
+  ): string | null {
+    if (detalle.es_titular) {
+      return null;
+    }
+
     const directSender =
       transaccion.titular?.trim() ||
       transaccion.remitente?.trim() ||
@@ -874,7 +885,7 @@ export class PagosRealizadosPage implements OnInit {
 
     return namedDetail?.nombre_participante?.trim()
       ? this.extractFirstName(namedDetail.nombre_participante)
-      : '-';
+      : null;
   }
 
   private extractFirstName(value: string | null | undefined): string {
@@ -885,6 +896,14 @@ export class PagosRealizadosPage implements OnInit {
     }
 
     return normalized.split(/\s+/)[0] || '-';
+  }
+
+  private isTitularFilterKey(participanteKey: string | null | undefined): boolean {
+    return typeof participanteKey === 'string' && participanteKey.startsWith('titular:');
+  }
+
+  private isRowWithinTitularScope(row: Pick<PagoRealizadoRow, 'participanteKey'>): boolean {
+    return row.participanteKey.startsWith('titular:') || row.participanteKey.startsWith('participante:');
   }
 
   private isCurrentUserSystemParticipante(
