@@ -319,6 +319,16 @@
   font-weight: 900;
 }
 
+.payments-participant-name {
+  color: inherit;
+  font-weight: 700;
+}
+
+.payments-participant-name-assigned {
+  color: #2563eb;
+  font-weight: 900;
+}
+
 .payments-pagination {
   display: flex;
   align-items: center;

@@ -86,6 +86,7 @@ interface PagoRealizadoRow {
   metodoPagoId: number | null;
   metodoPagoNombre: string;
   enviadorNombre: string | null;
+  esParticipanteAsignado: boolean;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -742,6 +743,7 @@ export class PagosRealizadosPage implements OnInit {
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
+      esParticipanteAsignado: !detalle.es_titular,
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,

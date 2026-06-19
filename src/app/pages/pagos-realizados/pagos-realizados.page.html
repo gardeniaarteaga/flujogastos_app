@@ -268,7 +268,14 @@
                 </div>
               </td>
               <td>{{ row.metodoPagoNombre }}</td>
-              <td>{{ row.participanteNombre }}</td>
+              <td>
+                <span
+                  class="payments-participant-name"
+                  [class.payments-participant-name-assigned]="row.esParticipanteAsignado"
+                >
+                  {{ row.participanteNombre }}
+                </span>
+              </td>
               <td>{{ row.cuotaLabel }}</td>
               <td>{{ formatCurrency(row.montoCuota) }}</td>
               <td>{{ formatCurrency(row.montoPagado) }}</td>
