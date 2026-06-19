@@ -69,6 +69,8 @@ type ResolvedDetalleInput = {
 
 type TransaccionResponse = {
   id_transaccion: number;
+  id_usuario: number;
+  nombre_usuario_creador: string | null;
   es_propietario: boolean;
   fecha: string;
   monto: number;
@@ -1423,6 +1425,9 @@ export class TransaccionesService {
     const participanteIds = this.uniqueNumbers([
       ...detalles.map((detalle) => detalle.id_participante),
     ]);
+    const usuarioIds = this.uniqueNumbers(
+      transacciones.map((transaccion) => transaccion.id_usuario),
+    );
 
     const [
       formasPago,
@@ -1431,6 +1436,7 @@ export class TransaccionesService {
       subcategorias,
       estados,
       participantes,
+      usuarios,
     ] = await Promise.all([
       metodoIds.length > 0
         ? this.formasPagoRepository.find({
@@ -1463,6 +1469,11 @@ export class TransaccionesService {
             where: { id_participante: In(participanteIds) },
           })
         : Promise.resolve([]),
+      usuarioIds.length > 0
+        ? this.usuariosRepository.find({
+            where: { id_usuario: In(usuarioIds) },
+          })
+        : Promise.resolve([]),
     ]);
 
     const formasPagoMap = new Map(
@@ -1488,6 +1499,9 @@ export class TransaccionesService {
         participante.id_participante,
         participante,
       ]),
+    );
+    const usuariosMap = new Map(
+      usuarios.map((usuario) => [usuario.id_usuario, usuario]),
     );
     const estadoRegistroPendiente =
       estados.find(
@@ -1619,6 +1633,11 @@ export class TransaccionesService {
         estadoRegistroId !== null
           ? (estadosMap.get(estadoRegistroId) ?? null)
           : null;
+      const usuarioCreador = usuariosMap.get(transaccion.id_usuario) ?? null;
+      const nombreUsuarioCreador =
+        usuarioCreador?.nombre_completo?.trim() ||
+        usuarioCreador?.username?.trim() ||
+        null;
       const titular =
         participantesMap.get(titularParticipanteId ?? -1)
           ?.nombre_participante ?? null;
@@ -1652,6 +1671,8 @@ export class TransaccionesService {
 
       return {
         id_transaccion: transaccion.id_transaccion,
+        id_usuario: transaccion.id_usuario,
+        nombre_usuario_creador: nombreUsuarioCreador,
         es_propietario: isOwner,
         fecha: transaccion.fecha,
         monto: isOwner ? Number(transaccion.monto) : montoVisible,

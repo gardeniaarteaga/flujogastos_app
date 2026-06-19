@@ -45,6 +45,8 @@ interface ParticipanteDetalleListado {
 
 interface TransaccionListado {
   id_transaccion: number;
+  id_usuario_origen?: number | null;
+  enviado_por?: string | null;
   es_propietario: boolean;
   fecha: string;
   monto: number;
@@ -848,7 +850,7 @@ export class PagosRealizadosPage implements OnInit {
   private resolveTransactionSenderFirstName(
     transaccion: Pick<
       TransaccionListado,
-      'titular'
+      'enviado_por' | 'titular'
     >,
     detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
   ): string | null {
@@ -856,23 +858,13 @@ export class PagosRealizadosPage implements OnInit {
       return null;
     }
 
-    const directSender = transaccion.titular?.trim();
+    const directSender = transaccion.enviado_por?.trim() || transaccion.titular?.trim();
 
     if (directSender) {
-      return this.extractFirstName(directSender);
+      return directSender;
     }
 
     return null;
-  }
-
-  private extractFirstName(value: string | null | undefined): string {
-    const normalized = value?.trim() ?? '';
-
-    if (!normalized) {
-      return '-';
-    }
-
-    return normalized.split(/\s+/)[0] || '-';
   }
 
   private isTitularFilterKey(participanteKey: string | null | undefined): boolean {
