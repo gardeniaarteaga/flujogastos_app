@@ -854,17 +854,29 @@ export class PagosRealizadosPage implements OnInit {
     >,
     detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
   ): string | null {
-    if (detalle.es_titular) {
+    if (!detalle.es_titular) {
       return null;
     }
 
-    const directSender = transaccion.enviado_por?.trim() || transaccion.titular?.trim();
+    const directSender = transaccion.enviado_por?.trim();
 
-    if (directSender) {
-      return directSender;
+    if (!directSender) {
+      return null;
     }
 
-    return null;
+    const normalizedSender = this.normalizeText(directSender);
+    const ownAliases = new Set(
+      [
+        this.currentUserParticipante?.nombre_participante,
+        this.userProfile.fullName,
+        this.userProfile.username,
+        transaccion.titular,
+      ]
+        .map((value) => this.normalizeText(value))
+        .filter((value) => value.length > 0),
+    );
+
+    return ownAliases.has(normalizedSender) ? null : directSender;
   }
 
   private isTitularFilterKey(participanteKey: string | null | undefined): boolean {
