@@ -67,9 +67,6 @@ interface TransaccionListado {
   fecha_ultimo_pago: string | null;
   fecha_creacion: string;
   titular: string | null;
-  remitente?: string | null;
-  nombre_titular?: string | null;
-  nombre_remitente?: string | null;
   cantidad_participantes: number;
   participantes_detalle: ParticipanteDetalleListado[];
 }
@@ -851,7 +848,7 @@ export class PagosRealizadosPage implements OnInit {
   private resolveTransactionSenderFirstName(
     transaccion: Pick<
       TransaccionListado,
-      'titular' | 'remitente' | 'nombre_titular' | 'nombre_remitente' | 'participantes_detalle'
+      'titular'
     >,
     detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
   ): string | null {
@@ -859,33 +856,13 @@ export class PagosRealizadosPage implements OnInit {
       return null;
     }
 
-    const directSender =
-      transaccion.titular?.trim() ||
-      transaccion.remitente?.trim() ||
-      transaccion.nombre_titular?.trim() ||
-      transaccion.nombre_remitente?.trim();
+    const directSender = transaccion.titular?.trim();
 
     if (directSender) {
       return this.extractFirstName(directSender);
     }
 
-    const titularDetail = (Array.isArray(transaccion.participantes_detalle)
-      ? transaccion.participantes_detalle
-      : []
-    ).find((detalle) => detalle.es_titular && detalle.nombre_participante?.trim());
-
-    if (titularDetail?.nombre_participante?.trim()) {
-      return this.extractFirstName(titularDetail.nombre_participante);
-    }
-
-    const namedDetail = (Array.isArray(transaccion.participantes_detalle)
-      ? transaccion.participantes_detalle
-      : []
-    ).find((detalle) => detalle.nombre_participante?.trim());
-
-    return namedDetail?.nombre_participante?.trim()
-      ? this.extractFirstName(namedDetail.nombre_participante)
-      : null;
+    return null;
   }
 
   private extractFirstName(value: string | null | undefined): string {
