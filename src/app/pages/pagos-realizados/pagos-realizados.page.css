@@ -263,7 +263,7 @@
 }
 
 .payments-table {
-  min-width: 84rem;
+  min-width: 92rem;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -291,6 +291,12 @@
 .payments-table th:nth-child(2),
 .payments-table td:nth-child(2) {
   min-width: 17rem;
+}
+
+.payments-table th:nth-child(3),
+.payments-table td:nth-child(3) {
+  min-width: 8.5rem;
+  white-space: nowrap;
 }
 
 .payments-pagination {

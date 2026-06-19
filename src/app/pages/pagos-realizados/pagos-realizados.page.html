@@ -244,6 +244,7 @@
             <tr>
               <th>Fecha referencia</th>
               <th>Transaccion</th>
+              <th>Enviador por</th>
               <th>Metodo</th>
               <th>Participante</th>
               <th>Cuota</th>
@@ -259,6 +260,7 @@
             <tr *ngFor="let row of paginatedFilteredPagos; trackBy: trackPago">
               <td>{{ row.fechaReferenciaLabel }}</td>
               <td>{{ row.descripcion }}</td>
+              <td>{{ row.enviadorNombre }}</td>
               <td>{{ row.metodoPagoNombre }}</td>
               <td>{{ row.participanteNombre }}</td>
               <td>{{ row.cuotaLabel }}</td>

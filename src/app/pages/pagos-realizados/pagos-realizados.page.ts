@@ -67,6 +67,9 @@ interface TransaccionListado {
   fecha_ultimo_pago: string | null;
   fecha_creacion: string;
   titular: string | null;
+  remitente?: string | null;
+  nombre_titular?: string | null;
+  nombre_remitente?: string | null;
   cantidad_participantes: number;
   participantes_detalle: ParticipanteDetalleListado[];
 }
@@ -83,6 +86,7 @@ interface PagoRealizadoRow {
   fechaPagoLabel: string;
   metodoPagoId: number | null;
   metodoPagoNombre: string;
+  enviadorNombre: string;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -732,6 +736,7 @@ export class PagosRealizadosPage implements OnInit {
       fechaPagoLabel: this.formatDateLabel(fechaPago),
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
+      enviadorNombre: this.resolveTransactionSenderFirstName(transaccion),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
@@ -835,6 +840,51 @@ export class PagosRealizadosPage implements OnInit {
         ?.nombre_participante?.trim() ||
       'Participante'
     );
+  }
+
+  private resolveTransactionSenderFirstName(
+    transaccion: Pick<
+      TransaccionListado,
+      'titular' | 'remitente' | 'nombre_titular' | 'nombre_remitente' | 'participantes_detalle'
+    >,
+  ): string {
+    const directSender =
+      transaccion.titular?.trim() ||
+      transaccion.remitente?.trim() ||
+      transaccion.nombre_titular?.trim() ||
+      transaccion.nombre_remitente?.trim();
+
+    if (directSender) {
+      return this.extractFirstName(directSender);
+    }
+
+    const titularDetail = (Array.isArray(transaccion.participantes_detalle)
+      ? transaccion.participantes_detalle
+      : []
+    ).find((detalle) => detalle.es_titular && detalle.nombre_participante?.trim());
+
+    if (titularDetail?.nombre_participante?.trim()) {
+      return this.extractFirstName(titularDetail.nombre_participante);
+    }
+
+    const namedDetail = (Array.isArray(transaccion.participantes_detalle)
+      ? transaccion.participantes_detalle
+      : []
+    ).find((detalle) => detalle.nombre_participante?.trim());
+
+    return namedDetail?.nombre_participante?.trim()
+      ? this.extractFirstName(namedDetail.nombre_participante)
+      : '-';
+  }
+
+  private extractFirstName(value: string | null | undefined): string {
+    const normalized = value?.trim() ?? '';
+
+    if (!normalized) {
+      return '-';
+    }
+
+    return normalized.split(/\s+/)[0] || '-';
   }
 
   private isCurrentUserSystemParticipante(
