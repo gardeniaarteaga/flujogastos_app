@@ -75,7 +75,11 @@ interface TransaccionListado {
   pagocompartido: boolean;
   fecha_ultimo_pago: string | null;
   fecha_creacion: string;
+  enviado_por?: string | null;
   titular: string | null;
+  remitente?: string | null;
+  nombre_titular?: string | null;
+  nombre_remitente?: string | null;
   cantidad_participantes: number;
   participantes_detalle: ParticipanteDetalleListado[];
 }
@@ -106,6 +110,7 @@ interface ExpenseRecord {
   description: string;
   statusName: string;
   paymentMethodName: string;
+  originLabel: string;
   sourceType: ExpenseSourceType;
 }
 
@@ -393,10 +398,6 @@ export class GastosPorCategoriaPage implements OnInit {
     return `${day}/${month}/${value.getFullYear()}`;
   }
 
-  getExpenseSourceLabel(sourceType: ExpenseSourceType): string {
-    return sourceType === 'assigned' ? 'Asignado por otros' : 'Propio del titular';
-  }
-
   readonly handleOpenSubcategoryDetailModal = (
     category: CategoryBreakdown,
     subcategory: CategorySubcategoryBreakdown,
@@ -592,6 +593,7 @@ export class GastosPorCategoriaPage implements OnInit {
           description,
           statusName: resolvedStatusName,
           paymentMethodName,
+          originLabel: this.resolveExpenseOriginLabel(transaction),
           sourceType: transaction.es_propietario ? 'own' : 'assigned',
         });
 
@@ -621,6 +623,57 @@ export class GastosPorCategoriaPage implements OnInit {
     );
 
     return detallesDelUsuario;
+  }
+
+  private resolveExpenseOriginLabel(
+    transaction: Pick<
+      TransaccionListado,
+      | 'es_propietario'
+      | 'enviado_por'
+      | 'remitente'
+      | 'nombre_remitente'
+      | 'participantes_detalle'
+    >,
+  ): string {
+    if (transaction.es_propietario) {
+      return 'Titular';
+    }
+
+    const senderName = this.resolveAssignedSenderName(transaction);
+    return senderName ? this.extractFirstName(senderName) : 'Participante';
+  }
+
+  private resolveAssignedSenderName(
+    transaction: Pick<
+      TransaccionListado,
+      'enviado_por' | 'remitente' | 'nombre_remitente' | 'participantes_detalle'
+    >,
+  ): string | null {
+    const explicitSender =
+      transaction.enviado_por?.trim() ||
+      transaction.remitente?.trim() ||
+      transaction.nombre_remitente?.trim();
+
+    if (explicitSender) {
+      return explicitSender;
+    }
+
+    const participantSender = (Array.isArray(transaction.participantes_detalle)
+      ? transaction.participantes_detalle
+      : []
+    ).find((detail) => !detail.es_titular && detail.nombre_participante?.trim());
+
+    return participantSender?.nombre_participante?.trim() || null;
+  }
+
+  private extractFirstName(value: string | null | undefined): string {
+    const normalized = value?.trim() || '';
+
+    if (!normalized) {
+      return 'Participante';
+    }
+
+    return normalized.split(/\s+/)[0] || 'Participante';
   }
 
   private isDetalleDelUsuarioLogueado(

@@ -349,7 +349,7 @@
                   <strong>{{ formatDate(transaction.analysisDate) }}</strong>
                 </td>
                 <td>{{ formatCurrency(transaction.amount) }}</td>
-                <td>{{ getExpenseSourceLabel(transaction.sourceType) }}</td>
+                <td>{{ transaction.originLabel }}</td>
                 <td>{{ transaction.statusName }}</td>
                 <td>{{ transaction.paymentMethodName }}</td>
                 <td>{{ transaction.description }}</td>

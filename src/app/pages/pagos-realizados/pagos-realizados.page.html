@@ -262,7 +262,8 @@
                 <div class="payments-transaction-cell">
                   <span>{{ row.descripcion }}</span>
                   <span *ngIf="row.enviadorNombre" class="payments-transaction-sender">
-                    Enviado por: {{ row.enviadorNombre }}
+                    <span>Enviado por:</span>
+                    <strong class="payments-transaction-sender-name">{{ row.enviadorNombre }}</strong>
                   </span>
                 </div>
               </td>

@@ -302,14 +302,21 @@
   display: inline-flex;
   width: fit-content;
   align-items: center;
+  gap: 0.3rem;
   padding: 0.18rem 0.56rem;
   border-radius: 999px;
-  background: #eef4ff;
-  color: #335a8d;
+  background: linear-gradient(180deg, #fff4e8 0%, #ffe7cf 100%);
+  border: 1px solid #fdba74;
+  color: #9a3412;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.01em;
   white-space: nowrap;
+}
+
+.payments-transaction-sender-name {
+  color: #c2410c;
+  font-weight: 900;
 }
 
 .payments-pagination {
