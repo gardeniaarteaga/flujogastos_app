@@ -8,6 +8,32 @@
   align-items: start;
 }
 
+.page-header {
+  padding: 1.05rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 28%),
+    radial-gradient(circle at right, rgba(16, 185, 129, 0.07), transparent 28%),
+    linear-gradient(135deg, #f8fbff 0%, #ffffff 55%, #f6fbf8 100%);
+  border: 1px solid #dce8ff;
+  box-shadow: 0 0.15rem 0.5rem rgba(37, 99, 235, 0.06);
+}
+
+.panel-header {
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e8eef6;
+  margin-bottom: 1.1rem;
+}
+
+.quick-pay-detail-table tbody tr:not(.quick-pay-method-group-row):hover > td {
+  background: #f5f8ff;
+}
+
+.quick-pay-detail-table tbody tr:not(.quick-pay-method-group-row) {
+  transition: background 0.1s ease;
+}
+
 .stats-strip { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .header-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
 .user-hint { margin:-.25rem 0 1rem; color:#6b7a90; font-size:.85rem; font-weight:600; }
@@ -16,18 +42,19 @@
 .quick-pay-bulk-summary { display:grid; }
 .quick-pay-bulk-actions { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
-.filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #e3e8ee; border-radius:.65rem; background:linear-gradient(180deg,#fbfcfe 0%,#f7f9fd 100%); }
+.filters-panel { display:grid; gap:.85rem; margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #d8e5ff; border-radius:.85rem; background:linear-gradient(180deg,#f8fbff 0%,#f1f6ff 100%); box-shadow:0 .1rem .4rem rgba(37,99,235,.05); }
 .filters-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
 .filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
 .quick-pay-summary-layout { grid-column:5/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.8rem; min-width:0; }
 .quick-pay-summary-layout-standalone { grid-column:auto; grid-template-columns:minmax(0,1fr); margin-bottom:.15rem; }
 .quick-pay-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:.75rem; min-width:0; }
-.quick-pay-summary-card { min-width:0; padding:.7rem .85rem; border:1px solid #dce6f2; border-radius:.85rem; background:#f4f8ff; }
-.quick-pay-summary-card strong { display:block; color:var(--color-heading); font-size:clamp(1.08rem,1.6vw,1.35rem); line-height:1.1; }
-.quick-pay-summary-card small { display:block; margin-top:.3rem; color:#64748b; font-size:.73rem; line-height:1.35; }
-.quick-pay-summary-card-pending { border-color:#bfd4ff; background:#eef5ff; }
-.quick-pay-summary-card-paid { border-color:#c8e7d2; background:#eef9f1; }
-.quick-pay-summary-card-income { border-color:#efd9b1; background:#fff6e6; }
+.quick-pay-summary-card { min-width:0; padding:.85rem 1rem; border:1px solid #dce6f2; border-radius:.9rem; background:#f4f8ff; box-shadow:0 .3rem .8rem rgba(15,23,42,.07); transition:transform .15s ease, box-shadow .15s ease; }
+.quick-pay-summary-card:hover { transform:translateY(-2px); box-shadow:0 .5rem 1.2rem rgba(15,23,42,.1); }
+.quick-pay-summary-card strong { display:block; color:var(--color-heading); font-size:clamp(1.15rem,1.8vw,1.5rem); line-height:1.1; font-weight:900; letter-spacing:-.02em; }
+.quick-pay-summary-card small { display:block; margin-top:.35rem; color:#64748b; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; line-height:1.35; }
+.quick-pay-summary-card-pending { border-color:#bfd4ff; background:linear-gradient(135deg,#eef5ff 0%,#f4f8ff 100%); }
+.quick-pay-summary-card-paid { border-color:#c8e7d2; background:linear-gradient(135deg,#eef9f1 0%,#f4fbf7 100%); }
+.quick-pay-summary-card-income { border-color:#efd9b1; background:linear-gradient(135deg,#fff6e6 0%,#fffaf4 100%); }
 .quick-pay-days-field input { max-width:5.4rem; }
 .quick-pay-days-field { display:grid; gap:.45rem; }
 .quick-pay-days-field input.is-disabled { opacity:.6; cursor:not-allowed; }
@@ -77,11 +104,36 @@
 }
 
 .checkbox-row-compact {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid #d9e3f0;
+  padding: 0.42rem 0.82rem;
+  border: 1.5px solid #d5e3f5;
   border-radius: 999px;
   background: #ffffff;
-  font-size: 0.9rem;
+  color: #48617f;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.checkbox-row-compact:hover {
+  border-color: #bfd4ff;
+  background: #f0f5ff;
+  color: #2457b8;
+  transform: translateY(-1px);
+  box-shadow: 0 0.35rem 0.75rem rgba(36, 87, 184, 0.1);
+}
+
+.checkbox-row-compact:has(input:checked) {
+  border-color: #3b6fe8;
+  background: linear-gradient(180deg, #eef4ff 0%, #dde9ff 100%);
+  color: #2457b8;
+  box-shadow: inset 0 1px 3px rgba(36, 87, 184, 0.08);
 }
 
 .quick-pay-select-cell {

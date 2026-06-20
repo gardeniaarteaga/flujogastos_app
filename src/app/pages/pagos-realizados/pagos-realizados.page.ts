@@ -105,6 +105,17 @@ interface SelectOption {
   label: string;
 }
 
+interface ParticipanteGroup {
+  participanteKey: string;
+  label: string;
+  totalPagado: number;
+  totalPendiente: number;
+  cuotasPagadas: number;
+  cuotasPendientes: number;
+  cuotasTotal: number;
+  rows: PagoRealizadoRow[];
+}
+
 @Component({
   selector: 'app-pagos-realizados-page',
   imports: [
@@ -161,6 +172,7 @@ export class PagosRealizadosPage implements OnInit {
   participantes: CatalogoParticipante[] = [];
   metodoPagoOptions: SelectOption[] = [];
   participanteOptions: SelectOption[] = [];
+  readonly activeMethodFilters = new Map<string, number | null>();
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -205,6 +217,51 @@ export class PagosRealizadosPage implements OnInit {
 
   get totalInteresesPagados(): number {
     return this.filteredPagos.reduce((sum, row) => sum + row.interesPagado, 0);
+  }
+
+  get groupedPagos(): ParticipanteGroup[] {
+    const map = new Map<string, PagoRealizadoRow[]>();
+
+    for (const row of this.filteredPagos) {
+      const key = row.participanteKey;
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(row);
+    }
+
+    return Array.from(map.entries())
+      .map(([key, rows]) => {
+        const sortedRows = [...rows].sort((a, b) => {
+          if (!a.fechaReferencia && !b.fechaReferencia) return 0;
+          if (!a.fechaReferencia) return 1;
+          if (!b.fechaReferencia) return -1;
+          return a.fechaReferencia.localeCompare(b.fechaReferencia);
+        });
+
+        const isTitular = key.startsWith('titular:');
+        const nombre = rows[0]?.participanteNombre ?? 'Sin nombre';
+        const label = isTitular ? `Titular - ${nombre}` : nombre;
+        const cuotasPagadas = rows.filter((r) => r.estadoKey === 'pagado').length;
+
+        return {
+          participanteKey: key,
+          label,
+          totalPagado: rows.reduce((sum, r) => sum + r.totalPagado, 0),
+          totalPendiente: rows.reduce((sum, r) => sum + r.montoPendiente, 0),
+          cuotasPagadas,
+          cuotasPendientes: rows.length - cuotasPagadas,
+          cuotasTotal: rows.length,
+          rows: sortedRows,
+        };
+      })
+      .sort((a, b) => {
+        const aIsTitular = a.participanteKey.startsWith('titular:');
+        const bIsTitular = b.participanteKey.startsWith('titular:');
+        if (aIsTitular && !bIsTitular) return -1;
+        if (!aIsTitular && bIsTitular) return 1;
+        return a.label.localeCompare(b.label);
+      });
   }
 
   get paginationStartRecord(): number {
@@ -496,6 +553,38 @@ export class PagosRealizadosPage implements OnInit {
     return row.detalleId;
   }
 
+  trackGroup(_index: number, group: ParticipanteGroup): string {
+    return group.participanteKey;
+  }
+
+  getGroupAvailableMethods(group: ParticipanteGroup): SelectOption[] {
+    const seen = new Set<string>();
+    const options: SelectOption[] = [];
+
+    for (const row of group.rows) {
+      const value = String(row.metodoPagoId ?? '');
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      options.push({ value, label: row.metodoPagoNombre });
+    }
+
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  getGroupActiveMethodId(groupKey: string): number | null {
+    return this.activeMethodFilters.get(groupKey) ?? null;
+  }
+
+  setGroupMethodFilter(groupKey: string, methodId: number | null): void {
+    this.activeMethodFilters.set(groupKey, methodId);
+  }
+
+  getGroupFilteredRows(group: ParticipanteGroup): PagoRealizadoRow[] {
+    const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
+    if (activeMethod === null) return group.rows;
+    return group.rows.filter((row) => row.metodoPagoId === activeMethod);
+  }
+
   goToPage(page: number): void {
     if (page < 1 || page > this.totalPages || page === this.currentPage) {
       return;
@@ -604,19 +693,7 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   private applyDefaultParticipanteFilter(): void {
-    const participanteKeyControl = this.filtrosForm.controls.participanteKey;
-
-    if (participanteKeyControl.value) {
-      return;
-    }
-
-    const defaultParticipanteKey = this.getDefaultParticipanteKey();
-
-    if (!defaultParticipanteKey) {
-      return;
-    }
-
-    participanteKeyControl.patchValue(defaultParticipanteKey, { emitEvent: false });
+    // Default is "Todos" — no auto-selection
   }
 
   private getDefaultParticipanteKey(): string {
