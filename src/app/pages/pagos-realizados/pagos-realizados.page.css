@@ -52,6 +52,43 @@
   font-size: 0.92rem;
 }
 
+.date-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.date-input-wrap input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.date-picker-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.date-calendar-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  border: none;
+  background: none;
+  color: #8899ad;
+  cursor: pointer;
+  border-radius: 0.3rem;
+  transition: color 0.15s ease;
+}
+
+.date-calendar-btn:hover {
+  color: #2457b8;
+}
+
 .payments-filter-presets {
   display: flex;
   align-items: center;

@@ -1122,13 +1122,23 @@ export class PagosRealizadosPage implements OnInit {
     return `${day}/${month}/${year}`;
   }
 
-  private toISODate(value: string | null | undefined): string {
+  toISODate(value: string | null | undefined): string {
     if (!value) return '';
     const parts = value.split('/');
     if (parts.length !== 3) return '';
     const [day, month, year] = parts;
     if (!day || !month || !year || year.length !== 4) return '';
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  onDatePickerChange(event: Event, controlName: 'fechaDesde' | 'fechaHasta'): void {
+    const isoValue = (event.target as HTMLInputElement).value;
+    if (!isoValue) {
+      this.filtrosForm.get(controlName)?.setValue('', { emitEvent: true });
+      return;
+    }
+    const [year, month, day] = isoValue.split('-');
+    this.filtrosForm.get(controlName)?.setValue(`${day}/${month}/${year}`, { emitEvent: true });
   }
 
   onDateInput(event: Event, controlName: 'fechaDesde' | 'fechaHasta'): void {

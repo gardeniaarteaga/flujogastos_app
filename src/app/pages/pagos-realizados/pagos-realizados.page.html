@@ -135,28 +135,52 @@
       <form class="payments-filter-grid" [formGroup]="filtrosForm">
         <label class="filter-card">
           <span>Desde</span>
-          <input
-            type="text"
-            formControlName="fechaDesde"
-            placeholder="DD/MM/AAAA"
-            maxlength="10"
-            inputmode="numeric"
-            autocomplete="off"
-            (input)="onDateInput($event, 'fechaDesde')"
-          />
+          <div class="date-input-wrap">
+            <input
+              type="text"
+              formControlName="fechaDesde"
+              placeholder="DD/MM/AAAA"
+              maxlength="10"
+              inputmode="numeric"
+              autocomplete="off"
+              (input)="onDateInput($event, 'fechaDesde')"
+            />
+            <input
+              #pickerDesde
+              type="date"
+              class="date-picker-hidden"
+              [value]="toISODate(filtrosForm.get('fechaDesde')?.value)"
+              (change)="onDatePickerChange($event, 'fechaDesde')"
+            />
+            <button type="button" class="date-calendar-btn" (click)="pickerDesde.showPicker()" tabindex="-1" aria-label="Abrir calendario">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
         </label>
 
         <label class="filter-card">
           <span>Hasta</span>
-          <input
-            type="text"
-            formControlName="fechaHasta"
-            placeholder="DD/MM/AAAA"
-            maxlength="10"
-            inputmode="numeric"
-            autocomplete="off"
-            (input)="onDateInput($event, 'fechaHasta')"
-          />
+          <div class="date-input-wrap">
+            <input
+              type="text"
+              formControlName="fechaHasta"
+              placeholder="DD/MM/AAAA"
+              maxlength="10"
+              inputmode="numeric"
+              autocomplete="off"
+              (input)="onDateInput($event, 'fechaHasta')"
+            />
+            <input
+              #pickerHasta
+              type="date"
+              class="date-picker-hidden"
+              [value]="toISODate(filtrosForm.get('fechaHasta')?.value)"
+              (change)="onDatePickerChange($event, 'fechaHasta')"
+            />
+            <button type="button" class="date-calendar-btn" (click)="pickerHasta.showPicker()" tabindex="-1" aria-label="Abrir calendario">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
         </label>
 
         <label class="filter-card">
