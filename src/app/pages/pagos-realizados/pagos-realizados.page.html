@@ -234,6 +234,7 @@
       <details
         *ngFor="let group of groupedPagos; trackBy: trackGroup"
         class="panel payments-group-accordion"
+        open
       >
         <summary class="payments-group-summary">
           <span class="payments-group-label">{{ group.label }}</span>
@@ -254,24 +255,51 @@
         </summary>
 
         <div class="payments-group-body">
-          <div *ngIf="getGroupAvailableMethods(group).length > 1" class="payments-method-filter">
-            <button
-              type="button"
-              class="filter-preset-button"
-              [class.is-active]="getGroupActiveMethodId(group.participanteKey) === null"
-              (click)="setGroupMethodFilter(group.participanteKey, null)"
-            >
-              Todos
-            </button>
-            <button
-              *ngFor="let method of getGroupAvailableMethods(group)"
-              type="button"
-              class="filter-preset-button"
-              [class.is-active]="getGroupActiveMethodId(group.participanteKey) === +method.value"
-              (click)="setGroupMethodFilter(group.participanteKey, +method.value)"
-            >
-              {{ method.label }}
-            </button>
+          <div
+            *ngIf="getGroupAvailableMethods(group).length > 1 || getGroupAvailableTitulares(group).length > 1"
+            class="payments-filters-bar"
+          >
+            <div *ngIf="getGroupAvailableMethods(group).length > 1" class="payments-method-filter">
+              <span class="payments-filter-strip-label">Metodo</span>
+              <button
+                type="button"
+                class="filter-preset-button"
+                [class.is-active]="getGroupActiveMethodId(group.participanteKey) === null"
+                (click)="setGroupMethodFilter(group.participanteKey, null)"
+              >
+                Todos
+              </button>
+              <button
+                *ngFor="let method of getGroupAvailableMethods(group)"
+                type="button"
+                class="filter-preset-button"
+                [class.is-active]="getGroupActiveMethodId(group.participanteKey) === +method.value"
+                (click)="setGroupMethodFilter(group.participanteKey, +method.value)"
+              >
+                {{ method.label }}
+              </button>
+            </div>
+
+            <div *ngIf="getGroupAvailableTitulares(group).length > 1" class="payments-titular-filter">
+              <span class="payments-filter-strip-label payments-filter-strip-label-titular">Titular</span>
+              <button
+                type="button"
+                class="filter-titular-button"
+                [class.is-active]="getGroupActiveTitular(group.participanteKey) === null"
+                (click)="setGroupTitularFilter(group.participanteKey, null)"
+              >
+                Todos
+              </button>
+              <button
+                *ngFor="let titular of getGroupAvailableTitulares(group)"
+                type="button"
+                class="filter-titular-button"
+                [class.is-active]="getGroupActiveTitular(group.participanteKey) === titular.value"
+                (click)="setGroupTitularFilter(group.participanteKey, titular.value)"
+              >
+                {{ titular.label }}
+              </button>
+            </div>
           </div>
 
           <div class="table-wrap payments-table-wrap">
