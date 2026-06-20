@@ -949,7 +949,7 @@ export class PagosRealizadosPage implements OnInit {
     if (detalle.es_titular) {
       return 'Propias';
     }
-    return transaccion.titular?.trim() || 'Sin titular';
+    return transaccion.titular?.trim() || 'Propias';
   }
 
   private getParticipanteNombre(
