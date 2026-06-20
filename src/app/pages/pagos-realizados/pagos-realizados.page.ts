@@ -762,12 +762,15 @@ export class PagosRealizadosPage implements OnInit {
     } =
       this.filtrosForm.getRawValue();
 
+    const fechaDesdeISO = this.toISODate(fechaDesde);
+    const fechaHastaISO = this.toISODate(fechaHasta);
+
     this.filteredPagos = this.pagos.filter((row) => {
-      if (fechaDesde && row.fechaReferencia < fechaDesde) {
+      if (fechaDesdeISO && row.fechaReferencia < fechaDesdeISO) {
         return false;
       }
 
-      if (fechaHasta && row.fechaReferencia > fechaHasta) {
+      if (fechaHastaISO && row.fechaReferencia > fechaHastaISO) {
         return false;
       }
 
@@ -832,7 +835,7 @@ export class PagosRealizadosPage implements OnInit {
     const fechaProgramada = this.resolveFechaProgramada(detalle) ?? '';
     const fechaPago = this.resolveFechaPago(detalle) ?? '';
     const fechaReferencia =
-      (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago;
+      (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago || this.normalizeDateOnly(transaccion.fecha) || '';
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
     const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
@@ -1116,15 +1119,33 @@ export class PagosRealizadosPage implements OnInit {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${day}/${month}/${year}`;
+  }
+
+  private toISODate(value: string | null | undefined): string {
+    if (!value) return '';
+    const parts = value.split('/');
+    if (parts.length !== 3) return '';
+    const [day, month, year] = parts;
+    if (!day || !month || !year || year.length !== 4) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
+  onDateInput(event: Event, controlName: 'fechaDesde' | 'fechaHasta'): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length > 2) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+    if (digits.length > 4) formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    input.value = formatted;
+    this.filtrosForm.get(controlName)?.setValue(formatted, { emitEvent: true });
   }
 
   private formatDateLabel(value: string): string {
-    if (!value) {
-      return '-';
-    }
-
-    const [year, month, day] = value.split('-');
-    return `${day}/${month}/${year}`;
+    if (!value) return '-';
+    const parts = value.split('-');
+    if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return '-';
+    const [year, month, day] = parts;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
   }
 }

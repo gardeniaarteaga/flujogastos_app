@@ -135,12 +135,28 @@
       <form class="payments-filter-grid" [formGroup]="filtrosForm">
         <label class="filter-card">
           <span>Desde</span>
-          <input type="date" formControlName="fechaDesde" />
+          <input
+            type="text"
+            formControlName="fechaDesde"
+            placeholder="DD/MM/AAAA"
+            maxlength="10"
+            inputmode="numeric"
+            autocomplete="off"
+            (input)="onDateInput($event, 'fechaDesde')"
+          />
         </label>
 
         <label class="filter-card">
           <span>Hasta</span>
-          <input type="date" formControlName="fechaHasta" />
+          <input
+            type="text"
+            formControlName="fechaHasta"
+            placeholder="DD/MM/AAAA"
+            maxlength="10"
+            inputmode="numeric"
+            autocomplete="off"
+            (input)="onDateInput($event, 'fechaHasta')"
+          />
         </label>
 
         <label class="filter-card">
@@ -281,7 +297,6 @@
             </div>
 
             <div *ngIf="getGroupAvailableTitulares(group).length > 1" class="payments-titular-filter">
-              <span class="payments-filter-strip-label payments-filter-strip-label-titular">Titular</span>
               <button
                 type="button"
                 class="filter-titular-button"
@@ -306,6 +321,7 @@
             <table class="payments-table">
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Fecha</th>
                   <th>Transaccion</th>
                   <th>Metodo</th>
@@ -320,6 +336,7 @@
               </thead>
               <tbody>
                 <tr *ngFor="let row of getGroupFilteredRows(group); trackBy: trackPago">
+                  <td>{{ row.transaccionId }}</td>
                   <td>{{ row.fechaReferenciaLabel }}</td>
                   <td>
                     <div class="payments-transaction-cell">

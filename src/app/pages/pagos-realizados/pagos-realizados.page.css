@@ -284,12 +284,21 @@
 
 .payments-table th:nth-child(1),
 .payments-table td:nth-child(1) {
-  min-width: 9.5rem;
+  min-width: 4rem;
+  max-width: 5rem;
   white-space: nowrap;
+  color: #8899ad;
+  font-size: 0.82rem;
 }
 
 .payments-table th:nth-child(2),
 .payments-table td:nth-child(2) {
+  min-width: 9.5rem;
+  white-space: nowrap;
+}
+
+.payments-table th:nth-child(3),
+.payments-table td:nth-child(3) {
   min-width: 17rem;
 }
 
