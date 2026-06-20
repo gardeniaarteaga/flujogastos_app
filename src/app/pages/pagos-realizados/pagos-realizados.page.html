@@ -234,20 +234,21 @@
       <details
         *ngFor="let group of groupedPagos; trackBy: trackGroup"
         class="panel payments-group-accordion"
-        open
       >
         <summary class="payments-group-summary">
           <span class="payments-group-label">{{ group.label }}</span>
           <span class="payments-group-meta">
-            <span *ngIf="group.cuotasPagadas > 0" class="payments-group-badge payments-group-badge-pagado">
-              {{ group.cuotasPagadas }} cuota{{ group.cuotasPagadas !== 1 ? 's' : '' }} pagada{{ group.cuotasPagadas !== 1 ? 's' : '' }}
-            </span>
-            <span *ngIf="group.cuotasPendientes > 0" class="payments-group-badge payments-group-badge-pendiente">
-              {{ group.cuotasPendientes }} pendiente{{ group.cuotasPendientes !== 1 ? 's' : '' }}
-            </span>
-            <span class="payments-group-total">
-              Total: <strong>{{ formatCurrency(group.totalPagado) }}</strong>
-            </span>
+            <ng-container *ngIf="getGroupDisplayStats(group) as stats">
+              <span *ngIf="stats.cuotasPagadas > 0" class="payments-group-badge payments-group-badge-pagado">
+                {{ stats.cuotasPagadas }} cuota{{ stats.cuotasPagadas !== 1 ? 's' : '' }} pagada{{ stats.cuotasPagadas !== 1 ? 's' : '' }}
+              </span>
+              <span *ngIf="stats.cuotasPendientes > 0" class="payments-group-badge payments-group-badge-pendiente">
+                {{ stats.cuotasPendientes }} pendiente{{ stats.cuotasPendientes !== 1 ? 's' : '' }}
+              </span>
+              <span class="payments-group-total">
+                Total: <strong>{{ formatCurrency(stats.totalPagado) }}</strong>
+              </span>
+            </ng-container>
             <span class="payments-group-caret" aria-hidden="true">›</span>
           </span>
         </summary>

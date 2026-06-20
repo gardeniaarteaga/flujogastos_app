@@ -87,6 +87,7 @@ interface PagoRealizadoRow {
   metodoPagoNombre: string;
   enviadorNombre: string | null;
   esParticipanteAsignado: boolean;
+  esTitular: boolean;
   usuarioNombre: string;
   participanteKey: string;
   participanteNombre: string;
@@ -108,6 +109,7 @@ interface SelectOption {
 interface ParticipanteGroup {
   participanteKey: string;
   label: string;
+  isTitular: boolean;
   totalPagado: number;
   totalPendiente: number;
   cuotasPagadas: number;
@@ -239,7 +241,7 @@ export class PagosRealizadosPage implements OnInit {
           return a.fechaReferencia.localeCompare(b.fechaReferencia);
         });
 
-        const isTitular = key.startsWith('titular:');
+        const isTitular = rows.some((r) => r.esTitular);
         const nombre = rows[0]?.participanteNombre ?? 'Sin nombre';
         const label = isTitular ? `Titular - ${nombre}` : nombre;
         const cuotasPagadas = rows.filter((r) => r.estadoKey === 'pagado').length;
@@ -247,6 +249,7 @@ export class PagosRealizadosPage implements OnInit {
         return {
           participanteKey: key,
           label,
+          isTitular,
           totalPagado: rows.reduce((sum, r) => sum + r.totalPagado, 0),
           totalPendiente: rows.reduce((sum, r) => sum + r.montoPendiente, 0),
           cuotasPagadas,
@@ -256,10 +259,8 @@ export class PagosRealizadosPage implements OnInit {
         };
       })
       .sort((a, b) => {
-        const aIsTitular = a.participanteKey.startsWith('titular:');
-        const bIsTitular = b.participanteKey.startsWith('titular:');
-        if (aIsTitular && !bIsTitular) return -1;
-        if (!aIsTitular && bIsTitular) return 1;
+        if (a.isTitular && !b.isTitular) return -1;
+        if (!a.isTitular && b.isTitular) return 1;
         return a.label.localeCompare(b.label);
       });
   }
@@ -585,6 +586,16 @@ export class PagosRealizadosPage implements OnInit {
     return group.rows.filter((row) => row.metodoPagoId === activeMethod);
   }
 
+  getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number } {
+    const rows = this.getGroupFilteredRows(group);
+    const cuotasPagadas = rows.filter((r) => r.estadoKey === 'pagado').length;
+    return {
+      cuotasPagadas,
+      cuotasPendientes: rows.length - cuotasPagadas,
+      totalPagado: rows.reduce((sum, r) => sum + r.totalPagado, 0),
+    };
+  }
+
   goToPage(page: number): void {
     if (page < 1 || page > this.totalPages || page === this.currentPage) {
       return;
@@ -676,9 +687,7 @@ export class PagosRealizadosPage implements OnInit {
     return this.participantes
       .filter((participante) => this.isTitularScopedParticipante(participante))
       .map((participante) => ({
-        value: this.isCurrentUserTitularParticipante(participante)
-          ? `titular:${participante.id_participante}`
-          : `participante:${participante.id_participante}`,
+        value: String(participante.id_participante),
         label: this.getParticipanteDisplayName(participante),
       }))
       .filter((option) => {
@@ -703,17 +712,13 @@ export class PagosRealizadosPage implements OnInit {
       return '';
     }
 
-    const preferredKeys = [
-      `titular:${currentUserParticipanteId}`,
-      `participante:${currentUserParticipanteId}`,
-    ];
-
+    const key = String(currentUserParticipanteId);
     const availableKeys = new Set([
       ...this.participanteOptions.map((option) => option.value),
       ...this.pagos.map((row) => row.participanteKey),
     ]);
 
-    return preferredKeys.find((key) => availableKeys.has(key)) ?? '';
+    return availableKeys.has(key) ? key : '';
   }
 
   private applyFilters(): void {
@@ -740,14 +745,8 @@ export class PagosRealizadosPage implements OnInit {
         return false;
       }
 
-      if (participanteKey) {
-        if (this.isTitularFilterKey(participanteKey)) {
-          if (!this.isRowWithinTitularScope(row)) {
-            return false;
-          }
-        } else if (row.participanteKey !== participanteKey) {
-          return false;
-        }
+      if (participanteKey && row.participanteKey !== participanteKey) {
+        return false;
       }
 
       if (!incluirPagados && !incluirPendientes) {
@@ -822,6 +821,7 @@ export class PagosRealizadosPage implements OnInit {
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
       esParticipanteAsignado: !detalle.es_titular,
+      esTitular: detalle.es_titular,
       usuarioNombre: this.resolveUsuarioNombre(transaccion, detalle),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
@@ -905,9 +905,7 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   private getParticipanteKey(detalle: ParticipanteDetalleListado): string {
-    return detalle.es_titular
-      ? `titular:${detalle.id_participante}`
-      : `participante:${detalle.id_participante}`;
+    return String(detalle.id_participante);
   }
 
   private getParticipanteNombre(
@@ -985,25 +983,7 @@ export class PagosRealizadosPage implements OnInit {
     );
   }
 
-  private isTitularFilterKey(participanteKey: string | null | undefined): boolean {
-    return typeof participanteKey === 'string' && participanteKey.startsWith('titular:');
-  }
 
-  private isRowWithinTitularScope(row: Pick<PagoRealizadoRow, 'participanteKey'>): boolean {
-    return row.participanteKey.startsWith('titular:') || row.participanteKey.startsWith('participante:');
-  }
-
-  private isCurrentUserSystemParticipante(
-    participante:
-      | Pick<CatalogoParticipante, 'id_usuario_relacionado' | 'id_usuario_titular'>
-      | null
-      | undefined,
-  ): boolean {
-    const systemUserId =
-      participante?.id_usuario_titular ?? participante?.id_usuario_relacionado ?? null;
-
-    return systemUserId === this.currentUserId;
-  }
 
   private getParticipanteDisplayName(
     participante: Pick<
@@ -1049,23 +1029,6 @@ export class PagosRealizadosPage implements OnInit {
     );
   }
 
-  private isCurrentUserTitularParticipante(
-    participante:
-      | Pick<
-          CatalogoParticipante,
-          'id_participante' | 'id_usuario' | 'id_usuario_relacionado' | 'id_usuario_titular'
-        >
-      | null
-      | undefined,
-  ): boolean {
-    const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
-
-    if (currentUserParticipanteId !== null) {
-      return participante?.id_participante === currentUserParticipanteId;
-    }
-
-    return this.isCurrentUserSystemParticipante(participante);
-  }
 
   private getTransaccionTitle(
     transaccion: Pick<TransaccionListado, 'descripcion' | 'id_transaccion'> | null | undefined,
