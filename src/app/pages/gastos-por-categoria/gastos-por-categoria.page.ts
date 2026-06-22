@@ -1112,6 +1112,20 @@ export class GastosPorCategoriaPage implements OnInit {
     return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
+  getEstadoClass(statusName: string | null | undefined): string {
+    const normalized = this.normalizeText(statusName ?? '');
+    switch (normalized) {
+      case 'pago parcial': return 'status-pill-parcial';
+      case 'pendiente': return 'status-pill-pendiente';
+      case 'anulado':
+      case 'anulada': return 'status-pill-anulada';
+      case 'pagado':
+      case 'pagada': return 'status-pill-completado';
+      case 'sin registro': return 'status-pill-sin-registro';
+      default: return 'status-pill-default';
+    }
+  }
+
   private normalizeText(value: string | null | undefined): string {
     return (value ?? '')
       .normalize('NFD')

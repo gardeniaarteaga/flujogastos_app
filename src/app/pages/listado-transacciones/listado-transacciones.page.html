@@ -2069,7 +2069,11 @@
           </article>
           <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
             <span>Estado pago</span>
-            <strong>{{ getEstadoDisplayLabel(detailModalTransaccion.nombre_estado) }}</strong>
+            <strong>
+              <span class="status-pill" [ngClass]="getEstadoClass(detailModalTransaccion.nombre_estado || 'Sin estado')">
+                {{ getEstadoDisplayLabel(detailModalTransaccion.nombre_estado) }}
+              </span>
+            </strong>
           </article>
         </section>
 

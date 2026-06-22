@@ -3,6 +3,24 @@
   min-height: 100dvh;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #eef4ff;
+  color: #3354b8;
+}
+.status-pill-default    { background: #eef4ff; color: #3354b8; }
+.status-pill-pendiente  { background: #ffe8ea; color: #c62839; }
+.status-pill-parcial    { background: #f1e8ff; color: #7a3db8; }
+.status-pill-anulada    { background: #f1f3f7; color: #5f6f89; }
+.status-pill-completado { background: #e9f9ef; color: #18794e; }
+.status-pill-sin-registro { background: #f1f3f7; color: #5f6f89; }
+
 .report-body,
 .kpi-grid,
 .main-grid {

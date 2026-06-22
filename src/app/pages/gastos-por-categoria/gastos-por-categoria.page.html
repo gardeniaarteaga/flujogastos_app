@@ -350,7 +350,11 @@
                 </td>
                 <td>{{ formatCurrency(transaction.amount) }}</td>
                 <td>{{ transaction.originLabel }}</td>
-                <td>{{ transaction.statusName }}</td>
+                <td>
+                  <span class="status-pill" [ngClass]="getEstadoClass(transaction.statusName)">
+                    {{ transaction.statusName }}
+                  </span>
+                </td>
                 <td>{{ transaction.paymentMethodName }}</td>
                 <td>{{ transaction.description }}</td>
               </tr>
