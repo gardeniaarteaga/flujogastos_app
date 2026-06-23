@@ -99,7 +99,8 @@
 }
 
 .filters-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem 1rem; }
-.filters-search-row { display:grid; grid-template-columns:minmax(0,1fr); }
+.filters-search-row { display:flex; gap:0.65rem; align-items:flex-end; }
+.filters-search-row .field:last-child { flex:1; min-width:0; }
 .quick-pay-summary-layout { grid-column:5/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.8rem; min-width:0; }
 .quick-pay-summary-layout-standalone { grid-column:auto; grid-template-columns:minmax(0,1fr); margin-bottom:.15rem; }
 .quick-pay-summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:.75rem; min-width:0; }
@@ -385,8 +386,8 @@
 }
 
 .status-pill-pendiente {
-  background: #ffe8ea;
-  color: #c62839;
+  background: #fff4d6;
+  color: #9a6700;
 }
 
 .status-pill-parcial { background:#f1e8ff; color:#7a3db8; }
@@ -443,6 +444,18 @@
 
 .detail-modal-sender-text strong {
   color: inherit;
+}
+
+.detail-table-wrap {
+  max-height: 45vh;
+}
+
+.detail-table-wrap table {
+  min-width: 720px;
+}
+
+.detail-table-wrap th {
+  white-space: nowrap;
 }
 
 .payment-modal-hint {

@@ -55,6 +55,7 @@ const PRIORITY_WINDOW_DAYS = 7;
 const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
 const QUICK_PAY_PRIORITY_FILTER_STORAGE_KEY =
   'flujo-gastos.quick-pay.prioritarios';
+const QUICK_PAY_FILTERS_COLLAPSED_KEY = 'flujo-gastos.quick-pay.filters-collapsed';
 const ESTADOS_LISTADO_PERMITIDOS = new Set(['pagado', 'pendiente', 'anulado']);
 const ESTADOS_FILTRO_DISPONIBLES = new Set([...ESTADOS_LISTADO_PERMITIDOS]);
 
@@ -361,6 +362,7 @@ export class ListadoTransaccionesPage implements OnInit {
     idCategoria: [null as number | null],
     idSubcategoria: [null as number | null],
     busquedaDescripcion: [''],
+    busquedaId: [''],
   });
 
   sidebarCollapsed = false;
@@ -465,6 +467,11 @@ export class ListadoTransaccionesPage implements OnInit {
   });
 
   ngOnInit(): void {
+    try {
+      const stored = window.sessionStorage.getItem(QUICK_PAY_FILTERS_COLLAPSED_KEY);
+      if (stored !== null) this.quickPayFiltersCollapsed = stored === 'true';
+    } catch { /* Ignore storage errors */ }
+
     this.syncQuickPayPriorityControlState(this.filtrosForm.controls.prioritarios.value);
 
     this.filtrosForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -598,6 +605,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
     const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
+    const idFiltro = (filtros.busquedaId ?? '').trim();
     const mostrarTodas = !!filtros.todos;
     const prioridadActiva = !!filtros.prioritarios;
     const vencidosActivos = !!filtros.vencidos;
@@ -687,6 +695,10 @@ export class ListadoTransaccionesPage implements OnInit {
         return false;
       }
 
+      if (idFiltro && !String(transaccion.id_transaccion).includes(idFiltro)) {
+        return false;
+      }
+
       return true;
     });
   }
@@ -717,6 +729,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
+    const idFiltroDetalle = (filtros.busquedaId ?? '').trim();
 
     return this.detalleTransaccionRowsCache
       .filter((row) => {
@@ -770,6 +783,10 @@ export class ListadoTransaccionesPage implements OnInit {
         }
 
         if (descripcionFiltro && !descripcionTransaccion.includes(descripcionFiltro)) {
+          return false;
+        }
+
+        if (idFiltroDetalle && !String(row.transaccion.id_transaccion).includes(idFiltroDetalle)) {
           return false;
         }
 
@@ -844,6 +861,23 @@ export class ListadoTransaccionesPage implements OnInit {
 
   get quickPayDetalleMetodoGroups(): QuickPayMetodoGroup[] {
     return this.quickPayDetalleMetodoGroupsCache;
+  }
+
+  get activeQuickPayFilterChips(): string[] {
+    if (!this.isDetalleViewMode) return [];
+    const f = this.filtrosForm.getRawValue();
+    const chips: string[] = [];
+    if (f.prioritarios) chips.push('Proximos 15 dias');
+    if (f.vencidos) chips.push('Vencidos');
+    if (f.mesActual) chips.push('Mes actual');
+    if (f.enviadas) chips.push('Recibidos');
+    if (f.compartidos) chips.push('Compartidos');
+    if (f.estado) chips.push(String(f.estado));
+    if (f.idParticipante !== null && f.idParticipante !== undefined) {
+      const p = this.quickPayParticipantesFiltro.find((x) => x.id_participante === f.idParticipante);
+      if (p) chips.push(p.nombre_participante);
+    }
+    return chips;
   }
 
   private buildQuickPayDetalleMetodoGroups(
@@ -2066,6 +2100,9 @@ export class ListadoTransaccionesPage implements OnInit {
 
   toggleQuickPayFiltersCollapsed(): void {
     this.quickPayFiltersCollapsed = !this.quickPayFiltersCollapsed;
+    try {
+      window.sessionStorage.setItem(QUICK_PAY_FILTERS_COLLAPSED_KEY, String(this.quickPayFiltersCollapsed));
+    } catch { /* Ignore storage errors */ }
   }
 
   onSoloHoyToggle(event: Event): void {
@@ -9051,6 +9088,7 @@ export class ListadoTransaccionesPage implements OnInit {
       idCategoria: null,
       idSubcategoria: null,
       busquedaDescripcion: '',
+      busquedaId: '',
     });
     this.syncQuickPayPriorityControlState(this.filtrosForm.controls.prioritarios.value);
     this.listadoCurrentPage = 1;
@@ -9338,6 +9376,7 @@ export class ListadoTransaccionesPage implements OnInit {
         idCategoria: null,
         idSubcategoria: null,
         busquedaDescripcion: '',
+        busquedaId: '',
       },
       { emitEvent: true },
     );
@@ -9364,6 +9403,7 @@ export class ListadoTransaccionesPage implements OnInit {
       !this.normalizeDateInputValue(filtros.fechaHasta ?? '') &&
       !this.normalizeText(filtros.estado ?? '') &&
       !this.normalizeText(filtros.busquedaDescripcion ?? '') &&
+      !(filtros.busquedaId ?? '').trim() &&
       filtros.idMetodoPago === null &&
       filtros.idParticipante === null &&
       filtros.idCategoria === null &&

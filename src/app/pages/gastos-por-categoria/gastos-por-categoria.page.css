@@ -15,7 +15,7 @@
   color: #3354b8;
 }
 .status-pill-default    { background: #eef4ff; color: #3354b8; }
-.status-pill-pendiente  { background: #ffe8ea; color: #c62839; }
+.status-pill-pendiente  { background: #fff4d6; color: #9a6700; }
 .status-pill-parcial    { background: #f1e8ff; color: #7a3db8; }
 .status-pill-anulada    { background: #f1f3f7; color: #5f6f89; }
 .status-pill-completado { background: #e9f9ef; color: #18794e; }

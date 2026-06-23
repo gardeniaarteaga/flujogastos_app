@@ -413,10 +413,6 @@ export class IngresoTransaccionesPage implements OnInit {
       return false;
     }
 
-    if (this.isImmediatePaymentSelected) {
-      return false;
-    }
-
     if (Number(group.controls.cantidad_cuotas.value ?? 0) !== 1) {
       return false;
     }
@@ -3457,16 +3453,16 @@ export class IngresoTransaccionesPage implements OnInit {
       return 'PENDIENTE';
     }
 
-    if (this.isImmediatePaymentSelected) {
-      return 'COMPLETADO';
-    }
-
     if (
       this.titularDetalleGroup &&
       this.shouldShowTitularCuotaUnicaPagadaOption(this.titularDetalleGroup) &&
       this.isTitularCuotaUnicaPagadaSelected
     ) {
       return this.resolveTitularCuotaUnicaPagadaEstadoName();
+    }
+
+    if (this.isImmediatePaymentSelected) {
+      return 'COMPLETADO';
     }
 
     if (!this.usarParticipantesControl.value) {

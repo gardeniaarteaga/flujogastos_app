@@ -187,7 +187,15 @@
           <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones">
             <div style="display:grid;gap:.85rem;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-                <strong style="color:var(--color-heading);font-size:1rem;line-height:1.2;">Detalle programado para pago</strong>
+                <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                  <strong style="color:var(--color-heading);font-size:1rem;line-height:1.2;">Detalle programado para pago</strong>
+                  <ng-container *ngIf="quickPayFiltersCollapsed && activeQuickPayFilterChips.length > 0">
+                    <span
+                      *ngFor="let chip of activeQuickPayFilterChips"
+                      style="display:inline-flex;align-items:center;padding:0.2rem 0.55rem;border-radius:999px;background:#eef4ff;border:1px solid #cddcff;color:#2457b8;font-size:0.72rem;font-weight:800;white-space:nowrap;"
+                    >{{ chip }}</span>
+                  </ng-container>
+                </div>
                 <button
                   type="button"
                   class="compact-button"
@@ -304,6 +312,17 @@
                   </div>
 
                   <div class="filters-search-row">
+                    <div class="field" style="max-width:9rem;">
+                      <label for="busquedaIdDetalle">ID</label>
+                      <input
+                        id="busquedaIdDetalle"
+                        type="text"
+                        formControlName="busquedaId"
+                        maxlength="12"
+                        inputmode="numeric"
+                        placeholder="Ej: 114"
+                      />
+                    </div>
                     <div class="field">
                       <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
                       <input
@@ -442,6 +461,17 @@
             </div>
 
             <div class="filters-search-row">
+              <div class="field" style="max-width:9rem;">
+                <label for="busquedaIdListado">ID</label>
+                <input
+                  id="busquedaIdListado"
+                  type="text"
+                  formControlName="busquedaId"
+                  maxlength="12"
+                  inputmode="numeric"
+                  placeholder="Ej: 114"
+                />
+              </div>
               <div class="field">
                 <label for="busquedaDescripcion">Buscar por descripcion</label>
                 <input

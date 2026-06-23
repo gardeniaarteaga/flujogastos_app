@@ -1,7 +1,7 @@
-import { NgClass, NgFor, NgIf } from '@angular/common';
+import { DecimalPipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { firstValueFrom, timeout } from 'rxjs';
@@ -71,6 +71,7 @@ interface TransaccionListado {
   titular: string | null;
   cantidad_participantes: number;
   participantes_detalle: ParticipanteDetalleListado[];
+  tasa_interes_anual?: number | null;
 }
 
 interface PagoRealizadoRow {
@@ -100,6 +101,7 @@ interface PagoRealizadoRow {
   totalPagado: number;
   estadoNombre: string;
   estadoKey: EstadoReportePago;
+  transaccionData: TransaccionListado;
 }
 
 interface SelectOption {
@@ -128,6 +130,7 @@ interface ParticipanteGroup {
     NgClass,
     NgIf,
     NgFor,
+    DecimalPipe,
     SessionStripComponent,
   ],
   templateUrl: './pagos-realizados.page.html',
@@ -177,6 +180,7 @@ export class PagosRealizadosPage implements OnInit {
   participanteOptions: SelectOption[] = [];
   readonly activeMethodFilters = new Map<string, number | null>();
   readonly activeTitularFilters = new Map<string, string | null>();
+  detailModalTransaccion: TransaccionListado | null = null;
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -211,16 +215,20 @@ export class PagosRealizadosPage implements OnInit {
     ]);
   }
 
+  get displayedRows(): PagoRealizadoRow[] {
+    return this.groupedPagos.flatMap((group) => this.getGroupFilteredRows(group));
+  }
+
   get totalPagado(): number {
-    return this.filteredPagos.reduce((sum, row) => sum + row.totalPagado, 0);
+    return this.displayedRows.reduce((sum, row) => sum + row.totalPagado, 0);
   }
 
   get totalPendiente(): number {
-    return this.filteredPagos.reduce((sum, row) => sum + row.montoPendiente, 0);
+    return this.displayedRows.reduce((sum, row) => sum + row.montoPendiente, 0);
   }
 
   get totalInteresesPagados(): number {
-    return this.filteredPagos.reduce((sum, row) => sum + row.interesPagado, 0);
+    return this.displayedRows.reduce((sum, row) => sum + row.interesPagado, 0);
   }
 
   get groupedPagos(): ParticipanteGroup[] {
@@ -561,10 +569,15 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   getGroupAvailableMethods(group: ParticipanteGroup): SelectOption[] {
+    const activeTitular = this.activeTitularFilters.get(group.participanteKey) ?? null;
+    const sourceRows = activeTitular !== null
+      ? group.rows.filter((row) => row.titularNombre === activeTitular)
+      : group.rows;
+
     const seen = new Set<string>();
     const options: SelectOption[] = [];
 
-    for (const row of group.rows) {
+    for (const row of sourceRows) {
       const value = String(row.metodoPagoId ?? '');
       if (!value || seen.has(value)) continue;
       seen.add(value);
@@ -578,21 +591,36 @@ export class PagosRealizadosPage implements OnInit {
     return this.activeMethodFilters.get(groupKey) ?? null;
   }
 
-  setGroupMethodFilter(groupKey: string, methodId: number | null): void {
-    this.activeMethodFilters.set(groupKey, methodId);
+  setGroupMethodFilter(group: ParticipanteGroup, methodId: number | null): void {
+    this.activeMethodFilters.set(group.participanteKey, methodId);
+    const currentTitular = this.activeTitularFilters.get(group.participanteKey) ?? null;
+    if (currentTitular !== null) {
+      const stillAvailable = this.getGroupAvailableTitulares(group).some((t) => t.value === currentTitular);
+      if (!stillAvailable) {
+        this.activeTitularFilters.set(group.participanteKey, null);
+      }
+    }
   }
 
   getGroupAvailableTitulares(group: ParticipanteGroup): SelectOption[] {
+    const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
+    const sourceRows = activeMethod !== null
+      ? group.rows.filter((row) => row.metodoPagoId === activeMethod)
+      : group.rows;
+
+    const participanteNombre = group.rows[0]?.participanteNombre ?? 'Propios';
+
     const seen = new Set<string>();
     const options: SelectOption[] = [];
-    for (const row of group.rows) {
+    for (const row of sourceRows) {
       if (seen.has(row.titularNombre)) continue;
       seen.add(row.titularNombre);
-      options.push({ value: row.titularNombre, label: row.titularNombre });
+      const label = row.titularNombre === 'Propios' ? participanteNombre : row.titularNombre;
+      options.push({ value: row.titularNombre, label });
     }
     return options.sort((a, b) => {
-      if (a.value === 'Propias') return -1;
-      if (b.value === 'Propias') return 1;
+      if (a.value === 'Propios') return -1;
+      if (b.value === 'Propios') return 1;
       return a.label.localeCompare(b.label);
     });
   }
@@ -601,8 +629,15 @@ export class PagosRealizadosPage implements OnInit {
     return this.activeTitularFilters.get(groupKey) ?? null;
   }
 
-  setGroupTitularFilter(groupKey: string, titular: string | null): void {
-    this.activeTitularFilters.set(groupKey, titular);
+  setGroupTitularFilter(group: ParticipanteGroup, titular: string | null): void {
+    this.activeTitularFilters.set(group.participanteKey, titular);
+    const currentMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
+    if (currentMethod !== null) {
+      const stillAvailable = this.getGroupAvailableMethods(group).some((m) => +m.value === currentMethod);
+      if (!stillAvailable) {
+        this.activeMethodFilters.set(group.participanteKey, null);
+      }
+    }
   }
 
   getGroupFilteredRows(group: ParticipanteGroup): PagoRealizadoRow[] {
@@ -639,6 +674,30 @@ export class PagosRealizadosPage implements OnInit {
 
   goToNextPage(): void {
     this.goToPage(this.currentPage + 1);
+  }
+
+  openDetailModal(t: TransaccionListado): void {
+    this.detailModalTransaccion = t;
+  }
+
+  @HostListener('document:keydown.escape')
+  closeDetailModal(): void {
+    this.detailModalTransaccion = null;
+  }
+
+  getDetailModalTitle(t: TransaccionListado): string {
+    return this.getTransaccionTitle(t);
+  }
+
+  isCreditoTransaccion(t: TransaccionListado): boolean {
+    if (t.id_tipo_transaccion === 2) return true;
+    if (t.id_tipo_transaccion === 1) return false;
+    const n = (t.nombre_tipo_transaccion ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return n === 'credito';
+  }
+
+  formatDetalleDate(value: string | null): string {
+    return this.formatDateLabel(this.normalizeDateOnly(value) ?? '');
   }
 
   private buildPagos(transacciones: TransaccionListado[]): PagoRealizadoRow[] {
@@ -731,8 +790,7 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   private applyDefaultParticipanteFilter(): void {
-    const key = this.getDefaultParticipanteKey();
-    this.filtrosForm.patchValue({ participanteKey: key }, { emitEvent: false });
+    this.filtrosForm.patchValue({ participanteKey: '' }, { emitEvent: false });
   }
 
   private getDefaultParticipanteKey(): string {
@@ -867,6 +925,7 @@ export class PagosRealizadosPage implements OnInit {
       totalPagado: montoPagado + interesPagado,
       estadoNombre: this.resolveEstadoNombre(detalle, estadoKey),
       estadoKey,
+      transaccionData: transaccion,
     };
   }
 
@@ -947,9 +1006,9 @@ export class PagosRealizadosPage implements OnInit {
     detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
   ): string {
     if (detalle.es_titular) {
-      return 'Propias';
+      return 'Propios';
     }
-    return transaccion.titular?.trim() || 'Propias';
+    return transaccion.titular?.trim() || 'Propios';
   }
 
   private getParticipanteNombre(

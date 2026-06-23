@@ -252,7 +252,7 @@
       </article>
       <article class="panel payments-summary-card">
         <span class="panel-kicker">Registros encontrados</span>
-        <strong>{{ filteredPagos.length }}</strong>
+        <strong>{{ displayedRows.length }}</strong>
       </article>
     </section>
 
@@ -305,7 +305,7 @@
                 type="button"
                 class="filter-preset-button"
                 [class.is-active]="getGroupActiveMethodId(group.participanteKey) === null"
-                (click)="setGroupMethodFilter(group.participanteKey, null)"
+                (click)="setGroupMethodFilter(group, null)"
               >
                 Todos
               </button>
@@ -314,18 +314,19 @@
                 type="button"
                 class="filter-preset-button"
                 [class.is-active]="getGroupActiveMethodId(group.participanteKey) === +method.value"
-                (click)="setGroupMethodFilter(group.participanteKey, +method.value)"
+                (click)="setGroupMethodFilter(group, +method.value)"
               >
                 {{ method.label }}
               </button>
             </div>
 
             <div *ngIf="getGroupAvailableTitulares(group).length > 1" class="payments-titular-filter">
+              <span class="payments-filter-strip-label">Origen</span>
               <button
                 type="button"
                 class="filter-titular-button"
                 [class.is-active]="getGroupActiveTitular(group.participanteKey) === null"
-                (click)="setGroupTitularFilter(group.participanteKey, null)"
+                (click)="setGroupTitularFilter(group, null)"
               >
                 Todos
               </button>
@@ -334,7 +335,7 @@
                 type="button"
                 class="filter-titular-button"
                 [class.is-active]="getGroupActiveTitular(group.participanteKey) === titular.value"
-                (click)="setGroupTitularFilter(group.participanteKey, titular.value)"
+                (click)="setGroupTitularFilter(group, titular.value)"
               >
                 {{ titular.label }}
               </button>
@@ -356,6 +357,7 @@
                   <th>Saldo pendiente</th>
                   <th>Total pagado</th>
                   <th>Estado</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -383,12 +385,149 @@
                       {{ row.estadoNombre }}
                     </span>
                   </td>
+                  <td class="payments-actions-cell">
+                    <span
+                      class="payments-shared-icon"
+                      [class.is-shared]="row.transaccionData.pagocompartido"
+                      [class.is-individual]="!row.transaccionData.pagocompartido"
+                      [attr.title]="row.transaccionData.pagocompartido ? 'Compartido' : 'Individual'"
+                      [attr.aria-label]="row.transaccionData.pagocompartido ? 'Compartido' : 'Individual'"
+                    >
+                      <span *ngIf="row.transaccionData.pagocompartido; else individualIcon" class="people-icon people-icon-shared" aria-hidden="true">
+                        <span class="person person-back"></span>
+                        <span class="person person-front"></span>
+                      </span>
+                      <ng-template #individualIcon>
+                        <span class="people-icon people-icon-individual" aria-hidden="true">
+                          <span class="person person-front"></span>
+                        </span>
+                      </ng-template>
+                    </span>
+                    <button
+                      type="button"
+                      class="payments-icon-btn"
+                      title="Detalle de transaccion"
+                      aria-label="Detalle de transaccion"
+                      (click)="openDetailModal(row.transaccionData)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1.5 12s3.75-6.75 10.5-6.75S22.5 12 22.5 12s-3.75 6.75-10.5 6.75S1.5 12 1.5 12Z"/>
+                        <circle cx="12" cy="12" r="3.25"/>
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
       </details>
+    </div>
+    <div
+      *ngIf="detailModalTransaccion"
+      class="payments-detail-backdrop"
+      (click)="closeDetailModal()"
+    >
+      <section class="payments-detail-modal" (click)="$event.stopPropagation()">
+        <header class="payment-modal-header">
+          <div>
+            <p class="panel-title">Detalle de transaccion</p>
+            <h3>{{ getDetailModalTitle(detailModalTransaccion) }}</h3>
+          </div>
+          <button type="button" class="secondary-button compact-button" (click)="closeDetailModal()">
+            Cerrar
+          </button>
+        </header>
+
+        <section class="payments-detail-summary">
+          <article class="payment-modal-chip">
+            <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha gasto' }}</span>
+            <strong>{{ formatDetalleDate(detailModalTransaccion.fecha) }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Monto</span>
+            <strong>{{ formatCurrency(detailModalTransaccion.monto) }}</strong>
+          </article>
+          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+            <span>Intereses</span>
+            <strong>{{ formatCurrency(detailModalTransaccion.intereses) }}</strong>
+          </article>
+          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+            <span>Saldo pendiente</span>
+            <strong>{{ formatCurrency(detailModalTransaccion.saldo_pendiente) }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Metodo</span>
+            <strong>{{ detailModalTransaccion.nombre_forma_pago || '-' }}</strong>
+          </article>
+          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+            <span>Interes anual</span>
+            <strong>
+              <ng-container *ngIf="detailModalTransaccion.tasa_interes_anual != null; else noTasaPagos">
+                {{ detailModalTransaccion.tasa_interes_anual | number: '1.0-2' }}%
+              </ng-container>
+              <ng-template #noTasaPagos>-</ng-template>
+            </strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Categoria</span>
+            <strong>
+              {{ detailModalTransaccion.nombre_categoria || '-' }}<ng-container *ngIf="detailModalTransaccion.nombre_subcategoria"> / {{ detailModalTransaccion.nombre_subcategoria }}</ng-container>
+            </strong>
+          </article>
+          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+            <span>Estado pago</span>
+            <strong>
+              <span class="status-pill" [ngClass]="detailModalTransaccion.nombre_estado?.toLowerCase() === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">
+                {{ detailModalTransaccion.nombre_estado || '-' }}
+              </span>
+            </strong>
+          </article>
+        </section>
+
+        <div class="payments-detail-table-wrap">
+          <table class="payments-detail-table">
+            <thead>
+              <tr>
+                <th>Participante</th>
+                <th>Cuota</th>
+                <th>Monto</th>
+                <th>Pagado</th>
+                <th>Interes</th>
+                <th>Saldo</th>
+                <th>F. Programada</th>
+                <th>F. Pago</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let det of detailModalTransaccion.participantes_detalle">
+                <td>
+                  <div style="display:grid;gap:.18rem;">
+                    <span>{{ det.nombre_participante || (det.es_titular ? 'Titular' : '-') }}</span>
+                    <span
+                      *ngIf="det.es_titular"
+                      style="display:inline-flex;width:fit-content;align-items:center;padding:.15rem .45rem;border-radius:999px;background:#fff7e6;color:#d48a00;font-size:.72rem;font-weight:800;"
+                    >Titular</span>
+                  </div>
+                </td>
+                <td>{{ det.numero_cuota }}/{{ det.total_cuotas }}</td>
+                <td>{{ formatCurrency(det.monto) }}</td>
+                <td>{{ formatCurrency(det.monto_pagado) }}</td>
+                <td>{{ formatCurrency(det.interes_pagado + det.interes_pendiente) }}</td>
+                <td>{{ formatCurrency(det.saldo_pendiente) }}</td>
+                <td style="white-space:nowrap;">{{ formatDetalleDate(det.fecha_programada) }}</td>
+                <td style="white-space:nowrap;">{{ formatDetalleDate(det.fecha_pago) }}</td>
+                <td>
+                  <span class="status-pill" [ngClass]="det.nombre_estado?.toLowerCase() === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">
+                    {{ det.nombre_estado || 'Pendiente' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </main>
 </div>
