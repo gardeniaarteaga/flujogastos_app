@@ -363,13 +363,37 @@
   justify-content: center;
   min-height: 1.8rem;
   padding: 0.2rem 0.65rem;
-  border: 1px solid var(--tone-border, #dbe4ff);
+  border: 1px solid #bfdbfe;
   border-radius: 999px;
-  background: var(--tone-bg, #eef4ff);
-  color: var(--tone-text, #3354b8);
+  background: #eff6ff;
+  color: #1d4ed8;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.03em;
+}
+
+.dashboard-status-pill.tone-good {
+  background: #e9f9ef;
+  border-color: #bbf7d0;
+  color: #18794e;
+}
+
+.dashboard-status-pill.tone-warning {
+  background: #fff4d6;
+  border-color: #fde68a;
+  color: #9a6700;
+}
+
+.dashboard-status-pill.tone-danger {
+  background: #ffe4e6;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.dashboard-status-pill.tone-neutral {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
 }
 
 .amount-column {

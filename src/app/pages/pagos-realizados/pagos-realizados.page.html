@@ -296,10 +296,10 @@
 
         <div class="payments-group-body">
           <div
-            *ngIf="getGroupAvailableMethods(group).length > 1 || getGroupAvailableTitulares(group).length > 1"
+            *ngIf="getGroupAvailableMethods(group).length > 1"
             class="payments-filters-bar"
           >
-            <div *ngIf="getGroupAvailableMethods(group).length > 1" class="payments-method-filter">
+            <div class="payments-method-filter">
               <span class="payments-filter-strip-label">Metodo</span>
               <button
                 type="button"
@@ -317,27 +317,6 @@
                 (click)="setGroupMethodFilter(group, +method.value)"
               >
                 {{ method.label }}
-              </button>
-            </div>
-
-            <div *ngIf="getGroupAvailableTitulares(group).length > 1" class="payments-titular-filter">
-              <span class="payments-filter-strip-label">Origen</span>
-              <button
-                type="button"
-                class="filter-titular-button"
-                [class.is-active]="getGroupActiveTitular(group.participanteKey) === null"
-                (click)="setGroupTitularFilter(group, null)"
-              >
-                Todos
-              </button>
-              <button
-                *ngFor="let titular of getGroupAvailableTitulares(group)"
-                type="button"
-                class="filter-titular-button"
-                [class.is-active]="getGroupActiveTitular(group.participanteKey) === titular.value"
-                (click)="setGroupTitularFilter(group, titular.value)"
-              >
-                {{ titular.label }}
               </button>
             </div>
           </div>

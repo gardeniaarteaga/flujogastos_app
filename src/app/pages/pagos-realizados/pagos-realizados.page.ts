@@ -89,8 +89,6 @@ interface PagoRealizadoRow {
   enviadorNombre: string | null;
   esParticipanteAsignado: boolean;
   esTitular: boolean;
-  titularNombre: string;
-  usuarioNombre: string;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -179,7 +177,6 @@ export class PagosRealizadosPage implements OnInit {
   metodoPagoOptions: SelectOption[] = [];
   participanteOptions: SelectOption[] = [];
   readonly activeMethodFilters = new Map<string, number | null>();
-  readonly activeTitularFilters = new Map<string, string | null>();
   detailModalTransaccion: TransaccionListado | null = null;
 
   get isAdminSession(): boolean {
@@ -569,15 +566,10 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   getGroupAvailableMethods(group: ParticipanteGroup): SelectOption[] {
-    const activeTitular = this.activeTitularFilters.get(group.participanteKey) ?? null;
-    const sourceRows = activeTitular !== null
-      ? group.rows.filter((row) => row.titularNombre === activeTitular)
-      : group.rows;
-
     const seen = new Set<string>();
     const options: SelectOption[] = [];
 
-    for (const row of sourceRows) {
+    for (const row of group.rows) {
       const value = String(row.metodoPagoId ?? '');
       if (!value || seen.has(value)) continue;
       seen.add(value);
@@ -593,59 +585,12 @@ export class PagosRealizadosPage implements OnInit {
 
   setGroupMethodFilter(group: ParticipanteGroup, methodId: number | null): void {
     this.activeMethodFilters.set(group.participanteKey, methodId);
-    const currentTitular = this.activeTitularFilters.get(group.participanteKey) ?? null;
-    if (currentTitular !== null) {
-      const stillAvailable = this.getGroupAvailableTitulares(group).some((t) => t.value === currentTitular);
-      if (!stillAvailable) {
-        this.activeTitularFilters.set(group.participanteKey, null);
-      }
-    }
-  }
-
-  getGroupAvailableTitulares(group: ParticipanteGroup): SelectOption[] {
-    const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
-    const sourceRows = activeMethod !== null
-      ? group.rows.filter((row) => row.metodoPagoId === activeMethod)
-      : group.rows;
-
-    const participanteNombre = group.rows[0]?.participanteNombre ?? 'Propios';
-
-    const seen = new Set<string>();
-    const options: SelectOption[] = [];
-    for (const row of sourceRows) {
-      if (seen.has(row.titularNombre)) continue;
-      seen.add(row.titularNombre);
-      const label = row.titularNombre === 'Propios' ? participanteNombre : row.titularNombre;
-      options.push({ value: row.titularNombre, label });
-    }
-    return options.sort((a, b) => {
-      if (a.value === 'Propios') return -1;
-      if (b.value === 'Propios') return 1;
-      return a.label.localeCompare(b.label);
-    });
-  }
-
-  getGroupActiveTitular(groupKey: string): string | null {
-    return this.activeTitularFilters.get(groupKey) ?? null;
-  }
-
-  setGroupTitularFilter(group: ParticipanteGroup, titular: string | null): void {
-    this.activeTitularFilters.set(group.participanteKey, titular);
-    const currentMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
-    if (currentMethod !== null) {
-      const stillAvailable = this.getGroupAvailableMethods(group).some((m) => +m.value === currentMethod);
-      if (!stillAvailable) {
-        this.activeMethodFilters.set(group.participanteKey, null);
-      }
-    }
   }
 
   getGroupFilteredRows(group: ParticipanteGroup): PagoRealizadoRow[] {
     const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
-    const activeTitular = this.activeTitularFilters.get(group.participanteKey) ?? null;
     return group.rows.filter((row) => {
       if (activeMethod !== null && row.metodoPagoId !== activeMethod) return false;
-      if (activeTitular !== null && row.titularNombre !== activeTitular) return false;
       return true;
     });
   }
@@ -913,8 +858,6 @@ export class PagosRealizadosPage implements OnInit {
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
       esParticipanteAsignado: !detalle.es_titular,
       esTitular: detalle.es_titular,
-      titularNombre: this.getTransaccionTitularNombre(transaccion, detalle),
-      usuarioNombre: this.resolveUsuarioNombre(transaccion, detalle),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
@@ -1001,16 +944,6 @@ export class PagosRealizadosPage implements OnInit {
     return String(detalle.id_participante);
   }
 
-  private getTransaccionTitularNombre(
-    transaccion: Pick<TransaccionListado, 'titular'>,
-    detalle: Pick<ParticipanteDetalleListado, 'es_titular'>,
-  ): string {
-    if (detalle.es_titular) {
-      return 'Propios';
-    }
-    return transaccion.titular?.trim() || 'Propios';
-  }
-
   private getParticipanteNombre(
     detalle: Pick<ParticipanteDetalleListado, 'es_titular' | 'nombre_participante' | 'id_participante'>,
   ): string {
@@ -1061,29 +994,6 @@ export class PagosRealizadosPage implements OnInit {
     );
 
     return ownAliases.has(normalizedSender) ? null : directSender;
-  }
-
-  private resolveUsuarioNombre(
-    transaccion: Pick<TransaccionListado, 'enviado_por' | 'titular'>,
-    detalle: Pick<ParticipanteDetalleListado, 'es_titular' | 'nombre_participante' | 'id_participante'>,
-  ): string {
-    if (detalle.es_titular) {
-      return this.resolveTransactionSenderFirstName(transaccion, detalle) ?? this.getTitularUsuarioNombre(transaccion);
-    }
-
-    return this.getParticipanteNombre(detalle);
-  }
-
-  private getTitularUsuarioNombre(
-    transaccion: Pick<TransaccionListado, 'titular'>,
-  ): string {
-    return (
-      this.currentUserParticipante?.nombre_participante?.trim() ||
-      this.userProfile.fullName?.trim() ||
-      this.userProfile.username?.trim() ||
-      transaccion.titular?.trim() ||
-      'Titular'
-    );
   }
 
 
