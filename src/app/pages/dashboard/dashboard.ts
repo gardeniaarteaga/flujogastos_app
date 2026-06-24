@@ -2442,8 +2442,9 @@ export class Dashboard implements OnInit {
       case 'completado':
         return 'good';
       case 'pendiente':
-      case 'pago parcial':
         return 'warning';
+      case 'pago parcial':
+        return 'info';
       case 'anulado':
         return 'neutral';
       default:

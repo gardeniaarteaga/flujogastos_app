@@ -378,6 +378,12 @@
   color: #18794e;
 }
 
+.dashboard-status-pill.tone-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
 .dashboard-status-pill.tone-warning {
   background: #fff4d6;
   border-color: #fde68a;
