@@ -99,6 +99,7 @@ interface PagoRealizadoRow {
   totalPagado: number;
   estadoNombre: string;
   estadoKey: EstadoReportePago;
+  isVencido: boolean;
   transaccionData: TransaccionListado;
 }
 
@@ -155,8 +156,8 @@ export class PagosRealizadosPage implements OnInit {
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly pageSize = 25;
   readonly filtrosForm = this.fb.group({
-    fechaDesde: [this.todayFilterValue],
-    fechaHasta: [this.todayFilterValue],
+    fechaDesde: [''],
+    fechaHasta: [''],
     metodoPagoId: [''],
     participanteKey: [''],
     incluirPagados: [true],
@@ -164,6 +165,7 @@ export class PagosRealizadosPage implements OnInit {
   });
 
   sidebarCollapsed = false;
+  resumenOpen = false;
   maintenanceOpen = false;
   reportesOpen = false;
   loading = false;
@@ -177,7 +179,11 @@ export class PagosRealizadosPage implements OnInit {
   metodoPagoOptions: SelectOption[] = [];
   participanteOptions: SelectOption[] = [];
   readonly activeMethodFilters = new Map<string, number | null>();
+  readonly fechaSortOrders = new Map<string, 'asc' | 'desc'>();
+  readonly groupCurrentPages = new Map<string, number>();
+  readonly groupPageSize = 10;
   detailModalTransaccion: TransaccionListado | null = null;
+  detailModalLoading = false;
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -447,16 +453,24 @@ export class PagosRealizadosPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
   }
 
   onReportesToggle(open: boolean): void {
     this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   clearFilters(): void {
     this.filtrosForm.setValue({
-      fechaDesde: this.todayFilterValue,
-      fechaHasta: this.todayFilterValue,
+      fechaDesde: '',
+      fechaHasta: '',
       metodoPagoId: '',
       participanteKey: this.getDefaultParticipanteKey(),
       incluirPagados: true,
@@ -585,14 +599,63 @@ export class PagosRealizadosPage implements OnInit {
 
   setGroupMethodFilter(group: ParticipanteGroup, methodId: number | null): void {
     this.activeMethodFilters.set(group.participanteKey, methodId);
+    this.groupCurrentPages.set(group.participanteKey, 1);
+  }
+
+  getFechaSortOrder(groupKey: string): 'asc' | 'desc' {
+    return this.fechaSortOrders.get(groupKey) ?? 'asc';
+  }
+
+  toggleFechaSort(groupKey: string): void {
+    const current = this.getFechaSortOrder(groupKey);
+    this.fechaSortOrders.set(groupKey, current === 'asc' ? 'desc' : 'asc');
   }
 
   getGroupFilteredRows(group: ParticipanteGroup): PagoRealizadoRow[] {
     const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
-    return group.rows.filter((row) => {
+    const sortOrder = this.getFechaSortOrder(group.participanteKey);
+    const filtered = group.rows.filter((row) => {
       if (activeMethod !== null && row.metodoPagoId !== activeMethod) return false;
       return true;
     });
+
+    return [...filtered].sort((a, b) => {
+      const cmp = a.fechaReferencia.localeCompare(b.fechaReferencia);
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  getGroupCurrentPage(groupKey: string): number {
+    return this.groupCurrentPages.get(groupKey) ?? 1;
+  }
+
+  getGroupTotalPages(group: ParticipanteGroup): number {
+    return Math.max(1, Math.ceil(this.getGroupFilteredRows(group).length / this.groupPageSize));
+  }
+
+  getGroupPagedRows(group: ParticipanteGroup): PagoRealizadoRow[] {
+    const filtered = this.getGroupFilteredRows(group);
+    const currentPage = this.getGroupCurrentPage(group.participanteKey);
+    const start = (currentPage - 1) * this.groupPageSize;
+    return filtered.slice(start, start + this.groupPageSize);
+  }
+
+  getGroupVisiblePages(group: ParticipanteGroup): number[] {
+    const total = this.getGroupTotalPages(group);
+    const current = this.getGroupCurrentPage(group.participanteKey);
+    const maxVisible = 5;
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    let start = Math.max(1, current - Math.floor(maxVisible / 2));
+    const end = Math.min(total, start + maxVisible - 1);
+    start = Math.max(1, end - maxVisible + 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }
+
+  goToGroupPage(groupKey: string, page: number, totalPages: number): void {
+    if (page < 1 || page > totalPages) return;
+    this.groupCurrentPages.set(groupKey, page);
   }
 
   getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number } {
@@ -623,6 +686,26 @@ export class PagosRealizadosPage implements OnInit {
 
   openDetailModal(t: TransaccionListado): void {
     this.detailModalTransaccion = t;
+    this.detailModalLoading = true;
+
+    firstValueFrom(
+      this.http
+        .get<TransaccionListado>(`${this.apiUrl}/${t.id_transaccion}`)
+        .pipe(timeout(this.timeoutMs)),
+    )
+      .then((full) => {
+        if (
+          this.detailModalTransaccion?.id_transaccion === t.id_transaccion &&
+          full &&
+          Array.isArray(full.participantes_detalle)
+        ) {
+          this.detailModalTransaccion = { ...t, participantes_detalle: full.participantes_detalle };
+        }
+      })
+      .catch(() => { /* mantiene datos existentes */ })
+      .finally(() => {
+        this.detailModalLoading = false;
+      });
   }
 
   @HostListener('document:keydown.escape')
@@ -632,6 +715,20 @@ export class PagosRealizadosPage implements OnInit {
 
   getDetailModalTitle(t: TransaccionListado): string {
     return this.getTransaccionTitle(t);
+  }
+
+  getModalCompartidoCon(t: TransaccionListado): string | null {
+    if (!t.pagocompartido) return null;
+    const seen = new Set<string>();
+    const nombres: string[] = [];
+    for (const d of t.participantes_detalle) {
+      if (d.es_titular) continue;
+      const nombre = d.nombre_participante?.trim();
+      if (!nombre || seen.has(nombre)) continue;
+      seen.add(nombre);
+      nombres.push(nombre);
+    }
+    return nombres.length > 0 ? nombres.join(', ') : null;
   }
 
   isCreditoTransaccion(t: TransaccionListado): boolean {
@@ -805,6 +902,8 @@ export class PagosRealizadosPage implements OnInit {
     if (this.currentPage < 1) {
       this.currentPage = 1;
     }
+
+    this.groupCurrentPages.clear();
   }
 
   private getParticipantesDetalleForReport(
@@ -842,6 +941,10 @@ export class PagosRealizadosPage implements OnInit {
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
     const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
+    const isVencido =
+      estadoKey !== 'pagado' &&
+      fechaProgramada.length > 0 &&
+      new Date(fechaProgramada + 'T00:00:00') < new Date(new Date().toDateString());
 
     return {
       detalleId: detalle.id,
@@ -868,6 +971,7 @@ export class PagosRealizadosPage implements OnInit {
       totalPagado: montoPagado + interesPagado,
       estadoNombre: this.resolveEstadoNombre(detalle, estadoKey),
       estadoKey,
+      isVencido,
       transaccionData: transaccion,
     };
   }

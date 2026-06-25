@@ -352,6 +352,7 @@ export class Dashboard implements OnInit {
   scheduledNotificationsError = '';
   sidebarCollapsed = false;
   transactionsOpen = true;
+  resumenOpen = true;
   maintenanceOpen = false;
   reportesOpen = false;
   readonly userProfile = loadUserProfile();
@@ -470,12 +471,28 @@ export class Dashboard implements OnInit {
     }
   }
 
+  toggleResumenMenu(): void {
+    this.resumenOpen = !this.resumenOpen;
+    if (this.resumenOpen) {
+      this.maintenanceOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
   }
 
   onReportesToggle(open: boolean): void {
     this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   formatCurrency(value: number): string {

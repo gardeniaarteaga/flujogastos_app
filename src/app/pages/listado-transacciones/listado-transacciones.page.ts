@@ -366,7 +366,9 @@ export class ListadoTransaccionesPage implements OnInit {
   });
 
   sidebarCollapsed = false;
+  resumenOpen = true;
   maintenanceOpen = false;
+  reportesOpen = false;
   transactionsOpen = true;
   loading = false;
   loadingCatalogos = false;
@@ -589,6 +591,22 @@ export class ListadoTransaccionesPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
+  }
+
+  get isResumenMenuOpen(): boolean {
+    return false;
   }
 
   toggleTransactionsMenu(): void {
@@ -2285,6 +2303,26 @@ export class ListadoTransaccionesPage implements OnInit {
     event?.stopPropagation();
     this.detailModalTransaccion = this.buildDetailModalTransaccion(transaccion);
     this.detailModalCuotasPage = 1;
+
+    firstValueFrom(
+      this.http
+        .get<TransaccionListado>(`${this.apiUrl}/${transaccion.id_transaccion}`)
+        .pipe(timeout(10000)),
+    )
+      .then((full) => {
+        if (
+          this.detailModalTransaccion?.id_transaccion === transaccion.id_transaccion &&
+          full &&
+          Array.isArray(full.participantes_detalle)
+        ) {
+          this.detailModalTransaccion = this.buildDetailModalTransaccion({
+            ...transaccion,
+            participantes_detalle: full.participantes_detalle,
+          });
+          this.cdr.detectChanges();
+        }
+      })
+      .catch(() => { /* mantiene datos existentes si falla */ });
   }
 
   closeDetailModal(): void {

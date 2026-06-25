@@ -40,6 +40,7 @@ export class TipoEntidadPage {
   private readonly apiUrl = apiUrl('tipo-entidad');
 
   tiposEntidad: TipoEntidad[] = [];
+  resumenOpen = true;
   maintenanceOpen = true;
   loading = false;
   saving = false;
@@ -59,6 +60,9 @@ export class TipoEntidadPage {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+    }
   }
 
   get isEditing(): boolean {

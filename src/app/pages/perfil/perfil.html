@@ -19,7 +19,7 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-group open">
+      <div class="nav-group" [class.open]="resumenOpen || isResumenMenuOpen">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
           Resumen
         </a>
@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <details class="nav-group">
+      <details class="nav-group" [attr.open]="reportesOpen ? '' : null" (toggle)="onReportesToggle($any($event.target).open)">
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>

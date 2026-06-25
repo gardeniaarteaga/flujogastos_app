@@ -111,6 +111,12 @@
 .quick-pay-summary-card-pending { border-color:#bfd4ff; background:linear-gradient(135deg,#eef5ff 0%,#f4f8ff 100%); }
 .quick-pay-summary-card-paid { border-color:#c8e7d2; background:linear-gradient(135deg,#eef9f1 0%,#f4fbf7 100%); }
 .quick-pay-summary-card-income { border-color:#efd9b1; background:linear-gradient(135deg,#fff6e6 0%,#fffaf4 100%); }
+.qp-stat-chips { display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; }
+.qp-stat-chip { display:inline-flex; align-items:center; gap:.28rem; padding:.25rem .65rem; border-radius:999px; font-size:.8rem; font-weight:700; border:1px solid; line-height:1.3; white-space:nowrap; }
+.qp-stat-label { font-size:.67rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; opacity:.7; margin-right:.1rem; }
+.qp-stat-chip-pending { background:#eef5ff; border-color:#bfd4ff; color:#2457b8; }
+.qp-stat-chip-paid { background:#eef9f1; border-color:#c8e7d2; color:#1f7a46; }
+.qp-stat-chip-income { background:#fff6e6; border-color:#efd9b1; color:#9a6700; }
 .quick-pay-days-field input { max-width:5.4rem; }
 .quick-pay-days-field { display:grid; gap:.45rem; }
 .quick-pay-days-field input.is-disabled { opacity:.6; cursor:not-allowed; }

@@ -97,8 +97,10 @@ export class CategoriasPage implements OnInit {
   expandedCategoriaIds = new Set<number>();
   currentPage = 1;
   sidebarCollapsed = false;
+  resumenOpen = false;
   transactionsOpen = false;
-  maintenanceOpen = false;
+  maintenanceOpen = true;
+  reportesOpen = false;
   loading = false;
   saving = false;
   loadingSubcategorias = false;
@@ -127,8 +129,24 @@ export class CategoriasPage implements OnInit {
     void this.loadCategorias();
   }
 
+  get isResumenMenuOpen(): boolean {
+    return false;
+  }
+
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   toggleTransactionsMenu(): void {

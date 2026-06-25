@@ -74,7 +74,9 @@ export class PerfilPage {
   ];
 
   sidebarCollapsed = false;
+  resumenOpen = true;
   maintenanceOpen = false;
+  reportesOpen = false;
   saving = false;
   changingPassword = false;
   profileErrorMessage = '';
@@ -129,8 +131,24 @@ export class PerfilPage {
     this.patchProfileForm(this.userProfile());
   }
 
+  get isResumenMenuOpen(): boolean {
+    return false;
+  }
+
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   get initials(): string {

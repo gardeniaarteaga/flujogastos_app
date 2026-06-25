@@ -68,8 +68,10 @@ export class ParticipantesPage {
   participantes: Participante[] = [];
   currentPage = 1;
   sidebarCollapsed = false;
+  resumenOpen = false;
   transactionsOpen = false;
-  maintenanceOpen = false;
+  maintenanceOpen = true;
+  reportesOpen = false;
   loading = false;
   saving = false;
   deletingId: number | null = null;
@@ -90,12 +92,28 @@ export class ParticipantesPage {
     void this.loadParticipantes();
   }
 
+  get isResumenMenuOpen(): boolean {
+    return false;
+  }
+
   toggleTransactionsMenu(): void {
     this.transactionsOpen = !this.transactionsOpen;
   }
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   get isEditing(): boolean {

@@ -19,7 +19,7 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-group open">
+      <div class="nav-group" [class.open]="resumenOpen || isResumenMenuOpen">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
           Resumen
         </a>
@@ -78,7 +78,7 @@
         </div>
       </div>
 
-      <details class="nav-group">
+      <details class="nav-group" [attr.open]="reportesOpen ? '' : null" (toggle)="onReportesToggle($any($event.target).open)">
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>
@@ -185,10 +185,16 @@
 
         <form [formGroup]="filtrosForm" class="filters-panel" novalidate>
           <div *ngIf="isDetalleViewMode; else filtrosListadoTransacciones">
-            <div style="display:grid;gap:.85rem;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
-                  <strong style="color:var(--color-heading);font-size:1rem;line-height:1.2;">Detalle programado para pago</strong>
+            <div style="display:grid;gap:.6rem;">
+              <!-- Fila 1: título + stats compactos + chips activos + botón toggle -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:.65rem;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;">
+                  <strong style="color:var(--color-heading);font-size:.95rem;line-height:1.2;">Detalle programado para pago</strong>
+                  <div *ngIf="quickPayFilteredSubtotalSummary as qps" class="qp-stat-chips">
+                    <span class="qp-stat-chip qp-stat-chip-pending"><span class="qp-stat-label">Pendiente</span>${{ qps.pendiente | number: '1.2-2' }}</span>
+                    <span class="qp-stat-chip qp-stat-chip-paid"><span class="qp-stat-label">Pagado</span>${{ qps.pagado | number: '1.2-2' }}</span>
+                    <span class="qp-stat-chip qp-stat-chip-income"><span class="qp-stat-label">Ingresos</span>${{ qps.ingresos | number: '1.2-2' }}</span>
+                  </div>
                   <ng-container *ngIf="quickPayFiltersCollapsed && activeQuickPayFilterChips.length > 0">
                     <span
                       *ngFor="let chip of activeQuickPayFilterChips"
@@ -207,135 +213,117 @@
                 </button>
               </div>
 
-              <div style="display:grid;gap:.85rem;">
-                <div class="quick-pay-summary-layout quick-pay-summary-layout-standalone">
-                  <div class="quick-pay-summary-grid" *ngIf="quickPayFilteredSubtotalSummary as quickPaySummary">
-                    <div class="quick-pay-summary-card quick-pay-summary-card-pending">
-                      <span class="stat-label">Pendiente</span>
-                      <strong>${{ quickPaySummary.pendiente | number: '1.2-2' }}</strong>
-                    </div>
-                    <div class="quick-pay-summary-card quick-pay-summary-card-paid">
-                      <span class="stat-label">Pagado</span>
-                      <strong>${{ quickPaySummary.pagado | number: '1.2-2' }}</strong>
-                    </div>
-                    <div class="quick-pay-summary-card quick-pay-summary-card-income">
-                      <span class="stat-label">Ingresos</span>
-                      <strong>${{ quickPaySummary.ingresos | number: '1.2-2' }}</strong>
-                    </div>
+              <div *ngIf="!quickPayFiltersCollapsed" style="display:grid;gap:.55rem;">
+                <!-- Fila 2: checkboxes + dropdowns en la misma línea -->
+                <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;">
+                  <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
+                    <input
+                      id="prioritariosDetalle"
+                      type="checkbox"
+                      formControlName="prioritarios"
+                      (change)="onPrioritariosToggle($event)"
+                    />
+                    <span>Proximos 15 dias</span>
+                  </label>
+
+                  <label class="checkbox-row checkbox-row-compact" for="vencidosDetalle">
+                    <input
+                      id="vencidosDetalle"
+                      type="checkbox"
+                      formControlName="vencidos"
+                      (change)="onVencidosToggle($event)"
+                    />
+                    <span>Vencidos</span>
+                  </label>
+
+                  <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
+                    <input
+                      id="mesActualDetalle"
+                      type="checkbox"
+                      formControlName="mesActual"
+                      (change)="onMesActualToggle($event)"
+                    />
+                    <span>Mes actual</span>
+                  </label>
+
+                  <label class="checkbox-row checkbox-row-compact" for="enviadasDetalle">
+                    <input
+                      id="enviadasDetalle"
+                      type="checkbox"
+                      formControlName="enviadas"
+                      (change)="onEnviadasToggle($event)"
+                    />
+                    <span>Recibidos</span>
+                  </label>
+
+                  <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
+                    <input
+                      id="compartidosDetalle"
+                      type="checkbox"
+                      formControlName="compartidos"
+                      (change)="onCompartidosToggle($event)"
+                    />
+                    <span>Compartidos</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    class="secondary-button compact-button"
+                    (click)="toggleAdvancedFilters()"
+                  >
+                    {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
+                  </button>
+
+                  <div class="field quick-pay-state-field" style="min-width:130px;">
+                    <label for="estadoDetalle">Estado</label>
+                    <select id="estadoDetalle" formControlName="estado">
+                      <option [ngValue]="null">Todos</option>
+                      <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
+                        {{ estado.nombre_estado }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="field quick-pay-participant-field" style="min-width:160px;flex:1;max-width:280px;">
+                    <label for="participanteDetalle">Participantes</label>
+                    <select id="participanteDetalle" formControlName="idParticipante">
+                      <option [ngValue]="null">Todos</option>
+                      <option
+                        *ngFor="let participante of quickPayParticipantesFiltro"
+                        [ngValue]="participante.id_participante"
+                      >
+                        {{ getParticipanteDisplayName(participante) }}
+                      </option>
+                    </select>
                   </div>
                 </div>
 
-                <div *ngIf="!quickPayFiltersCollapsed" style="display:grid;gap:.85rem;">
-                  <div class="filter-toggle-group filter-toggle-group-compact quick-pay-toggle-group">
-                    <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
-                      <input
-                        id="prioritariosDetalle"
-                        type="checkbox"
-                        formControlName="prioritarios"
-                        (change)="onPrioritariosToggle($event)"
-                      />
-                      <span>Proximos 15 dias</span>
-                    </label>
-
-                    <label class="checkbox-row checkbox-row-compact" for="vencidosDetalle">
-                      <input
-                        id="vencidosDetalle"
-                        type="checkbox"
-                        formControlName="vencidos"
-                        (change)="onVencidosToggle($event)"
-                      />
-                      <span>Vencidos</span>
-                    </label>
-
-                    <label class="checkbox-row checkbox-row-compact" for="mesActualDetalle">
-                      <input
-                        id="mesActualDetalle"
-                        type="checkbox"
-                        formControlName="mesActual"
-                        (change)="onMesActualToggle($event)"
-                      />
-                      <span>Mes actual</span>
-                    </label>
-
-                    <label class="checkbox-row checkbox-row-compact" for="enviadasDetalle">
-                      <input
-                        id="enviadasDetalle"
-                        type="checkbox"
-                        formControlName="enviadas"
-                        (change)="onEnviadasToggle($event)"
-                      />
-                      <span>Recibidos</span>
-                    </label>
-
-                    <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
-                      <input
-                        id="compartidosDetalle"
-                        type="checkbox"
-                        formControlName="compartidos"
-                        (change)="onCompartidosToggle($event)"
-                      />
-                      <span>Compartidos</span>
-                    </label>
-
-                    <button
-                      type="button"
-                      class="secondary-button compact-button"
-                      (click)="toggleAdvancedFilters()"
-                    >
-                      {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
-                    </button>
+                <!-- Fila 3: búsqueda -->
+                <div class="filters-search-row">
+                  <div class="field" style="max-width:9rem;">
+                    <label for="busquedaIdDetalle">ID</label>
+                    <input
+                      id="busquedaIdDetalle"
+                      type="text"
+                      formControlName="busquedaId"
+                      maxlength="12"
+                      inputmode="numeric"
+                      placeholder="Ej: 114"
+                    />
                   </div>
-
-                  <div class="filters-grid">
-                    <div class="field quick-pay-state-field">
-                      <label for="estadoDetalle">Estado</label>
-                      <select id="estadoDetalle" formControlName="estado">
-                        <option [ngValue]="null">Todos</option>
-                        <option *ngFor="let estado of estadosTransaccionFiltro" [ngValue]="estado.nombre_estado">
-                          {{ estado.nombre_estado }}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div class="field quick-pay-participant-field">
-                      <label for="participanteDetalle">Participantes</label>
-                      <select id="participanteDetalle" formControlName="idParticipante">
-                        <option [ngValue]="null">Todos</option>
-                        <option
-                          *ngFor="let participante of quickPayParticipantesFiltro"
-                          [ngValue]="participante.id_participante"
-                        >
-                          {{ getParticipanteDisplayName(participante) }}
-                        </option>
-                      </select>
-                    </div>
+                  <div class="field">
+                    <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
+                    <input
+                      id="busquedaDescripcionDetalle"
+                      type="text"
+                      formControlName="busquedaDescripcion"
+                      maxlength="250"
+                      placeholder="Escribe parte de la descripcion..."
+                    />
                   </div>
+                </div>
 
-                  <div class="filters-search-row">
-                    <div class="field" style="max-width:9rem;">
-                      <label for="busquedaIdDetalle">ID</label>
-                      <input
-                        id="busquedaIdDetalle"
-                        type="text"
-                        formControlName="busquedaId"
-                        maxlength="12"
-                        inputmode="numeric"
-                        placeholder="Ej: 114"
-                      />
-                    </div>
-                    <div class="field">
-                      <label for="busquedaDescripcionDetalle">Buscar por descripcion</label>
-                      <input
-                        id="busquedaDescripcionDetalle"
-                        type="text"
-                        formControlName="busquedaDescripcion"
-                        maxlength="250"
-                        placeholder="Escribe parte de la descripcion..."
-                      />
-                    </div>
-                  </div>
-
-                  <div *ngIf="showAdvancedFilters" class="filters-grid quick-pay-advanced-grid">
+                <div *ngIf="showAdvancedFilters" class="filters-grid quick-pay-advanced-grid">
                     <div class="field quick-pay-type-field">
                       <label for="tipoTransaccionDetalle">Tipo</label>
                       <select id="tipoTransaccionDetalle" formControlName="tipoTransaccion">
@@ -418,12 +406,10 @@
                         </div>
                       </div>
                     </div>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
-
           <ng-template #filtrosListadoTransacciones>
             <div class="filter-toggle-group filter-toggle-group-compact">
               <label class="checkbox-row checkbox-row-compact" for="todos">
@@ -2060,18 +2046,18 @@
 
         <section class="payment-modal-summary">
           <article class="payment-modal-chip">
-            <span>{{ isCreditoTransaccion(detailModalTransaccion) ? 'Fecha ingreso' : 'Fecha gasto' }}</span>
+            <span>Fecha</span>
             <strong>{{ detailModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Monto</span>
             <strong>${{ detailModalTransaccion.monto | number: '1.2-2' }}</strong>
           </article>
-          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+          <article class="payment-modal-chip">
             <span>Intereses</span>
             <strong>${{ detailModalTransaccion.intereses | number: '1.2-2' }}</strong>
           </article>
-          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+          <article class="payment-modal-chip">
             <span>Saldo pendiente</span>
             <strong>${{ detailModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
           </article>
@@ -2079,7 +2065,7 @@
             <span>Metodo</span>
             <strong>{{ detailModalTransaccion.nombre_forma_pago || '-' }}</strong>
           </article>
-          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+          <article class="payment-modal-chip">
             <span>Interes anual</span>
             <strong>
               <ng-container *ngIf="detailModalTransaccion.tasa_interes_anual !== null && detailModalTransaccion.tasa_interes_anual !== undefined; else noTasaInteres">
@@ -2097,7 +2083,7 @@
               </span>
             </strong>
           </article>
-          <article *ngIf="!isCreditoTransaccion(detailModalTransaccion)" class="payment-modal-chip">
+          <article class="payment-modal-chip">
             <span>Estado pago</span>
             <strong>
               <span class="status-pill" [ngClass]="getEstadoClass(detailModalTransaccion.nombre_estado || 'Sin estado')">

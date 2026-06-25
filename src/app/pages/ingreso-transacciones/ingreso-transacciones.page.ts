@@ -461,6 +461,7 @@ export class IngresoTransaccionesPage implements OnInit {
   readonly diasProgramacion = Array.from({ length: 31 }, (_, index) => index + 1);
 
   sidebarCollapsed = false;
+  resumenOpen = true;
   maintenanceOpen = false;
   transactionsOpen = false;
   reportesOpen = false;
@@ -560,6 +561,10 @@ export class IngresoTransaccionesPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
   }
 
   toggleTransactionsMenu(): void {
@@ -568,6 +573,10 @@ export class IngresoTransaccionesPage implements OnInit {
 
   onReportesToggle(open: boolean): void {
     this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   onDescripcionFocus(): void {
@@ -3090,7 +3099,43 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private buildSingleCuotaFechaProgramada(fechaBaseIso: string): string {
-    const diasGracia = Number(this.getCurrentFormaPago()?.dias_gracia);
+    const formaPago = this.getCurrentFormaPago();
+    const diasGracia = Number(formaPago?.dias_gracia);
+    const diaCorte = Number(formaPago?.dia_corte);
+    const diaUltimoPago = Number(formaPago?.dia_ultimo_pago);
+
+    const hasBillingCycleConfig =
+      Number.isFinite(diaCorte) && diaCorte > 0 &&
+      Number.isFinite(diaUltimoPago) && diaUltimoPago > 0;
+
+    if (hasBillingCycleConfig) {
+      const fechaTransaccion = this.parseIsoDate(fechaBaseIso);
+      const diaTransaccion = fechaTransaccion.getDate();
+      let closeMes = fechaTransaccion.getMonth();
+      let closeYear = fechaTransaccion.getFullYear();
+
+      if (diaTransaccion > diaCorte) {
+        closeMes += 1;
+        if (closeMes > 11) {
+          closeMes = 0;
+          closeYear += 1;
+        }
+      }
+
+      let dueMes = closeMes + 1;
+      let dueYear = closeYear;
+      if (dueMes > 11) {
+        dueMes = 0;
+        dueYear += 1;
+      }
+
+      const fechaLimitePago = this.createDateWithPreferredDay(dueYear, dueMes, diaUltimoPago);
+      const diasAnticipacion =
+        Number.isFinite(diasGracia) && diasGracia > 0 ? Math.trunc(diasGracia) : 0;
+
+      return this.formatDateApi(this.addDays(fechaLimitePago, -diasAnticipacion));
+    }
+
     const diasProgramados =
       Number.isFinite(diasGracia) && diasGracia > 0
         ? Math.max(0, Math.trunc(diasGracia) - 1)

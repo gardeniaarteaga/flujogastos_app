@@ -446,14 +446,12 @@ h3 {
 }
 
 .nav-group.open .submenu,
-.nav-group[open] .submenu,
-.nav-group:has(.submenu-item.active) .submenu {
+.nav-group[open] .submenu {
   display: grid;
 }
 
 .nav-group.open .caret,
-.nav-group[open] .caret,
-.nav-group:has(.submenu-item.active) .caret {
+.nav-group[open] .caret {
   transform: rotate(180deg);
 }
 

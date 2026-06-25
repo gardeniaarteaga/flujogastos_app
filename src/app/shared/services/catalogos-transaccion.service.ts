@@ -16,6 +16,8 @@ export interface CatalogoFormaPago {
   tasa_anual?: number | null;
   calcula_interes?: boolean | null;
   dias_gracia?: number | null;
+  dia_corte?: number | null;
+  dia_ultimo_pago?: number | null;
   estado: boolean;
   id_usuario?: number | null;
   tipo_producto?: {

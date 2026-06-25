@@ -20,7 +20,7 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-group open">
+      <div class="nav-group" [class.open]="resumenOpen || isResumenMenuOpen">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
           Resumen
         </a>
@@ -107,7 +107,7 @@
         </div>
       </div>
 
-      <details class="nav-group">
+      <details class="nav-group" [attr.open]="reportesOpen ? '' : null" (toggle)="onReportesToggle($any($event.target).open)">
         <summary class="nav-item nav-item-group">
           <span>Reportes</span>
           <span class="caret">v</span>
@@ -407,18 +407,17 @@
 
           <div class="field">
             <label for="dias_gracia">
-              Dias gracia
-              <span
-                class="field-help-icon"
-                title="Son los dias en los que la transaccion no generara interes."
-                aria-label="Son los dias en los que la transaccion no generara interes."
-              >
-                ?
+              Anticipacion de pago
+              <span class="help-tooltip">
+                <span class="help-badge" tabindex="0" aria-label="Ayuda sobre anticipacion de pago">?</span>
+                <span class="help-tooltip-content">
+                  Dias antes de la fecha limite en los que se recomienda realizar el pago. Por ejemplo, con anticipacion de 3 dias y fecha limite el 05, el pago se programara el 02.
+                </span>
               </span>
             </label>
             <input id="dias_gracia" type="number" formControlName="dias_gracia" min="0" />
             <small class="field-example">
-              Son los dias en los que la transaccion no generara interes.
+              Dias antes de la fecha limite en los que se recomienda realizar el pago.
             </small>
           </div>
 

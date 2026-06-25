@@ -319,6 +319,23 @@
   box-shadow: inset 0 -1px 0 #dbe4ef;
 }
 
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.th-sortable:hover {
+  color: var(--color-primary, #2457b8);
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 0.85em;
+  color: var(--color-primary, #2457b8);
+}
+
 .payments-table th:nth-child(1),
 .payments-table td:nth-child(1) {
   min-width: 4rem;
@@ -722,9 +739,16 @@
 }
 
 .payments-detail-modal .payment-modal-header h3 {
-  margin: 0.15rem 0 0.25rem;
+  margin: 0.15rem 0 0.1rem;
   color: var(--color-heading);
   font-size: 1.35rem;
+}
+
+.modal-compartido-con {
+  margin: 0.1rem 0 0.15rem;
+  color: #2457b8;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .payments-detail-table-wrap {

@@ -19,7 +19,7 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-group open">
+      <div class="nav-group" [class.open]="resumenOpen || isResumenMenuOpen">
         <a
           class="nav-item"
           routerLink="/dashboard"

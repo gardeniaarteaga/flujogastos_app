@@ -311,6 +311,7 @@ export class AnalisisFinancieroPage implements OnInit {
   loading = false;
   errorMessage = '';
   sidebarCollapsed = false;
+  resumenOpen = false;
   maintenanceOpen = false;
   reportesOpen = false;
   currentUserId = getCurrentUserId();
@@ -482,10 +483,18 @@ export class AnalisisFinancieroPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
   }
 
   onReportesToggle(open: boolean): void {
     this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   resetSecondaryFilters(): void {

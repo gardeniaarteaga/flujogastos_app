@@ -132,8 +132,10 @@ export class FormasPagoPage implements OnInit {
   tipos: TipoProducto[] = [];
   currentPage = 1;
   sidebarCollapsed = false;
+  resumenOpen = false;
   transactionsOpen = false;
-  maintenanceOpen = false;
+  maintenanceOpen = true;
+  reportesOpen = false;
   loading = false;
   loadingCatalogs = false;
   saving = false;
@@ -174,12 +176,28 @@ export class FormasPagoPage implements OnInit {
     void this.loadSupportCatalogs();
   }
 
+  get isResumenMenuOpen(): boolean {
+    return false;
+  }
+
   toggleTransactionsMenu(): void {
     this.transactionsOpen = !this.transactionsOpen;
   }
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
+  }
+
+  onReportesToggle(open: boolean): void {
+    this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   get isEditing(): boolean {
@@ -606,7 +624,7 @@ export class FormasPagoPage implements OnInit {
         },
         { label: 'Dia corte', value: forma.dia_corte },
         { label: 'Dia ultimo pago', value: forma.dia_ultimo_pago },
-        { label: 'Dias gracia', value: forma.dias_gracia },
+        { label: 'Anticipacion de pago', value: forma.dias_gracia },
         { label: 'Estado', value: forma.estado ? 'Activo' : 'Inactivo' },
         { label: 'Fecha creacion', value: forma.fecha_creacion.slice(0, 10) },
       ],

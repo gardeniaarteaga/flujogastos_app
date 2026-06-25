@@ -58,6 +58,7 @@ export class EntidadesFinancierasPage {
 
   entidades: EntidadFinanciera[] = [];
   tiposEntidad: TipoEntidad[] = [];
+  resumenOpen = true;
   maintenanceOpen = true;
   loading = false;
   saving = false;
@@ -82,6 +83,9 @@ export class EntidadesFinancierasPage {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+    }
   }
 
   get isEditing(): boolean {

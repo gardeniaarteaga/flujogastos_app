@@ -240,6 +240,7 @@ export class GastosPorCategoriaPage implements OnInit {
   loading = false;
   errorMessage = '';
   sidebarCollapsed = false;
+  resumenOpen = false;
   maintenanceOpen = false;
   reportesOpen = false;
   currentUserId = getCurrentUserId();
@@ -374,10 +375,18 @@ export class GastosPorCategoriaPage implements OnInit {
 
   toggleMaintenanceMenu(): void {
     this.maintenanceOpen = !this.maintenanceOpen;
+    if (this.maintenanceOpen) {
+      this.resumenOpen = false;
+      this.reportesOpen = false;
+    }
   }
 
   onReportesToggle(open: boolean): void {
     this.reportesOpen = open;
+    if (open) {
+      this.resumenOpen = false;
+      this.maintenanceOpen = false;
+    }
   }
 
   formatCurrency(value: number): string {
@@ -573,9 +582,9 @@ export class GastosPorCategoriaPage implements OnInit {
 
         const normalized = this.normalizeDetailAmounts(detail, paymentMethod);
         const analysisDate =
-          this.parseDateOnly(detail.fecha_programada) ??
+          this.parseDateOnly(transaction.fecha) ??
           this.parseDateOnly(detail.fecha_pago) ??
-          this.parseDateOnly(transaction.fecha);
+          this.parseDateOnly(detail.fecha_programada);
 
         if (!analysisDate) {
           return records;

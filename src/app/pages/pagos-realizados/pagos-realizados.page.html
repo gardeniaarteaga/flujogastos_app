@@ -19,7 +19,7 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-group open">
+      <div class="nav-group" [class.open]="resumenOpen || isResumenMenuOpen">
         <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
           Resumen
         </a>
@@ -274,7 +274,6 @@
       <details
         *ngFor="let group of groupedPagos; trackBy: trackGroup"
         class="panel payments-group-accordion"
-        open
       >
         <summary class="payments-group-summary">
           <span class="payments-group-label">{{ group.label }}</span>
@@ -326,7 +325,15 @@
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Fecha</th>
+                  <th
+                    class="th-sortable"
+                    (click)="toggleFechaSort(group.participanteKey)"
+                    [attr.aria-sort]="getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending'"
+                    title="Ordenar por fecha"
+                  >
+                    Fecha
+                    <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
+                  </th>
                   <th>Transaccion</th>
                   <th>Metodo</th>
                   <th>Cuota</th>
@@ -340,12 +347,18 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of getGroupFilteredRows(group); trackBy: trackPago">
+                <tr *ngFor="let row of getGroupPagedRows(group); trackBy: trackPago">
                   <td>{{ row.transaccionId }}</td>
                   <td>{{ row.fechaReferenciaLabel }}</td>
                   <td>
                     <div class="payments-transaction-cell">
                       <span>{{ row.descripcion }}</span>
+                      <span
+                        *ngIf="row.isVencido"
+                        style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
+                      >
+                        Vencido
+                      </span>
                       <span *ngIf="row.enviadorNombre" class="payments-transaction-sender">
                         <span>Enviado por:</span>
                         <strong class="payments-transaction-sender-name">{{ row.enviadorNombre }}</strong>
@@ -399,6 +412,42 @@
               </tbody>
             </table>
           </div>
+
+          <div *ngIf="getGroupTotalPages(group) > 1" class="payments-pagination" style="padding: 0.6rem 1rem 0.25rem;">
+            <span class="payments-pagination-summary">
+              Pág. {{ getGroupCurrentPage(group.participanteKey) }} / {{ getGroupTotalPages(group) }}
+              &middot; {{ getGroupFilteredRows(group).length }} registros
+            </span>
+            <div class="payments-pagination-actions">
+              <button
+                type="button"
+                class="filter-preset-button"
+                [disabled]="getGroupCurrentPage(group.participanteKey) <= 1"
+                (click)="goToGroupPage(group.participanteKey, getGroupCurrentPage(group.participanteKey) - 1, getGroupTotalPages(group))"
+              >
+                ← Ant.
+              </button>
+              <div class="payments-pagination-pages">
+                <button
+                  *ngFor="let p of getGroupVisiblePages(group)"
+                  type="button"
+                  class="filter-preset-button"
+                  [class.is-active]="p === getGroupCurrentPage(group.participanteKey)"
+                  (click)="goToGroupPage(group.participanteKey, p, getGroupTotalPages(group))"
+                >
+                  {{ p }}
+                </button>
+              </div>
+              <button
+                type="button"
+                class="filter-preset-button"
+                [disabled]="getGroupCurrentPage(group.participanteKey) >= getGroupTotalPages(group)"
+                (click)="goToGroupPage(group.participanteKey, getGroupCurrentPage(group.participanteKey) + 1, getGroupTotalPages(group))"
+              >
+                Sig. →
+              </button>
+            </div>
+          </div>
         </div>
       </details>
     </div>
@@ -412,10 +461,16 @@
           <div>
             <p class="panel-title">Detalle de transaccion</p>
             <h3>{{ getDetailModalTitle(detailModalTransaccion) }}</h3>
+            <p *ngIf="getModalCompartidoCon(detailModalTransaccion)" class="modal-compartido-con">
+              Compartido con: {{ getModalCompartidoCon(detailModalTransaccion) }}
+            </p>
           </div>
-          <button type="button" class="secondary-button compact-button" (click)="closeDetailModal()">
-            Cerrar
-          </button>
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <span *ngIf="detailModalLoading" style="color:#7a90a8;font-size:.8rem;font-weight:700;">Cargando...</span>
+            <button type="button" class="secondary-button compact-button" (click)="closeDetailModal()">
+              Cerrar
+            </button>
+          </div>
         </header>
 
         <section class="payments-detail-summary">
@@ -469,13 +524,13 @@
             <thead>
               <tr>
                 <th>Participante</th>
-                <th>Cuota</th>
-                <th>Monto</th>
-                <th>Pagado</th>
-                <th>Interes</th>
-                <th>Saldo</th>
                 <th>F. Programada</th>
                 <th>F. Pago</th>
+                <th>Cuota</th>
+                <th>Monto</th>
+                <th>Interes</th>
+                <th>Pagado</th>
+                <th>Saldo</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -490,13 +545,13 @@
                     >Titular</span>
                   </div>
                 </td>
-                <td>{{ det.numero_cuota }}/{{ det.total_cuotas }}</td>
-                <td>{{ formatCurrency(det.monto) }}</td>
-                <td>{{ formatCurrency(det.monto_pagado) }}</td>
-                <td>{{ formatCurrency(det.interes_pagado + det.interes_pendiente) }}</td>
-                <td>{{ formatCurrency(det.saldo_pendiente) }}</td>
                 <td style="white-space:nowrap;">{{ formatDetalleDate(det.fecha_programada) }}</td>
                 <td style="white-space:nowrap;">{{ formatDetalleDate(det.fecha_pago) }}</td>
+                <td>{{ det.numero_cuota }}/{{ det.total_cuotas }}</td>
+                <td>{{ formatCurrency(det.monto) }}</td>
+                <td>{{ formatCurrency(det.interes_pagado + det.interes_pendiente) }}</td>
+                <td>{{ formatCurrency(det.monto_pagado) }}</td>
+                <td>{{ formatCurrency(det.saldo_pendiente) }}</td>
                 <td>
                   <span class="status-pill" [ngClass]="det.nombre_estado?.toLowerCase() === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">
                     {{ det.nombre_estado || 'Pendiente' }}
