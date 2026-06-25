@@ -258,7 +258,7 @@
                 <option [ngValue]="null">Seleccione una entidad financiera</option>
                 <option *ngFor="let entidad of entidades" [ngValue]="entidad.id_entidad">
                   {{ entidad.nombre_entidad }}
-                  {{ entidad.tipoEntidad?.descripcion ? ' - ' + entidad.tipoEntidad?.descripcion : '' }}
+                  {{ entidad.tipoEntidad?.descripcion ? ' - ' + entidad.tipoEntidad.descripcion : '' }}
                   {{ entidad.estado ? '' : ' (Inactiva)' }}
                 </option>
               </select>
