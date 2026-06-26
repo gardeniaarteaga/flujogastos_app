@@ -1120,6 +1120,7 @@
                 / {{ selectedTransaccion.nombre_subcategoria }}
               </span>
             </p>
+            <p *ngIf="selectedTransaccion.comentario" style="margin:.25rem 0 0;font-size:.8rem;color:#6b7c93;font-style:italic;">{{ selectedTransaccion.comentario }}</p>
           </div>
           <div class="header-actions">
             <span class="pill">
@@ -2035,6 +2036,18 @@
             <textarea id="edit_descripcion" rows="3" maxlength="250" formControlName="descripcion" style="min-height:4.5rem;"></textarea>
           </div>
 
+          <div class="field" *ngIf="isEditingSharedExpenseMode">
+            <label for="edit_comentario" style="font-size:.8rem;color:#6b7c93;">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
+            <input
+              id="edit_comentario"
+              type="text"
+              maxlength="50"
+              formControlName="comentario"
+              placeholder="Nota corta sobre este gasto..."
+              style="font-size:.85rem;"
+            />
+          </div>
+
           <div class="form-actions">
             <button type="submit" [disabled]="saving || loadingCatalogos">
               {{ saving ? 'Guardando...' : 'Actualizar transaccion' }}
@@ -2060,6 +2073,7 @@
           <div>
             <p class="panel-title">Detalle de transaccion</p>
             <h3>{{ getTransaccionModalTitle(detailModalTransaccion) }}</h3>
+            <p *ngIf="detailModalTransaccion.comentario" style="margin:.25rem 0 0;font-size:.8rem;color:#6b7c93;font-style:italic;">{{ detailModalTransaccion.comentario }}</p>
           </div>
           <button
             type="button"

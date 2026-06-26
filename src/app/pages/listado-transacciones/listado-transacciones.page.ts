@@ -151,6 +151,7 @@ interface TransaccionListado {
   id_estado_registro: number | null;
   nombre_estado_registro: string | null;
   descripcion: string | null;
+  comentario: string | null;
   pagocompartido: boolean;
   fecha_ultimo_pago: string | null;
   fecha_creacion: string;
@@ -201,6 +202,7 @@ interface UpdateTransaccionPayload {
   id_subcategoria?: number | null;
   id_estado: number;
   descripcion?: string | null;
+  comentario?: string | null;
   pagocompartido: boolean;
   cantidad_cuotas_titular: number;
   cuotas_titular: CuotaPayload[];
@@ -463,6 +465,7 @@ export class ListadoTransaccionesPage implements OnInit {
       [Validators.required, Validators.min(0.01), this.maxTwoDecimalsValidator()],
     ],
     descripcion: ['', [Validators.maxLength(250)]],
+    comentario: [null as string | null, [Validators.maxLength(50)]],
   });
 
   readonly aplicarPagosForm = this.fb.group({
@@ -3224,6 +3227,7 @@ export class ListadoTransaccionesPage implements OnInit {
       intereses: 0,
       monto: null,
       descripcion: '',
+      comentario: null,
     });
     this.isSyncingEstadoTransaccion = false;
 
@@ -3283,6 +3287,7 @@ export class ListadoTransaccionesPage implements OnInit {
       intereses: transaccion.intereses,
       monto: this.resolveEditorMontoBase(transaccion, detalles, incomeCuotasMode),
       descripcion: transaccion.descripcion ?? '',
+      comentario: transaccion.comentario ?? null,
     });
     this.isSyncingEstadoTransaccion = false;
     this.updateEditingMontoValidators();
@@ -3929,6 +3934,7 @@ export class ListadoTransaccionesPage implements OnInit {
       id_subcategoria: formValue.id_subcategoria ?? null,
       id_estado: formValue.id_estado as number,
       descripcion: formValue.descripcion ?? '',
+      comentario: this.isEditingSharedExpenseMode ? (formValue.comentario?.trim() || null) : null,
       pagocompartido: Boolean(this.usarParticipantesControl.value && hasAdditionalParticipants),
       cantidad_cuotas_titular: this.titularDetalleGroup?.controls.cantidad_cuotas.value ?? 1,
       cuotas_titular: this.titularDetalleGroup

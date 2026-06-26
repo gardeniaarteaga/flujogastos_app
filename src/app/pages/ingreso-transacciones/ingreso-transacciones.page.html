@@ -239,6 +239,21 @@
                 </small>
               </div>
 
+              <div class="field" *ngIf="isSharedExpenseMode">
+                <label for="comentario">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
+                <input
+                  id="comentario"
+                  type="text"
+                  maxlength="50"
+                  formControlName="comentario"
+                  placeholder="Nota corta sobre este gasto..."
+                  autocomplete="off"
+                />
+                <small *ngIf="transaccionForm.controls.comentario.touched && transaccionForm.controls.comentario.errors?.['maxlength']">
+                  El comentario no puede superar los 50 caracteres.
+                </small>
+              </div>
+
               <div class="field" *ngIf="!isSharedExpenseMode">
                 <label for="monto">{{ montoPrincipalLabel }}</label>
                 <input

@@ -560,7 +560,7 @@
 }
 
 .field-grid-primary {
-  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.5fr) minmax(180px, 0.8fr);
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 280px) minmax(180px, 0.8fr);
 }
 
 .field-span-2 {

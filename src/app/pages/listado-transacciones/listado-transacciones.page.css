@@ -10,7 +10,7 @@
 
 .page-header {
   padding: 0.75rem 1.25rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.5rem;
   border-radius: 0.85rem;
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 28%),
@@ -21,13 +21,17 @@
 }
 
 .table-panel {
-  padding-top: 0.85rem;
+  padding-top: 0.5rem;
 }
 
 .panel-header {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e8eef6;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.35rem;
+}
+
+.messages {
+  min-height: 0;
 }
 
 .quick-pay-detail-table tbody tr:not(.quick-pay-method-group-row):hover > td {

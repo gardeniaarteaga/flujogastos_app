@@ -77,6 +77,7 @@ interface CreateTransaccionPayload {
   id_subcategoria?: number;
   id_estado: number;
   descripcion?: string;
+  comentario?: string;
   pago_variable?: boolean;
   cuotas_sin_intereses: boolean;
   pagocompartido: boolean;
@@ -520,6 +521,7 @@ export class IngresoTransaccionesPage implements OnInit {
       [Validators.required, Validators.min(0.01), this.maxTwoDecimalsValidator()],
     ],
     descripcion: ['', [this.requiredTrimmedValidator(), Validators.maxLength(250)]],
+    comentario: [null as string | null, [Validators.maxLength(50)]],
   });
 
   ngOnInit(): void {
@@ -1418,6 +1420,13 @@ export class IngresoTransaccionesPage implements OnInit {
     const descripcionNormalizada = formValue.descripcion?.trim();
     if (descripcionNormalizada) {
       payload.descripcion = descripcionNormalizada;
+    }
+
+    if (this.isSharedExpenseMode) {
+      const comentarioNormalizado = formValue.comentario?.trim();
+      if (comentarioNormalizado) {
+        payload.comentario = comentarioNormalizado;
+      }
     }
 
     if (payload.pagocompartido) {
