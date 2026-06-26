@@ -266,6 +266,7 @@ interface QuickPayMetodoGroup {
   rows: DetalleTransaccionListadoRow[];
   totalPendiente: number;
   expanded: boolean;
+  currentPage: number;
   selectableCount: number;
   selectedCount: number;
   selectionDisabled: boolean;
@@ -818,7 +819,15 @@ export class ListadoTransaccionesPage implements OnInit {
       return false;
     }
 
-    if (Number(detalle.saldo_pendiente ?? 0) <= 0) {
+    const estadoNorm = this.normalizeText(detalle.nombre_estado ?? '');
+    if (estadoNorm === 'pagado' || estadoNorm === 'pagada') {
+      return false;
+    }
+
+    const hasPendingSaldo = Number(detalle.saldo_pendiente ?? 0) > 0;
+    const isPendingStatus = estadoNorm === 'pendiente' || estadoNorm === 'pago parcial';
+
+    if (!hasPendingSaldo && !isPendingStatus) {
       return false;
     }
 
@@ -936,6 +945,7 @@ export class ListadoTransaccionesPage implements OnInit {
         rows: [row],
         totalPendiente: this.roundMoneyValue(saldoPendiente),
         expanded: this.quickPayMetodoGroupExpansionState[groupKey] ?? false,
+        currentPage: 1,
         selectableCount: 0,
         selectedCount: 0,
         selectionDisabled: false,
@@ -956,6 +966,42 @@ export class ListadoTransaccionesPage implements OnInit {
   toggleQuickPayMetodoGroup(group: QuickPayMetodoGroup, index: number): void {
     group.expanded = !group.expanded;
     this.quickPayMetodoGroupExpansionState[group.key] = group.expanded;
+  }
+
+  readonly quickPayGroupPageSize = 10;
+
+  getGroupPagedRows(group: QuickPayMetodoGroup): DetalleTransaccionListadoRow[] {
+    const start = (group.currentPage - 1) * this.quickPayGroupPageSize;
+    return group.rows.slice(start, start + this.quickPayGroupPageSize);
+  }
+
+  getGroupTotalPages(group: QuickPayMetodoGroup): number {
+    return Math.max(1, Math.ceil(group.rows.length / this.quickPayGroupPageSize));
+  }
+
+  changeGroupPage(group: QuickPayMetodoGroup, delta: number): void {
+    const next = group.currentPage + delta;
+    const total = this.getGroupTotalPages(group);
+    if (next >= 1 && next <= total) {
+      group.currentPage = next;
+    }
+  }
+
+  goToGroupPage(group: QuickPayMetodoGroup, page: number): void {
+    const total = this.getGroupTotalPages(group);
+    if (page >= 1 && page <= total) {
+      group.currentPage = page;
+    }
+  }
+
+  getGroupVisiblePages(group: QuickPayMetodoGroup): number[] {
+    const total = this.getGroupTotalPages(group);
+    const current = group.currentPage;
+    const windowSize = 5;
+    let start = Math.max(1, current - Math.floor(windowSize / 2));
+    const end = Math.min(total, start + windowSize - 1);
+    start = Math.max(1, end - windowSize + 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   }
 
   getQuickPayMetodoGroupSelectableCount(group: QuickPayMetodoGroup): number {

@@ -957,7 +957,7 @@
                     </div>
                   </td>
                 </tr>
-                <tr *ngFor="let row of group.rows; trackBy: trackDetalleTransaccion" [style.display]="group.expanded ? '' : 'none'">
+                <tr *ngFor="let row of getGroupPagedRows(group); trackBy: trackDetalleTransaccion" [style.display]="group.expanded ? '' : 'none'">
                   <td>
                     <label
                       class="quick-pay-select-cell"
@@ -1058,6 +1058,36 @@
                           />
                         </svg>
                       </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="group.expanded && getGroupTotalPages(group) > 1">
+                  <td colspan="9" style="padding:.45rem .85rem;background:#f8fafd;border-top:1px solid #e5eaf2;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;">
+                      <span style="font-size:.8rem;color:#64748b;font-weight:600;">
+                        Pág. {{ group.currentPage }} / {{ getGroupTotalPages(group) }} &middot; {{ group.rows.length }} cuotas
+                      </span>
+                      <div style="display:flex;align-items:center;gap:.3rem;">
+                        <button
+                          type="button"
+                          class="filter-preset-button"
+                          [disabled]="group.currentPage <= 1"
+                          (click)="changeGroupPage(group, -1)"
+                        >← Ant.</button>
+                        <button
+                          *ngFor="let p of getGroupVisiblePages(group)"
+                          type="button"
+                          class="filter-preset-button"
+                          [class.is-active]="p === group.currentPage"
+                          (click)="goToGroupPage(group, p)"
+                        >{{ p }}</button>
+                        <button
+                          type="button"
+                          class="filter-preset-button"
+                          [disabled]="group.currentPage >= getGroupTotalPages(group)"
+                          (click)="changeGroupPage(group, 1)"
+                        >Sig. →</button>
+                      </div>
                     </div>
                   </td>
                 </tr>

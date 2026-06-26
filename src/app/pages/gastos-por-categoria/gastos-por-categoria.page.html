@@ -345,8 +345,13 @@
             <tbody>
               <tr *ngFor="let transaction of subcategoryDetailModalData.transactions">
                 <td>{{ transaction.transactionId }}</td>
-                <td>
-                  <strong>{{ formatDate(transaction.analysisDate) }}</strong>
+                <td style="white-space:nowrap;">
+                  <div style="display:grid;gap:.18rem;">
+                    <strong>{{ formatDate(transaction.fechaProgramada ?? transaction.analysisDate) }}</strong>
+                    @if (transaction.isVencida) {
+                      <span style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;">Vencida</span>
+                    }
+                  </div>
                 </td>
                 <td>{{ formatCurrency(transaction.amount) }}</td>
                 <td>{{ transaction.originLabel }}</td>

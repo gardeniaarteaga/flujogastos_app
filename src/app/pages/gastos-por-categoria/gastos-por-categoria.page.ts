@@ -102,6 +102,8 @@ interface ExpenseRecord {
   id: string;
   transactionId: number;
   analysisDate: Date;
+  fechaProgramada: Date | null;
+  isVencida: boolean;
   amount: number;
   categoryId: number;
   categoryName: string;
@@ -549,6 +551,8 @@ export class GastosPorCategoriaPage implements OnInit {
 
   private buildExpenseRecords(transacciones: TransaccionListado[]): ExpenseRecord[] {
     const formsById = new Map(this.formasPago.map((item) => [item.id_forma, item]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     return transacciones.flatMap<ExpenseRecord>((transaction) => {
       if (transaction.id_tipo_transaccion === 2) {
@@ -581,19 +585,28 @@ export class GastosPorCategoriaPage implements OnInit {
         }
 
         const normalized = this.normalizeDetailAmounts(detail, paymentMethod);
+        const fechaProgramada = this.parseDateOnly(detail.fecha_programada);
         const analysisDate =
+          fechaProgramada ??
           this.parseDateOnly(transaction.fecha) ??
-          this.parseDateOnly(detail.fecha_pago) ??
-          this.parseDateOnly(detail.fecha_programada);
+          this.parseDateOnly(detail.fecha_pago);
 
         if (!analysisDate) {
           return records;
         }
 
+        const normalizedStatus = this.normalizeText(resolvedStatusName);
+        const isVencida =
+          fechaProgramada !== null &&
+          fechaProgramada < today &&
+          (normalizedStatus === 'pendiente' || normalizedStatus === 'pago parcial');
+
         records.push({
           id: `expense-${transaction.id_transaccion}-${detail.id || index}`,
           transactionId: transaction.id_transaccion,
           analysisDate,
+          fechaProgramada,
+          isVencida,
           amount: normalized.totalAmount,
           categoryId: transaction.id_categoria,
           categoryName,
