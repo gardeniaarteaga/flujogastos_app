@@ -2036,7 +2036,7 @@
             <textarea id="edit_descripcion" rows="3" maxlength="250" formControlName="descripcion" style="min-height:4.5rem;"></textarea>
           </div>
 
-          <div class="field" *ngIf="isEditingSharedExpenseMode">
+          <div class="field" *ngIf="selectedTransaccion?.pagocompartido">
             <label for="edit_comentario" style="font-size:.8rem;color:#6b7c93;">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
             <input
               id="edit_comentario"
@@ -2232,9 +2232,7 @@
           <div>
             <p class="panel-title">Pago de transaccion</p>
             <h3>{{ getTransaccionModalTitle(paymentModalTransaccion) }}</h3>
-            <p class="user-hint payment-modal-hint">
-              Revisa cada persona por separado, ajusta sus cuotas si hace falta y aplica el pago correspondiente con mas claridad.
-            </p>
+            <p *ngIf="paymentModalTransaccion.comentario" style="margin:.25rem 0 0;font-size:.8rem;color:#6b7c93;font-style:italic;">{{ paymentModalTransaccion.comentario }}</p>
           </div>
           <div class="header-actions">
             <button
