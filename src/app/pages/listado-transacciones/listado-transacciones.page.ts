@@ -921,6 +921,7 @@ export class ListadoTransaccionesPage implements OnInit {
     rows: DetalleTransaccionListadoRow[],
   ): QuickPayMetodoGroup[] {
     const groups = new Map<string, QuickPayMetodoGroup>();
+    const idMetodoPagoFiltrado = this.filtrosForm.getRawValue().idMetodoPago;
 
     for (const row of rows) {
       const metodoPagoId = row.quickPayMetodoPagoId;
@@ -947,6 +948,7 @@ export class ListadoTransaccionesPage implements OnInit {
         continue;
       }
 
+      const expandedByFilter = idMetodoPagoFiltrado !== null;
       groups.set(groupKey, {
         key: groupKey,
         metodoPagoId,
@@ -954,7 +956,7 @@ export class ListadoTransaccionesPage implements OnInit {
         oldestScheduledDate: fechaProgramada,
         rows: [row],
         totalPendiente: this.roundMoneyValue(saldoPendiente),
-        expanded: this.quickPayMetodoGroupExpansionState[groupKey] ?? false,
+        expanded: expandedByFilter || (this.quickPayMetodoGroupExpansionState[groupKey] ?? false),
         currentPage: 1,
         selectableCount: 0,
         selectedCount: 0,
