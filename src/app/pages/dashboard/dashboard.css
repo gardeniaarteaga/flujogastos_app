@@ -166,22 +166,141 @@
 
 .scheduled-card {
   display: grid;
-  gap: 0.45rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 1rem 1rem 1rem 1.15rem;
   border-radius: 1rem;
   border: 1px solid #e4ebf2;
-  background: #f8fafc;
+  border-left: 3px solid var(--scard-accent, #cbd5e1);
+  background: var(--scard-bg, #f8fafc);
+  align-content: start;
 }
 
-.scheduled-card-header {
+.scheduled-card.tone-danger {
+  --scard-accent: #e11d48;
+  --scard-bg: #fff5f6;
+  border-color: #fecdd3;
+}
+
+.scheduled-card.tone-warning {
+  --scard-accent: #d97706;
+  --scard-bg: #fffbeb;
+  border-color: #fde68a;
+}
+
+.scheduled-card.tone-good {
+  --scard-accent: #16a34a;
+  --scard-bg: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.scheduled-card.tone-info {
+  --scard-accent: #2563eb;
+  --scard-bg: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.scheduled-card-badges {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
-.scheduled-card strong {
+.scheduled-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.scheduled-status-pill.tone-danger {
+  background: #ffe4e6;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.scheduled-status-pill.tone-warning {
+  background: #fff4d6;
+  color: #9a6700;
+  border-color: #fde68a;
+}
+
+.scheduled-status-pill.tone-good {
+  background: #e9f9ef;
+  color: #18794e;
+  border-color: #bbf7d0;
+}
+
+.scheduled-status-pill.tone-info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.scheduled-priority-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #dde6f0;
+}
+
+.scheduled-priority-pill.priority-alta {
+  background: #ffe4e6;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.scheduled-priority-pill.priority-media {
+  background: #fff4d6;
+  color: #9a6700;
+  border-color: #fde68a;
+}
+
+.scheduled-priority-pill.priority-baja {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.scheduled-card-title {
   color: #172033;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.scheduled-relative-label {
+  color: var(--scard-accent, #475569);
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.scheduled-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.scheduled-card-sep {
+  color: #94a3b8;
 }
 
 .scheduled-card p,

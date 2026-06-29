@@ -328,10 +328,25 @@
           class="scheduled-card"
           [ngClass]="'tone-' + item.tone"
         >
-          <div class="scheduled-card-header">
-            <strong>{{ item.descripcion }}</strong>
+          <div class="scheduled-card-badges">
+            <span class="scheduled-status-pill" [ngClass]="'tone-' + item.tone">{{ item.statusLabel }}</span>
+            <span
+              *ngIf="item.prioridad !== 'Sin prioridad'"
+              class="scheduled-priority-pill"
+              [ngClass]="'priority-' + item.prioridad.toLowerCase()"
+            >{{ item.prioridad }}</span>
           </div>
-          <p>{{ item.frecuenciaLabel }} | {{ item.quincenaLabel }} | {{ item.nextDateLabel }}</p>
+          <strong class="scheduled-card-title">{{ item.descripcion }}</strong>
+          <span class="scheduled-relative-label">{{ item.relativeLabel }}</span>
+          <div class="scheduled-card-meta">
+            <span>{{ item.nextDateLabel }}</span>
+            <span class="scheduled-card-sep" aria-hidden="true">·</span>
+            <span>{{ item.frecuenciaLabel }}</span>
+            <ng-container *ngIf="item.quincenaLabel && item.quincenaLabel !== 'Sin quincena definida'">
+              <span class="scheduled-card-sep" aria-hidden="true">·</span>
+              <span>{{ item.quincenaLabel }}</span>
+            </ng-container>
+          </div>
         </article>
       </div>
 

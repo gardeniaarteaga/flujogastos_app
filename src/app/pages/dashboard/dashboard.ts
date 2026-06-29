@@ -2034,7 +2034,7 @@ export class Dashboard implements OnInit {
     }
 
     if (diffInDays === 1) {
-      return { label: 'Vence manana', tone: 'warning' };
+      return { label: 'Vence manana', tone: 'danger' };
     }
 
     if (diffInDays <= 7) {
