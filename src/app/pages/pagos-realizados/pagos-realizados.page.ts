@@ -218,6 +218,13 @@ export class PagosRealizadosPage implements OnInit {
     ]);
   }
 
+  get fechaColumnSuffix(): string {
+    const { incluirPagados, incluirPendientes } = this.filtrosForm.getRawValue();
+    if (incluirPagados && !incluirPendientes) return 'Pago';
+    if (!incluirPagados && incluirPendientes) return 'Programada';
+    return '';
+  }
+
   get displayedRows(): PagoRealizadoRow[] {
     return this.groupedPagos.flatMap((group) => this.getGroupFilteredRows(group));
   }

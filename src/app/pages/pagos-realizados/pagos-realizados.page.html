@@ -331,7 +331,7 @@
                     [attr.aria-sort]="getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending'"
                     title="Ordenar por fecha"
                   >
-                    Fecha
+                    Fecha<ng-container *ngIf="fechaColumnSuffix"><br>{{ fechaColumnSuffix }}</ng-container>
                     <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
                   </th>
                   <th>Transaccion</th>
