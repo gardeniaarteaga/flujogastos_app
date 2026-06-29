@@ -96,6 +96,7 @@ interface PagoRealizadoRow {
   montoPendiente: number;
   montoPagado: number;
   interesPagado: number;
+  interesPendiente: number;
   totalPagado: number;
   estadoNombre: string;
   estadoKey: EstadoReportePago;
@@ -154,10 +155,12 @@ export class PagosRealizadosPage implements OnInit {
   readonly userProfile = loadUserProfile();
   readonly today = new Date();
   readonly todayFilterValue = this.formatDateInput(this.today);
+  readonly currentMonthStart = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
+  readonly currentMonthEnd = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth() + 1, 0));
   readonly pageSize = 25;
   readonly filtrosForm = this.fb.group({
-    fechaDesde: [''],
-    fechaHasta: [''],
+    fechaDesde: [this.currentMonthStart],
+    fechaHasta: [this.currentMonthEnd],
     metodoPagoId: [''],
     participanteKey: [''],
     incluirPagados: [true],
@@ -478,8 +481,8 @@ export class PagosRealizadosPage implements OnInit {
 
   clearFilters(): void {
     this.filtrosForm.setValue({
-      fechaDesde: '',
-      fechaHasta: '',
+      fechaDesde: this.currentMonthStart,
+      fechaHasta: this.currentMonthEnd,
       metodoPagoId: '',
       participanteKey: this.getDefaultParticipanteKey(),
       incluirPagados: true,
@@ -975,6 +978,7 @@ export class PagosRealizadosPage implements OnInit {
       (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago || this.normalizeDateOnly(transaccion.fecha) || '';
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
+    const interesPendiente = Number(detalle.interes_pendiente ?? 0);
     const montoPendiente = Number(detalle.saldo_pendiente ?? 0);
     const isVencido =
       estadoKey !== 'pagado' &&
@@ -1003,6 +1007,7 @@ export class PagosRealizadosPage implements OnInit {
       montoPendiente,
       montoPagado,
       interesPagado,
+      interesPendiente,
       totalPagado: montoPagado + interesPagado,
       estadoNombre: this.resolveEstadoNombre(detalle, estadoKey),
       estadoKey,

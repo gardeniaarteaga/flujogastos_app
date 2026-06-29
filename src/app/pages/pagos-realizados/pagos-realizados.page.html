@@ -339,11 +339,11 @@
                   <th>Transaccion</th>
                   <th>Metodo</th>
                   <th>Cuota</th>
-                  <th>Monto cuota</th>
-                  <th>Capital pagado</th>
-                  <th>Interes pagado</th>
-                  <th>Saldo pendiente</th>
-                  <th>Total pagado</th>
+                  <th>{{ isOnlyPendienteFilter ? 'Monto' : 'Monto cuota' }}</th>
+                  <th *ngIf="!isOnlyPendienteFilter">Capital pagado</th>
+                  <th>{{ isOnlyPendienteFilter ? 'Interes' : 'Interes pagado' }}</th>
+                  <th *ngIf="!isOnlyPendienteFilter">Saldo pendiente</th>
+                  <th>{{ isOnlyPendienteFilter ? 'Total Pendiente' : 'Total pagado' }}</th>
                   <th>Estado</th>
                   <th></th>
                 </tr>
@@ -370,10 +370,10 @@
                   <td>{{ row.metodoPagoNombre }}</td>
                   <td>{{ row.cuotaLabel }}</td>
                   <td>{{ formatCurrency(row.montoCuota) }}</td>
-                  <td>{{ formatCurrency(row.montoPagado) }}</td>
-                  <td>{{ formatCurrency(row.interesPagado) }}</td>
-                  <td>{{ formatCurrency(row.montoPendiente) }}</td>
-                  <td class="payment-total-cell">{{ formatCurrency(row.totalPagado) }}</td>
+                  <td *ngIf="!isOnlyPendienteFilter">{{ formatCurrency(row.montoPagado) }}</td>
+                  <td>{{ formatCurrency(isOnlyPendienteFilter ? row.interesPendiente : row.interesPagado) }}</td>
+                  <td *ngIf="!isOnlyPendienteFilter">{{ formatCurrency(row.montoPendiente) }}</td>
+                  <td class="payment-total-cell">{{ formatCurrency(isOnlyPendienteFilter ? row.montoPendiente : row.totalPagado) }}</td>
                   <td>
                     <span class="status-pill" [ngClass]="row.estadoKey === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">
                       {{ row.estadoNombre }}
