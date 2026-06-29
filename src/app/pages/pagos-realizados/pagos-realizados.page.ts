@@ -181,7 +181,9 @@ export class PagosRealizadosPage implements OnInit {
   readonly activeMethodFilters = new Map<string, number | null>();
   readonly fechaSortOrders = new Map<string, 'asc' | 'desc'>();
   readonly groupCurrentPages = new Map<string, number>();
+  readonly expandedGroups = new Set<string>();
   readonly groupPageSize = 10;
+  private lastParticipanteKey: string | null = null;
   detailModalTransaccion: TransaccionListado | null = null;
   detailModalLoading = false;
 
@@ -665,13 +667,19 @@ export class PagosRealizadosPage implements OnInit {
     this.groupCurrentPages.set(groupKey, page);
   }
 
-  getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number } {
+  get isOnlyPendienteFilter(): boolean {
+    const { incluirPagados, incluirPendientes } = this.filtrosForm.getRawValue();
+    return !incluirPagados && Boolean(incluirPendientes);
+  }
+
+  getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number; totalPendiente: number } {
     const rows = this.getGroupFilteredRows(group);
     const cuotasPagadas = rows.filter((r) => r.estadoKey === 'pagado').length;
     return {
       cuotasPagadas,
       cuotasPendientes: rows.length - cuotasPagadas,
       totalPagado: rows.reduce((sum, r) => sum + r.totalPagado, 0),
+      totalPendiente: rows.reduce((sum, r) => sum + r.montoPendiente, 0),
     };
   }
 
@@ -911,6 +919,26 @@ export class PagosRealizadosPage implements OnInit {
     }
 
     this.groupCurrentPages.clear();
+
+    const currentKey = participanteKey ?? '';
+    if (currentKey !== (this.lastParticipanteKey ?? '')) {
+      if (currentKey) {
+        for (const group of this.groupedPagos) {
+          this.expandedGroups.add(group.participanteKey);
+        }
+      } else {
+        this.expandedGroups.clear();
+      }
+    }
+    this.lastParticipanteKey = currentKey;
+  }
+
+  onGroupToggle(groupKey: string, open: boolean): void {
+    if (open) {
+      this.expandedGroups.add(groupKey);
+    } else {
+      this.expandedGroups.delete(groupKey);
+    }
   }
 
   private getParticipantesDetalleForReport(
