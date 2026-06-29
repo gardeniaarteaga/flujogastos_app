@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Carpetas locales excluidas
+_produccion_app_limpia/
