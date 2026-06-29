@@ -804,6 +804,13 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
+        if (
+          filtros.idMetodoPago !== null &&
+          row.quickPayMetodoPagoId !== filtros.idMetodoPago
+        ) {
+          return false;
+        }
+
         if (descripcionFiltro && !descripcionTransaccion.includes(descripcionFiltro)) {
           return false;
         }

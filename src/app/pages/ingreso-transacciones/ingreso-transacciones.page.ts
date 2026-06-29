@@ -303,6 +303,13 @@ export class IngresoTransaccionesPage implements OnInit {
       return this.estadosTransaccion;
     }
 
+    if (this.isGastoSinInteresSelected) {
+      return this.estadosTransaccion.filter((item) => {
+        const nombreEstado = item.nombre_estado.trim().toUpperCase();
+        return nombreEstado === 'PAGADO' || nombreEstado === 'PENDIENTE';
+      });
+    }
+
     return this.estadosTransaccion.filter((item) => {
       const nombreEstado = item.nombre_estado.trim().toUpperCase();
       return (
@@ -2316,7 +2323,11 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private get usesLimitedEstadoPagoOptions(): boolean {
-    return this.isIncomeMode || this.isSharedExpenseMode;
+    return this.isIncomeMode || this.isSharedExpenseMode || this.isGastoSinInteresSelected;
+  }
+
+  private get isGastoSinInteresSelected(): boolean {
+    return this.isIndividualExpenseMode && this.selectedFormaPago?.calcula_interes === false;
   }
 
   private hasConfiguredMultipleSharedExpenseCuotas(): boolean {

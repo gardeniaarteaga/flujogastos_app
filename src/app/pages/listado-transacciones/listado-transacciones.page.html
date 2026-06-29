@@ -284,8 +284,8 @@
                     </select>
                   </div>
 
-                  <div class="field quick-pay-participant-field" style="min-width:160px;flex:1;max-width:280px;">
-                    <label for="participanteDetalle">Participantes</label>
+                  <div class="field quick-pay-participant-field" style="min-width:120px;max-width:180px;">
+                    <label for="participanteDetalle">Participante</label>
                     <select id="participanteDetalle" formControlName="idParticipante">
                       <option [ngValue]="null">Todos</option>
                       <option
@@ -293,6 +293,16 @@
                         [ngValue]="participante.id_participante"
                       >
                         {{ getParticipanteDisplayName(participante) }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="field quick-pay-method-field" style="min-width:120px;max-width:180px;">
+                    <label for="metodoPagoDetalle">Metodo de pago</label>
+                    <select id="metodoPagoDetalle" formControlName="idMetodoPago">
+                      <option [ngValue]="null">Todos</option>
+                      <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                        {{ forma.nombre_forma }}
                       </option>
                     </select>
                   </div>
