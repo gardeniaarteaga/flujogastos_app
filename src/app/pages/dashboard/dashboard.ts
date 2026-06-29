@@ -1875,13 +1875,10 @@ export class Dashboard implements OnInit {
         }
 
         const daysToNext = nextDate ? this.calculateScheduledDiffInDays(nextDate, today) : null;
-        const lastDate = this.resolveLastScheduledDate(configuracion);
-        const daysSinceLast = lastDate ? this.calculateScheduledDiffInDays(today, lastDate) : null;
 
-        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 5;
-        const isRecentlyPast = daysSinceLast !== null && daysSinceLast >= 0 && daysSinceLast <= 10;
+        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 15;
 
-        if (!isUpcoming && !isRecentlyPast) {
+        if (!isUpcoming) {
           return [];
         }
 
