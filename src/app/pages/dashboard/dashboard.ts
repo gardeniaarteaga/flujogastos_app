@@ -1863,6 +1863,8 @@ export class Dashboard implements OnInit {
   private buildScheduledNotifications(
     configuraciones: ConfiguracionNotificacionPago[],
   ): ScheduledNotificationView[] {
+    const today = this.getToday();
+
     return configuraciones
       .flatMap((configuracion) => {
         const nextDate = this.resolveScheduledNotificationDate(configuracion);
@@ -1872,9 +1874,18 @@ export class Dashboard implements OnInit {
           return [];
         }
 
-        const diffInDays = nextDate
-          ? this.calculateScheduledDiffInDays(nextDate, this.getToday())
-          : null;
+        const daysToNext = nextDate ? this.calculateScheduledDiffInDays(nextDate, today) : null;
+        const lastDate = this.resolveLastScheduledDate(configuracion);
+        const daysSinceLast = lastDate ? this.calculateScheduledDiffInDays(today, lastDate) : null;
+
+        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 5;
+        const isRecentlyPast = daysSinceLast !== null && daysSinceLast >= 0 && daysSinceLast <= 10;
+
+        if (!isUpcoming && !isRecentlyPast) {
+          return [];
+        }
+
+        const diffInDays = daysToNext;
 
         return [{
           id_notificacion_programada: configuracion.id_notificacion_programada,
@@ -2081,6 +2092,105 @@ export class Dashboard implements OnInit {
     }
 
     return nextDate && nextDate.getTime() <= endDate.getTime() ? nextDate : null;
+  }
+
+  private resolveLastScheduledDate(
+    configuracion: ConfiguracionNotificacionPago,
+  ): Date | null {
+    if (!configuracion.estado) {
+      return null;
+    }
+
+    const startDate = this.parseDateOnly(configuracion.fecha_inicio);
+    const endDate = this.parseDateOnly(configuracion.fecha_fin);
+
+    if (!startDate || !endDate || endDate.getTime() < startDate.getTime()) {
+      return null;
+    }
+
+    const today = this.getToday();
+    const day = configuracion.dia_pago_programado;
+
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+      return null;
+    }
+
+    const periodicidadCode = this.resolvePeriodicidadCode(configuracion);
+
+    let lastDate: Date | null;
+    switch (periodicidadCode) {
+      case 'fecha-especifica':
+        lastDate = startDate.getTime() <= today.getTime() ? startDate : null;
+        break;
+      case 'quincenal':
+        lastDate = this.buildLastQuincenalOccurrence(today);
+        break;
+      case 'anual':
+        lastDate = this.buildLastYearlyOccurrence(today, startDate.getMonth(), day);
+        break;
+      default:
+        lastDate = this.buildLastMonthlyOccurrence(today, day);
+        break;
+    }
+
+    if (!lastDate) {
+      return null;
+    }
+
+    if (lastDate.getTime() < startDate.getTime() || lastDate.getTime() > endDate.getTime()) {
+      return null;
+    }
+
+    return lastDate;
+  }
+
+  private buildLastMonthlyOccurrence(today: Date, day: number): Date {
+    const currentMonthDate = this.createDateWithPreferredDay(
+      today.getFullYear(),
+      today.getMonth(),
+      day,
+    );
+
+    if (currentMonthDate.getTime() <= today.getTime()) {
+      return currentMonthDate;
+    }
+
+    return this.createDateWithPreferredDay(
+      today.getFullYear(),
+      today.getMonth() - 1,
+      day,
+    );
+  }
+
+  private buildLastYearlyOccurrence(today: Date, month: number, day: number): Date {
+    const currentYearDate = this.createDateWithPreferredDay(
+      today.getFullYear(),
+      month,
+      day,
+    );
+
+    if (currentYearDate.getTime() <= today.getTime()) {
+      return currentYearDate;
+    }
+
+    return this.createDateWithPreferredDay(today.getFullYear() - 1, month, day);
+  }
+
+  private buildLastQuincenalOccurrence(today: Date): Date {
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const firstCut = new Date(year, month, 15);
+    const secondCut = this.getEndOfMonthDate(year, month);
+
+    if (secondCut.getTime() <= today.getTime()) {
+      return secondCut;
+    }
+
+    if (firstCut.getTime() <= today.getTime()) {
+      return firstCut;
+    }
+
+    return this.getEndOfMonthDate(year, month - 1);
   }
 
   private getScheduledFrequencyLabel(configuracion: ConfiguracionNotificacionPago): string {

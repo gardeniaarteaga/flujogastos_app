@@ -319,7 +319,8 @@ export class ResumenNotificacionesPage implements OnInit {
         this.periodicidadOptions,
       );
       this.mergePeriodicidadesFromConfiguraciones();
-    } catch {
+    } catch (error) {
+      console.error('[ResumenNotificaciones] Error al cargar configuraciones:', error);
       this.configuraciones = [];
       this.errorMessage =
         'No se pudieron cargar las notificaciones programadas del usuario actual.';
@@ -409,7 +410,8 @@ export class ResumenNotificacionesPage implements OnInit {
         wasEditing ? 'Configuracion actualizada' : 'Configuracion guardada',
         this.successMessage,
       );
-    } catch {
+    } catch (error) {
+      console.error('[ResumenNotificaciones] Error al guardar configuracion:', error);
       this.errorMessage =
         'No se pudo guardar la configuracion de notificaciones en este momento.';
       await this.alerts.error('No se pudo guardar', this.errorMessage);

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:3001/api/notificaciones/programadas?id_usuario=999\")",
+      "Bash(psql -U postgres -d control_gastos -h localhost -c \"\\\\d notificaciones_programadas\")",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"\\\\d notificaciones_programadas\" 2>&1)",
+      "PowerShell(Get-Command psql -ErrorAction SilentlyContinue)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"\\\\d notificaciones_programadas\" 2>&1)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT last_value, is_called FROM periodicidad_id_periodicidad_seq;\" 2>&1)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT id_usuario, username FROM usuarios ORDER BY id_usuario;\" 2>&1)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"INSERT INTO notificaciones_programadas \\(id_usuario, descripcion, prioridad, fecha_inicio, fecha_fin, dia_pago_programado, id_periodicidad, estado\\) VALUES \\(1, 'SIMAN', 'alta', '2026-06-29', '2027-06-29', 1, 3, true\\) RETURNING id_notificacion_programada;\" 2>&1)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT id_notificacion_programada, id_usuario, descripcion, estado FROM notificaciones_programadas ORDER BY id_notificacion_programada;\" 2>&1)",
+      "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT column_default FROM information_schema.columns WHERE table_name='notificaciones_programadas' AND column_name='id_notificacion_programada';\" 2>&1)"
+    ]
+  }
+}
