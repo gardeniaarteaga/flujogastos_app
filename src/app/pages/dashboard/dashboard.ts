@@ -1911,8 +1911,7 @@ export class Dashboard implements OnInit {
           (toneRank[a.tone] ?? 5) - (toneRank[b.tone] ?? 5) ||
           a.nextDateLabel.localeCompare(b.nextDateLabel)
         );
-      })
-      .slice(0, 4);
+      });
   }
 
   private buildHealthScore(
