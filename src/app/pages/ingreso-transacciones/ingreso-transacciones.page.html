@@ -205,7 +205,7 @@
                 </small>
               </div>
 
-              <div class="field field-span-2">
+              <div class="field">
                 <label for="descripcion">{{ isIncomeMode ? 'Descripcion del Ingreso' : 'Descripcion/Comercio' }}</label>
                 <div class="autocomplete-shell">
                   <input
@@ -239,7 +239,7 @@
                 </small>
               </div>
 
-              <div class="field" *ngIf="isSharedExpenseMode">
+              <div class="field" *ngIf="!isIncomeMode">
                 <label for="comentario">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
                 <input
                   id="comentario"

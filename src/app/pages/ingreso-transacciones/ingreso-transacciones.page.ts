@@ -1421,7 +1421,7 @@ export class IngresoTransaccionesPage implements OnInit {
       payload.descripcion = descripcionNormalizada;
     }
 
-    if (this.isSharedExpenseMode) {
+    if (!this.isIncomeMode) {
       const comentarioNormalizado = formValue.comentario?.trim();
       if (comentarioNormalizado) {
         payload.comentario = comentarioNormalizado;
