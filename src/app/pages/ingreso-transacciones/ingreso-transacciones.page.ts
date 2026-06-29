@@ -299,19 +299,11 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   get estadosIngresoDisponibles(): CatalogoEstadoTransaccion[] {
-    if (!this.usesLimitedEstadoPagoOptions) {
-      return this.estadosTransaccion;
-    }
-
-    if (this.isGastoSinInteresSelected) {
-      return this.estadosTransaccion.filter((item) => {
-        const nombreEstado = item.nombre_estado.trim().toUpperCase();
-        return nombreEstado === 'PAGADO' || nombreEstado === 'PENDIENTE';
-      });
-    }
-
     return this.estadosTransaccion.filter((item) => {
       const nombreEstado = item.nombre_estado.trim().toUpperCase();
+      if (this.isIndividualExpenseMode) {
+        return nombreEstado === 'PAGADO' || nombreEstado === 'PENDIENTE';
+      }
       return (
         nombreEstado === 'PAGADO' ||
         nombreEstado === 'PENDIENTE' ||
@@ -2323,11 +2315,7 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private get usesLimitedEstadoPagoOptions(): boolean {
-    return this.isIncomeMode || this.isSharedExpenseMode || this.isGastoSinInteresSelected;
-  }
-
-  private get isGastoSinInteresSelected(): boolean {
-    return this.isIndividualExpenseMode && this.selectedFormaPago?.calcula_interes === false;
+    return true;
   }
 
   private hasConfiguredMultipleSharedExpenseCuotas(): boolean {
@@ -3486,6 +3474,7 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     if (!this.isTitularCuotaUnicaPagadaSelected) {
+      this.setEstadoTransaccionByName('PENDIENTE');
       return;
     }
 

@@ -2046,7 +2046,7 @@
             <textarea id="edit_descripcion" rows="3" maxlength="250" formControlName="descripcion" style="min-height:4.5rem;"></textarea>
           </div>
 
-          <div class="field" *ngIf="selectedTransaccion?.pagocompartido">
+          <div class="field" *ngIf="selectedTransaccion.pagocompartido">
             <label for="edit_comentario" style="font-size:.8rem;color:#6b7c93;">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
             <input
               id="edit_comentario"
