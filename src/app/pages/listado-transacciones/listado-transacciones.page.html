@@ -256,16 +256,6 @@
                     <span>Recibidos</span>
                   </label>
 
-                  <label class="checkbox-row checkbox-row-compact" for="compartidosDetalle">
-                    <input
-                      id="compartidosDetalle"
-                      type="checkbox"
-                      formControlName="compartidos"
-                      (change)="onCompartidosToggle($event)"
-                    />
-                    <span>Compartidos</span>
-                  </label>
-
                   <button
                     type="button"
                     class="secondary-button compact-button"
@@ -692,9 +682,13 @@
                     </span>
                   </div>
                 </td>
-                <td [attr.title]="getTransaccionTitle(transaccion)">
+                <td>
                   <div style="display:grid;gap:.3rem;">
-                    <span>{{ getTransaccionTitle(transaccion) }}</span>
+                    <span
+                      (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
+                      (mousemove)="moveNotaTooltip($event)"
+                      (mouseleave)="hideNotaTooltip()"
+                    >{{ getTransaccionTitle(transaccion) }}</span>
                     <span
                       *ngIf="isTransaccionVencida(transaccion)"
                       style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
@@ -904,8 +898,10 @@
               <tr>
                 <th>Pagar</th>
                 <th>ID</th>
-                <th>Fecha</th>
-                <th>Transaccion</th>
+                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>Transaccion</th>
+                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>Programada</th>
+                <th *ngIf="isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>de Pago</th>
+                <th class="qp-col-transaccion">Transaccion</th>
                 <th>Cuota</th>
                 <th>Monto</th>
                 <th>Estado</th>
@@ -916,7 +912,7 @@
             <tbody>
               <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index; trackBy: trackQuickPayMetodoGroup">
                 <tr class="quick-pay-method-group-row">
-                  <td colspan="9">
+                  <td [attr.colspan]="isOnlyPagadoFilter ? 9 : 10">
                     <div
                       class="quick-pay-method-group-header"
                       [style.background]="'linear-gradient(180deg,' + getQuickPayMetodoGroupSurfaceColor(groupIndex) + ' 0%, #ffffff 100%)'"
@@ -982,7 +978,8 @@
                     </label>
                   </td>
                   <td>{{ row.transaccion.id_transaccion }}</td>
-                  <td>
+                  <td *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.transaccion.fecha | date: 'dd/MM/yyyy' }}</td>
+                  <td *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
                     <div style="display:grid;gap:.3rem;">
                       <span>{{ row.quickPayFechaProgramadaLabel }}</span>
                       <span
@@ -993,11 +990,14 @@
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td *ngIf="isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.quickPayFechaPagoLabel }}</td>
+                  <td class="qp-col-transaccion">
                     <div style="display:grid;gap:.35rem;">
-                      <strong [attr.title]="row.quickPayTitle">
-                        {{ row.quickPayTitle }}
-                      </strong>
+                      <strong
+                        (mouseenter)="showNotaTooltip(row.transaccion.comentario, $event)"
+                        (mousemove)="moveNotaTooltip($event)"
+                        (mouseleave)="hideNotaTooltip()"
+                      >{{ row.quickPayTitle }}</strong>
                       <span
                         *ngIf="!row.transaccion.es_propietario"
                         style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
@@ -2417,7 +2417,13 @@
       </section>
     </div>
   </main>
-</div>
 
+  <div
+    *ngIf="notaTooltipText"
+    class="tx-nota-fixed-tooltip"
+    [style.left.px]="notaTooltipX"
+    [style.top.px]="notaTooltipY"
+  >{{ notaTooltipText }}</div>
+</div>
 
 

@@ -675,6 +675,11 @@ export class PagosRealizadosPage implements OnInit {
     return !incluirPagados && Boolean(incluirPendientes);
   }
 
+  get isOnlyPagadoFilter(): boolean {
+    const { incluirPagados, incluirPendientes } = this.filtrosForm.getRawValue();
+    return Boolean(incluirPagados) && !incluirPendientes;
+  }
+
   getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number; totalPendiente: number } {
     const rows = this.getGroupFilteredRows(group);
     const cuotasPagadas = rows.filter((r) => r.estadoKey === 'pagado').length;

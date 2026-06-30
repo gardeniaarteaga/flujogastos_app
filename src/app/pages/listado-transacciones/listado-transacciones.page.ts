@@ -384,6 +384,9 @@ export class ListadoTransaccionesPage implements OnInit {
   applyingPaymentGroupId: number | null = null;
   completingId: number | null = null;
   paymentModalOpen = false;
+  notaTooltipText: string | null = null;
+  notaTooltipX = 0;
+  notaTooltipY = 0;
   private paymentModalOpenedAt = 0;
   detailModalTransaccion: TransaccionListado | null = null;
   detailModalCuotasPage = 1;
@@ -609,6 +612,23 @@ export class ListadoTransaccionesPage implements OnInit {
     }
   }
 
+  showNotaTooltip(text: string | null | undefined, event: MouseEvent): void {
+    if (!text) return;
+    this.notaTooltipText = text;
+    this.notaTooltipX = event.clientX + 14;
+    this.notaTooltipY = event.clientY + 14;
+  }
+
+  moveNotaTooltip(event: MouseEvent): void {
+    if (!this.notaTooltipText) return;
+    this.notaTooltipX = event.clientX + 14;
+    this.notaTooltipY = event.clientY + 14;
+  }
+
+  hideNotaTooltip(): void {
+    this.notaTooltipText = null;
+  }
+
   get isResumenMenuOpen(): boolean {
     return false;
   }
@@ -821,7 +841,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
         return true;
       })
-      .sort((left, right) => this.compareDetalleRowsByFechaProgramada(left, right));
+      .sort((left, right) => this.compareDetalleRowsByFechaTransaccion(left, right));
   }
 
   isDetalleVencido(detalle: ParticipanteDetalleListado): boolean {
@@ -1363,6 +1383,11 @@ export class ListadoTransaccionesPage implements OnInit {
       this.getListadoTotalPages(),
       Math.max(1, this.getListadoCurrentPage() + delta),
     );
+  }
+
+  get isOnlyPagadoFilter(): boolean {
+    const estado = this.filtrosForm.getRawValue().estado ?? '';
+    return estado.trim().toUpperCase() === 'PAGADO';
   }
 
   get estadosTransaccionFiltro(): CatalogoEstadoTransaccion[] {
@@ -5300,6 +5325,38 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (left.transaccion.id_transaccion !== right.transaccion.id_transaccion) {
       return left.transaccion.id_transaccion - right.transaccion.id_transaccion;
+    }
+
+    if (left.detalle.numero_cuota !== right.detalle.numero_cuota) {
+      return left.detalle.numero_cuota - right.detalle.numero_cuota;
+    }
+
+    return left.detalle.id - right.detalle.id;
+  }
+
+  private compareDetalleRowsByFechaTransaccion(
+    left: DetalleTransaccionListadoRow,
+    right: DetalleTransaccionListadoRow,
+  ): number {
+    const leftTx = this.parseIsoDateOnly(left.transaccion.fecha);
+    const rightTx = this.parseIsoDateOnly(right.transaccion.fecha);
+
+    if (leftTx && rightTx && leftTx.getTime() !== rightTx.getTime()) {
+      return rightTx.getTime() - leftTx.getTime();
+    }
+
+    if (leftTx && !rightTx) return -1;
+    if (!leftTx && rightTx) return 1;
+
+    const leftProg = this.parseIsoDateOnly(left.detalle.fecha_programada);
+    const rightProg = this.parseIsoDateOnly(right.detalle.fecha_programada);
+
+    if (leftProg && rightProg && leftProg.getTime() !== rightProg.getTime()) {
+      return rightProg.getTime() - leftProg.getTime();
+    }
+
+    if (left.transaccion.id_transaccion !== right.transaccion.id_transaccion) {
+      return right.transaccion.id_transaccion - left.transaccion.id_transaccion;
     }
 
     if (left.detalle.numero_cuota !== right.detalle.numero_cuota) {

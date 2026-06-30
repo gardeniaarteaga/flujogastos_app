@@ -333,16 +333,18 @@
                     [attr.aria-sort]="getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending'"
                     title="Ordenar por fecha"
                   >
-                    Fecha<ng-container *ngIf="fechaColumnSuffix"><br>{{ fechaColumnSuffix }}</ng-container>
+                    <ng-container *ngIf="isOnlyPagadoFilter">Fecha Pago</ng-container>
+                    <ng-container *ngIf="!isOnlyPagadoFilter">Fecha<br>Transaccion</ng-container>
                     <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
                   </th>
-                  <th>Transaccion</th>
-                  <th>Metodo</th>
+                  <th *ngIf="!isOnlyPagadoFilter">Fecha<br>Programada</th>
+                  <th class="payments-col-descripcion">Descripcion</th>
+                  <th class="payments-col-metodo">Metodo</th>
                   <th>Cuota</th>
                   <th>{{ isOnlyPendienteFilter ? 'Monto' : 'Monto cuota' }}</th>
                   <th *ngIf="!isOnlyPendienteFilter">Capital pagado</th>
                   <th>{{ isOnlyPendienteFilter ? 'Interes' : 'Interes pagado' }}</th>
-                  <th *ngIf="!isOnlyPendienteFilter">Saldo pendiente</th>
+                  <th *ngIf="!isOnlyPendienteFilter && !isOnlyPagadoFilter">Saldo pendiente</th>
                   <th>{{ isOnlyPendienteFilter ? 'Total Pendiente' : 'Total pagado' }}</th>
                   <th>Estado</th>
                   <th></th>
@@ -352,7 +354,8 @@
                 <tr *ngFor="let row of getGroupPagedRows(group); trackBy: trackPago">
                   <td>{{ row.transaccionId }}</td>
                   <td>{{ row.fechaReferenciaLabel }}</td>
-                  <td>
+                  <td *ngIf="!isOnlyPagadoFilter">{{ row.fechaProgramadaLabel }}</td>
+                  <td class="payments-col-descripcion">
                     <div class="payments-transaction-cell">
                       <span>{{ row.descripcion }}</span>
                       <span
@@ -367,12 +370,12 @@
                       </span>
                     </div>
                   </td>
-                  <td>{{ row.metodoPagoNombre }}</td>
+                  <td class="payments-col-metodo">{{ row.metodoPagoNombre }}</td>
                   <td>{{ row.cuotaLabel }}</td>
                   <td>{{ formatCurrency(row.montoCuota) }}</td>
                   <td *ngIf="!isOnlyPendienteFilter">{{ formatCurrency(row.montoPagado) }}</td>
                   <td>{{ formatCurrency(isOnlyPendienteFilter ? row.interesPendiente : row.interesPagado) }}</td>
-                  <td *ngIf="!isOnlyPendienteFilter">{{ formatCurrency(row.montoPendiente) }}</td>
+                  <td *ngIf="!isOnlyPendienteFilter && !isOnlyPagadoFilter">{{ formatCurrency(row.montoPendiente) }}</td>
                   <td class="payment-total-cell">{{ formatCurrency(isOnlyPendienteFilter ? row.montoPendiente : row.totalPagado) }}</td>
                   <td>
                     <span class="status-pill" [ngClass]="row.estadoKey === 'pagado' ? 'status-pill-pagado' : 'status-pill-pendiente'">

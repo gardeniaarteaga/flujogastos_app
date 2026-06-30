@@ -1868,21 +1868,29 @@ export class Dashboard implements OnInit {
     return configuraciones
       .flatMap((configuracion) => {
         const nextDate = this.resolveScheduledNotificationDate(configuracion);
+        const lastDate = this.resolveLastScheduledDate(configuracion);
         const status = this.resolveScheduledStatus(configuracion, nextDate);
 
-        if (!nextDate && status.tone === 'neutral' && status.label !== 'Pendiente de inicio') {
+        if (!nextDate && !lastDate && status.tone === 'neutral' && status.label !== 'Pendiente de inicio') {
           return [];
         }
 
         const daysToNext = nextDate ? this.calculateScheduledDiffInDays(nextDate, today) : null;
+        const daysFromLast = lastDate ? this.calculateScheduledDiffInDays(lastDate, today) : null;
 
-        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 15;
+        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 10;
+        const isOverdue = !isUpcoming && daysFromLast !== null && daysFromLast < 0;
 
-        if (!isUpcoming) {
+        if (!isUpcoming && !isOverdue) {
           return [];
         }
 
-        const diffInDays = daysToNext;
+        const effectiveStatus = isOverdue
+          ? { label: 'Vencida', tone: 'danger' as DashboardTone }
+          : status;
+
+        const diffInDays = isUpcoming ? daysToNext : daysFromLast;
+        const displayDate = isUpcoming ? nextDate : lastDate;
 
         return [{
           id_notificacion_programada: configuracion.id_notificacion_programada,
@@ -1890,16 +1898,16 @@ export class Dashboard implements OnInit {
           prioridad: this.getNotificationPriorityLabel(configuracion.prioridad),
           vigenciaLabel: `${this.formatFullDate(configuracion.fecha_inicio)} al ${this.formatFullDate(configuracion.fecha_fin)}`,
           frecuenciaLabel: this.getScheduledFrequencyLabel(configuracion),
-          quincenaLabel: this.getScheduledQuincenaLabel(configuracion, nextDate),
+          quincenaLabel: this.getScheduledQuincenaLabel(configuracion, displayDate),
           periodicidadNombre:
             configuracion.periodicidad?.nombre_periodicidad || 'Sin periodicidad',
-          nextDateLabel: nextDate ? this.fullDateFormatter.format(nextDate) : 'Sin proxima fecha',
+          nextDateLabel: displayDate ? this.fullDateFormatter.format(displayDate) : 'Sin proxima fecha',
           relativeLabel:
             diffInDays === null
-              ? status.label
+              ? effectiveStatus.label
               : this.relativeDayFormatter.format(diffInDays, 'day'),
-          statusLabel: status.label,
-          tone: status.tone,
+          statusLabel: effectiveStatus.label,
+          tone: effectiveStatus.tone,
         }];
       })
       .sort((a, b) => {

@@ -165,6 +165,7 @@ export class NotificacionesService {
 
   async loadConfiguracionesPago(
     periodicidades?: PeriodicidadCatalogo[],
+    includeAll = false,
   ): Promise<ConfiguracionNotificacionPago[]> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
     const [response, resolvedPeriodicidades] = await Promise.all([
@@ -184,7 +185,7 @@ export class NotificacionesService {
       ? response
           .map((item) => this.normalizeConfiguracion(item, periodicidadMap))
           .filter((item): item is ConfiguracionNotificacionPago => item !== null)
-          .filter((item) => this.isConfiguracionVisible(item))
+          .filter((item) => includeAll || this.isConfiguracionVisible(item))
       : [];
 
     return configuraciones.sort((a, b) => {

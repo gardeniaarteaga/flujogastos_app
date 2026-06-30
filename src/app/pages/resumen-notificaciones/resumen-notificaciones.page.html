@@ -380,11 +380,15 @@
           </button>
         </div>
 
-        <div *ngIf="configuraciones.length === 0" class="empty-box">
+        <div *ngIf="loadingConfiguraciones" class="empty-box">
+          Cargando notificaciones...
+        </div>
+
+        <div *ngIf="!loadingConfiguraciones && configuraciones.length === 0" class="empty-box">
           Todavia no hay configuraciones de notificaciones registradas.
         </div>
 
-        <div *ngIf="configuraciones.length > 0" class="table-wrap notifications-table-wrap">
+        <div *ngIf="!loadingConfiguraciones && configuraciones.length > 0" class="table-wrap notifications-table-wrap">
           <table class="notifications-table">
             <thead>
               <tr>

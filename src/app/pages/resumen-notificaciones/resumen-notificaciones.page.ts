@@ -155,6 +155,7 @@ export class ResumenNotificacionesPage implements OnInit {
   successMessage = '';
   errorMessage = '';
   loadingPeriodicidades = false;
+  loadingConfiguraciones = false;
   periodicidadesDisponibles = false;
   readonly today = new Date();
   readonly todayDateInput = this.toDateInputValue(this.today);
@@ -236,8 +237,8 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await this.loadPeriodicidades();
-    await this.loadConfiguraciones();
+    await Promise.all([this.loadPeriodicidades(), this.loadConfiguraciones()]);
+    this.mergePeriodicidadesFromConfiguraciones();
     this.applyPeriodicidadRules();
 
     this.notificacionForm.controls.id_periodicidad.valueChanges.subscribe(() => {
@@ -314,9 +315,12 @@ export class ResumenNotificacionesPage implements OnInit {
       this.errorMessage = '';
     }
 
+    this.loadingConfiguraciones = true;
+
     try {
       this.configuraciones = await this.notificacionesService.loadConfiguracionesPago(
         this.periodicidadOptions,
+        true,
       );
       this.mergePeriodicidadesFromConfiguraciones();
     } catch (error) {
@@ -324,6 +328,8 @@ export class ResumenNotificacionesPage implements OnInit {
       this.configuraciones = [];
       this.errorMessage =
         'No se pudieron cargar las notificaciones programadas del usuario actual.';
+    } finally {
+      this.loadingConfiguraciones = false;
     }
   }
 

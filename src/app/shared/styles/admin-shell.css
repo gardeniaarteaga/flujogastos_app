@@ -1046,39 +1046,45 @@ table {
 
 .quick-pay-detail-table th:nth-child(4),
 .quick-pay-detail-table td:nth-child(4) {
-  width: 12rem;
+  width: 8rem;
 }
 
 .quick-pay-detail-table th:nth-child(5),
 .quick-pay-detail-table td:nth-child(5) {
-  width: 3rem;
-  text-align: center;
+  width: 8rem;
 }
 
 .quick-pay-detail-table th:nth-child(6),
 .quick-pay-detail-table td:nth-child(6) {
-  width: 5.6rem;
+  width: 3rem;
+  text-align: center;
 }
 
 .quick-pay-detail-table th:nth-child(7),
 .quick-pay-detail-table td:nth-child(7) {
-  width: 5.25rem;
+  width: 5.6rem;
 }
 
 .quick-pay-detail-table th:nth-child(8),
 .quick-pay-detail-table td:nth-child(8) {
-  width: 6.3rem;
+  width: 5.25rem;
 }
 
 .quick-pay-detail-table th:nth-child(9),
 .quick-pay-detail-table td:nth-child(9) {
+  width: 6.3rem;
+}
+
+.quick-pay-detail-table th:nth-child(10),
+.quick-pay-detail-table td:nth-child(10) {
   width: 4.2rem;
 }
 
-.quick-pay-detail-table td:nth-child(4),
-.quick-pay-detail-table td:nth-child(8) {
+.quick-pay-detail-table .qp-col-transaccion {
+  width: 20rem;
   white-space: normal;
   overflow-wrap: anywhere;
+  text-align: left;
 }
 
 th,

@@ -322,7 +322,6 @@
 .th-sortable {
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
 }
 
 .th-sortable:hover {
@@ -353,7 +352,17 @@
 
 .payments-table th:nth-child(3),
 .payments-table td:nth-child(3) {
-  min-width: 17rem;
+  min-width: 9.5rem;
+  white-space: nowrap;
+}
+
+.payments-col-descripcion {
+  min-width: 12.8rem;
+}
+
+.payments-col-metodo {
+  min-width: 11rem;
+  white-space: normal;
 }
 
 .payments-transaction-cell {
