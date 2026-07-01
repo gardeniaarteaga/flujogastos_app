@@ -1113,6 +1113,88 @@ export class PagosRealizadosPage implements OnInit {
     );
   }
 
+  openWhatsApp(group: ParticipanteGroup): void {
+    window.open(this.buildWhatsAppUrl(group), '_blank', 'noopener,noreferrer');
+  }
+
+  buildWhatsAppUrl(group: ParticipanteGroup): string {
+    const rows = this.getGroupFilteredRows(group);
+    const totalPendiente = rows.reduce((sum, r) => sum + r.montoPendiente, 0);
+    const totalPagado = rows.reduce((sum, r) => sum + r.totalPagado, 0);
+
+    const byMethod = new Map<string, { pendiente: number; pagado: number }>();
+    for (const row of rows) {
+      const key = row.metodoPagoNombre;
+      if (!byMethod.has(key)) byMethod.set(key, { pendiente: 0, pagado: 0 });
+      const entry = byMethod.get(key)!;
+      entry.pendiente += row.montoPendiente;
+      entry.pagado += row.totalPagado;
+    }
+
+    const lines: string[] = [
+      `*Estado de Pagos*`,
+      `Hola ${group.label}`,
+      '',
+      `*Saldo por metodo de pago:*`,
+    ];
+
+    for (const [method, totals] of byMethod.entries()) {
+      const parts: string[] = [];
+      if (totals.pendiente > 0) parts.push(`Pendiente: *${this.formatCurrency(totals.pendiente)}*`);
+      if (totals.pagado > 0) parts.push(`Pagado: *${this.formatCurrency(totals.pagado)}*`);
+      lines.push(`• *${method}* - ${parts.join(' | ')}`);
+    }
+
+    lines.push('');
+    if (totalPendiente > 0) lines.push(`*Total pendiente: ${this.formatCurrency(totalPendiente)}*`);
+    if (totalPagado > 0) lines.push(`*Total pagado: ${this.formatCurrency(totalPagado)}*`);
+
+    lines.push('');
+    lines.push(`*Detalle:*`);
+    lines.push('```');
+
+    const D = 14;
+    const F = 10;
+    const M = 11;
+    const A = 9;
+    const E = 9;
+
+    lines.push(
+      `${'Fecha'.padEnd(F)}  ${'Descripcion'.padEnd(D)}  ${'Metodo'.padEnd(M)}  ${'Monto'.padStart(A)}  Estado`,
+    );
+    lines.push(`${'-'.repeat(F)}  ${'-'.repeat(D)}  ${'-'.repeat(M)}  ${'-'.repeat(A)}  ${'-'.repeat(E)}`);
+
+    const sortedRows = [...rows].sort((a, b) => a.metodoPagoNombre.localeCompare(b.metodoPagoNombre));
+
+    for (const row of sortedRows) {
+      const fecha = (row.fechaProgramadaLabel !== '-' ? row.fechaProgramadaLabel : row.fechaReferenciaLabel).padEnd(F);
+      const desc = row.descripcion.length > D
+        ? row.descripcion.substring(0, D - 1) + '.'
+        : row.descripcion.padEnd(D);
+      const metodo = row.metodoPagoNombre.length > M
+        ? row.metodoPagoNombre.substring(0, M - 1) + '.'
+        : row.metodoPagoNombre.padEnd(M);
+      const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
+      const monto = this.formatCurrency(montoVal).padStart(A);
+      const estado = row.estadoKey === 'pendiente' ? (row.isVencido ? 'Vencido' : 'Pendiente') : 'Pagado';
+      lines.push(`${fecha}  ${desc}  ${metodo}  ${monto}  ${estado}`);
+    }
+
+    lines.push('```');
+
+    const message = encodeURIComponent(lines.join('\n'));
+    const celular = this.getParticipanteCelular(group.participanteKey);
+    const phone = celular ? celular.replace(/\D/g, '') : '';
+
+    return `https://wa.me/${phone}?text=${message}`;
+  }
+
+  private getParticipanteCelular(participanteKey: string): string | null {
+    const id = Number(participanteKey);
+    const participante = this.participantes.find((p) => p.id_participante === id);
+    return participante?.celular ?? null;
+  }
+
   private resolveTransactionSenderFirstName(
     transaccion: Pick<
       TransaccionListado,

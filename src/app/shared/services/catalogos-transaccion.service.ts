@@ -53,6 +53,8 @@ export interface CatalogoParticipante {
   es_predeterminada: boolean;
   puede_editar: boolean;
   puede_eliminar: boolean;
+  celular?: string | null;
+  correo_electronico?: string | null;
 }
 
 export interface CatalogoCategoria {

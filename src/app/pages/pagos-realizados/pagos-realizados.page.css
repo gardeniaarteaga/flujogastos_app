@@ -557,6 +557,33 @@
   font-weight: 900;
 }
 
+.whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  border: none;
+  background: #25d366;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.12s;
+  padding: 0;
+}
+
+.whatsapp-btn:hover {
+  background: #1aad52;
+  transform: scale(1.1);
+}
+
+.whatsapp-btn svg {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
+
 .payments-group-caret {
   font-size: 1.15rem;
   color: #8899ad;
