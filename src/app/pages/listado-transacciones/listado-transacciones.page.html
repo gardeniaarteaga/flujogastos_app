@@ -2104,8 +2104,12 @@
             <strong>{{ detailModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
           </article>
           <article class="payment-modal-chip">
-            <span>Monto</span>
-            <strong>${{ detailModalTransaccion.monto | number: '1.2-2' }}</strong>
+            <span>Monto cuota</span>
+            <strong>${{ getDetailModalMontoCuota() | number: '1.2-2' }}</strong>
+          </article>
+          <article class="payment-modal-chip" *ngIf="getDetailModalCuotaActual()">
+            <span>Cuota actual</span>
+            <strong>{{ getDetailModalCuotaActual() }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Intereses</span>
@@ -2163,6 +2167,7 @@
               </tr>
             </thead>
             <tbody>
+              <!-- Cuotas del usuario logueado (paginadas) -->
               <tr *ngFor="let detalle of getDetailModalCuotasPageItems(); trackBy: trackDetalleCuota">
                 <td>
                   <span>{{ detalle.nombre_participante || (detalle.es_titular ? currentUserDisplayName : '-') }}</span>
@@ -2192,6 +2197,52 @@
                     </span>
                 </td>
               </tr>
+
+              <!-- Otros participantes: fila colapsable por participante -->
+              <ng-container *ngFor="let group of getDetailModalOtherParticipantGroups()">
+                <tr
+                  class="detail-other-participant-header"
+                  (click)="toggleDetailParticipante(group.id_participante)"
+                  style="cursor:pointer;"
+                >
+                  <td colspan="9" class="detail-other-participant-cell">
+                    <span class="detail-other-participant-name">{{ group.nombre }}</span>
+                    <span class="detail-other-participant-toggle">
+                      {{ isDetailParticipanteExpanded(group.id_participante) ? '▲' : '▼' }}
+                    </span>
+                  </td>
+                </tr>
+                <ng-container *ngIf="isDetailParticipanteExpanded(group.id_participante)">
+                  <tr *ngFor="let detalle of group.cuotas; trackBy: trackDetalleCuota" class="detail-other-participant-row">
+                    <td>
+                      <span>{{ detalle.nombre_participante || '-' }}</span>
+                      <span
+                        *ngIf="isDetalleParticipanteAsociado(detalle)"
+                        title="Usuario del sistema"
+                        aria-label="Usuario del sistema"
+                        style="color: #d48a00; font-size: 0; line-height: 1;"
+                      >
+                        <span aria-hidden="true" style="font-size: 0.9rem; line-height: 1;">&#9733;</span>
+                      </span>
+                    </td>
+                    <td>{{ detalle.fecha_programada ? (detalle.fecha_programada | date: 'dd/MM/yyyy') : '' }}</td>
+                    <td>{{ detalle.fecha_pago ? (detalle.fecha_pago | date: 'dd/MM/yyyy') : '' }}</td>
+                    <td>{{ detalle.numero_cuota }}/{{ detalle.total_cuotas }}</td>
+                    <td>${{ detalle.monto | number: '1.2-2' }}</td>
+                    <td>${{ (detalle.interes_pagado + detalle.interes_pendiente) | number: '1.2-2' }}</td>
+                    <td>${{ detalle.monto_pagado | number: '1.2-2' }}</td>
+                    <td>${{ detalle.saldo_pendiente | number: '1.2-2' }}</td>
+                    <td>
+                      <span
+                        class="status-pill"
+                        [ngClass]="getEstadoClass(detalle.nombre_estado || 'Sin estado')"
+                      >
+                        {{ getEstadoDisplayLabel(detalle.nombre_estado) }}
+                      </span>
+                    </td>
+                  </tr>
+                </ng-container>
+              </ng-container>
             </tbody>
           </table>
         </div>
@@ -2201,7 +2252,7 @@
         >
           <span style="color:#5f6f82;font-size:.84rem;font-weight:600;">
             Mostrando {{ getDetailModalCuotasPageStart() }}-{{ getDetailModalCuotasPageEnd() }}
-            de {{ getDetailModalCuotas().length }} cuotas
+            de {{ getDetailModalCurrentUserCuotas().length }} cuotas
           </span>
           <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;">
             <button

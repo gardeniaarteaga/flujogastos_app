@@ -457,6 +457,29 @@
   color: inherit;
 }
 
+.detail-modal .payment-modal-summary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.detail-modal .payment-modal-chip {
+  padding: 0.38rem 0.6rem;
+  border-radius: 0.5rem;
+  background: #f6f8fb;
+  border-color: #e4eaf3;
+  gap: 0.05rem;
+}
+
+.detail-modal .payment-modal-chip span {
+  font-size: 0.66rem;
+  margin-bottom: 0.05rem;
+  letter-spacing: 0.06em;
+}
+
+.detail-modal .payment-modal-chip strong {
+  font-size: 0.88rem;
+}
+
 .detail-table-wrap {
   max-height: 45vh;
 }
@@ -467,6 +490,38 @@
 
 .detail-table-wrap th {
   white-space: nowrap;
+}
+
+.detail-other-participant-header {
+  background: #f1f5f9;
+}
+
+.detail-other-participant-cell {
+  padding: 0.45rem 0.7rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.detail-other-participant-name {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.detail-other-participant-toggle {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.detail-other-participant-header:hover {
+  background: #e8edf3;
+}
+
+.detail-other-participant-row td {
+  opacity: 0.7;
+  font-size: 0.85rem;
 }
 
 .payment-modal-hint {

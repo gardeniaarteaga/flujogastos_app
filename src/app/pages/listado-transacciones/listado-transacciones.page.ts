@@ -390,6 +390,7 @@ export class ListadoTransaccionesPage implements OnInit {
   private paymentModalOpenedAt = 0;
   detailModalTransaccion: TransaccionListado | null = null;
   detailModalCuotasPage = 1;
+  detailExpandedParticipanteIds = new Set<number>();
   applyingBulkQuickPayments = false;
   selectedQuickPayDetalleIds = new Set<number>();
   montoAplicarDrafts: Record<number, string> = {};
@@ -2386,6 +2387,7 @@ export class ListadoTransaccionesPage implements OnInit {
     event?.stopPropagation();
     this.detailModalTransaccion = this.buildDetailModalTransaccion(transaccion);
     this.detailModalCuotasPage = 1;
+    this.detailExpandedParticipanteIds = new Set();
 
     firstValueFrom(
       this.http
@@ -4645,6 +4647,72 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.detailModalTransaccion.participantes_detalle ?? [];
   }
 
+  getDetailModalMontoCuota(): number {
+    return this.roundMoneyValue(
+      this.getDetailModalCuotas()
+        .filter((d) => d.numero_cuota === 1)
+        .reduce((sum, d) => sum + Number(d.monto ?? 0), 0),
+    );
+  }
+
+  getDetailModalCuotaActual(): string {
+    const userCuotas = this.getDetailModalCurrentUserCuotas()
+      .slice()
+      .sort((a, b) => a.numero_cuota - b.numero_cuota);
+    if (userCuotas.length === 0) return '';
+    const vigente =
+      userCuotas.find((d) => {
+        const estado = (d.nombre_estado ?? '').toLowerCase();
+        return !estado.includes('pagado') && !estado.includes('anulado');
+      }) ?? userCuotas[userCuotas.length - 1];
+    return `${vigente.numero_cuota}/${vigente.total_cuotas}`;
+  }
+
+  getDetailModalCurrentUserCuotas(): ParticipanteDetalleListado[] {
+    const esPropietario = this.detailModalTransaccion?.es_propietario ?? false;
+    return this.getDetailModalCuotas().filter((d) =>
+      this.isDetalleDelUsuarioLogueado(d, esPropietario),
+    );
+  }
+
+  getDetailModalOtherParticipantGroups(): Array<{
+    id_participante: number;
+    nombre: string;
+    cuotas: ParticipanteDetalleListado[];
+  }> {
+    const esPropietario = this.detailModalTransaccion?.es_propietario ?? false;
+    const others = this.getDetailModalCuotas().filter(
+      (d) => !this.isDetalleDelUsuarioLogueado(d, esPropietario),
+    );
+    const groupMap = new Map<
+      number,
+      { id_participante: number; nombre: string; cuotas: ParticipanteDetalleListado[] }
+    >();
+    for (const cuota of others) {
+      if (!groupMap.has(cuota.id_participante)) {
+        groupMap.set(cuota.id_participante, {
+          id_participante: cuota.id_participante,
+          nombre: cuota.nombre_participante?.trim() || '-',
+          cuotas: [],
+        });
+      }
+      groupMap.get(cuota.id_participante)!.cuotas.push(cuota);
+    }
+    return Array.from(groupMap.values());
+  }
+
+  toggleDetailParticipante(id: number): void {
+    if (this.detailExpandedParticipanteIds.has(id)) {
+      this.detailExpandedParticipanteIds.delete(id);
+    } else {
+      this.detailExpandedParticipanteIds.add(id);
+    }
+  }
+
+  isDetailParticipanteExpanded(id: number): boolean {
+    return this.detailExpandedParticipanteIds.has(id);
+  }
+
   getDetailModalRelationText(
     transaccion: Pick<
       TransaccionListado,
@@ -4685,19 +4753,19 @@ export class ListadoTransaccionesPage implements OnInit {
   getDetailModalCuotasTotalPages(): number {
     return Math.max(
       1,
-      Math.ceil(this.getDetailModalCuotas().length / this.cuotasPageSize),
+      Math.ceil(this.getDetailModalCurrentUserCuotas().length / this.cuotasPageSize),
     );
   }
 
   getDetailModalCuotasPageItems(): ParticipanteDetalleListado[] {
-    const cuotas = this.getDetailModalCuotas();
+    const cuotas = this.getDetailModalCurrentUserCuotas();
     const startIndex = (this.detailModalCuotasPage - 1) * this.cuotasPageSize;
 
     return cuotas.slice(startIndex, startIndex + this.cuotasPageSize);
   }
 
   getDetailModalCuotasPageStart(): number {
-    const totalCuotas = this.getDetailModalCuotas().length;
+    const totalCuotas = this.getDetailModalCurrentUserCuotas().length;
 
     if (totalCuotas === 0) {
       return 0;
@@ -4709,7 +4777,7 @@ export class ListadoTransaccionesPage implements OnInit {
   getDetailModalCuotasPageEnd(): number {
     return Math.min(
       this.detailModalCuotasPage * this.cuotasPageSize,
-      this.getDetailModalCuotas().length,
+      this.getDetailModalCurrentUserCuotas().length,
     );
   }
 
