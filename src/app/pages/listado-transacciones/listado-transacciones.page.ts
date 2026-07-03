@@ -80,6 +80,7 @@ type ParticipanteDetalleForm = FormGroup<{
   dia_programado: FormControl<number | null>;
   porcentaje: FormControl<number | null>;
   monto: FormControl<number | null>;
+  id_metodo_pago: FormControl<number | null>;
   cuotas: FormArray<CuotaMontoForm>;
 }>;
 
@@ -3389,6 +3390,9 @@ export class ListadoTransaccionesPage implements OnInit {
             montoParticipante,
             this.getEditorParticipanteMontoValidators(detalle.es_titular),
           ),
+          id_metodo_pago: this.fb.control<number | null>(
+            detalle.id_metodo_pago ?? null,
+          ),
           cuotas: this.createCuotasArray(cuotasParticipante, detalle.monto, detalle.total_cuotas),
         })),
       );
@@ -3548,6 +3552,7 @@ export class ListadoTransaccionesPage implements OnInit {
           titularMontoInicial,
           this.getEditorParticipanteMontoValidators(true),
         ),
+        id_metodo_pago: this.fb.control<number | null>(null),
         cuotas: this.createCuotasArray(undefined, titularMontoInicial, 1),
       })),
     );
@@ -3596,6 +3601,9 @@ export class ListadoTransaccionesPage implements OnInit {
       monto: this.fb.control<number | null>(
         this.isEditingSharedExpenseMode ? 0 : null,
         this.getEditorParticipanteMontoValidators(false),
+      ),
+      id_metodo_pago: this.fb.control<number | null>(
+        this.transaccionForm.controls.forma_pago.value,
       ),
       cuotas: this.createCuotasArray(undefined, 0, cuotasTitularIniciales),
     }));
@@ -3908,6 +3916,7 @@ export class ListadoTransaccionesPage implements OnInit {
             monto: this.getGroupMontoTarget(group),
             cantidad_cuotas: group.controls.cantidad_cuotas.value,
             cuotas: this.getCuotasPayload(group),
+            id_metodo_pago: group.controls.id_metodo_pago.value,
           }))
       : [];
     const hasAdditionalParticipants = participantesDetalle.length > 0;
@@ -3982,12 +3991,26 @@ export class ListadoTransaccionesPage implements OnInit {
     };
 
     if (payload.pagocompartido) {
-      payload.participantes_detalle = participantesDetalle.map((detalle) => ({
-        id_participante: detalle.id_participante as number,
-        monto: Number(detalle.monto),
-        cantidad_cuotas: Number(detalle.cantidad_cuotas),
-        cuotas: detalle.cuotas,
-      }));
+      const titularMetodoPagoId = formValue.forma_pago as number;
+      payload.participantes_detalle = participantesDetalle.map((detalle) => {
+        const item: {
+          id_participante: number;
+          monto: number;
+          cantidad_cuotas: number;
+          cuotas: typeof detalle.cuotas;
+          id_metodo_pago?: number;
+        } = {
+          id_participante: detalle.id_participante as number,
+          monto: Number(detalle.monto),
+          cantidad_cuotas: Number(detalle.cantidad_cuotas),
+          cuotas: detalle.cuotas,
+        };
+        const participanteMetodo = detalle.id_metodo_pago;
+        if (participanteMetodo && participanteMetodo !== titularMetodoPagoId) {
+          item.id_metodo_pago = participanteMetodo;
+        }
+        return item;
+      });
     } else {
       payload.participantes_detalle = undefined;
     }
@@ -4666,6 +4689,15 @@ export class ListadoTransaccionesPage implements OnInit {
         return !estado.includes('pagado') && !estado.includes('anulado');
       }) ?? userCuotas[userCuotas.length - 1];
     return `${vigente.numero_cuota}/${vigente.total_cuotas}`;
+  }
+
+  getDetailModalMetodoPago(): string {
+    const cuotaUsuario = this.getDetailModalCurrentUserCuotas()[0];
+    return (
+      cuotaUsuario?.nombre_forma_pago ||
+      this.detailModalTransaccion?.nombre_forma_pago ||
+      '-'
+    );
   }
 
   getDetailModalCurrentUserCuotas(): ParticipanteDetalleListado[] {

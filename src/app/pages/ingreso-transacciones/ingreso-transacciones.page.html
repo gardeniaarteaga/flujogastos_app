@@ -751,6 +751,23 @@
                       />
                     </div>
 
+                    <div
+                      class="field participant-field participant-field--metodo"
+                      *ngIf="!participanteGroup.controls.es_titular.value"
+                    >
+                      <label [for]="'participante_metodo_' + i">Forma de pago</label>
+                      <select
+                        [id]="'participante_metodo_' + i"
+                        formControlName="id_metodo_pago"
+                        class="participant-metodo-select"
+                      >
+                        <option [ngValue]="null">Heredar del titular</option>
+                        <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                          {{ forma.nombre_forma }}
+                        </option>
+                      </select>
+                    </div>
+
                     <div class="participant-actions">
                       <div
                         *ngIf="participanteGroup.controls.es_titular.value && shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"

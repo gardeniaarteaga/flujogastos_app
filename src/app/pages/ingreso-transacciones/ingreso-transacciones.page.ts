@@ -59,6 +59,7 @@ type ParticipanteDetalleForm = FormGroup<{
   dia_programado: FormControl<number | null>;
   porcentaje: FormControl<number | null>;
   monto: FormControl<number | null>;
+  id_metodo_pago: FormControl<number | null>;
   cuotas: FormArray<CuotaMontoForm>;
 }>;
 
@@ -1056,6 +1057,7 @@ export class IngresoTransaccionesPage implements OnInit {
           Validators.min(0),
           this.maxTwoDecimalsValidator(),
         ]),
+        id_metodo_pago: this.fb.control<number | null>(null),
         cuotas: this.createCuotasArray(titularMontoInicial, 1),
       }),
     );
@@ -1105,6 +1107,9 @@ export class IngresoTransaccionesPage implements OnInit {
         Validators.min(0.01),
         this.maxTwoDecimalsValidator(),
       ]),
+      id_metodo_pago: this.fb.control<number | null>(
+        this.transaccionForm.controls.forma_pago.value,
+      ),
       cuotas: this.createCuotasArray(0, 1),
     });
 
@@ -1325,6 +1330,7 @@ export class IngresoTransaccionesPage implements OnInit {
             porcentaje: group.controls.porcentaje.value,
             cantidad_cuotas: group.controls.cantidad_cuotas.value,
             cuotas: this.getCuotasPayload(group),
+            id_metodo_pago: group.controls.id_metodo_pago.value,
           }))
       : [];
     const hasAdditionalParticipants = participantesDetalle.length > 0;
@@ -1429,12 +1435,26 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     if (payload.pagocompartido) {
-      payload.participantes_detalle = participantesDetalle.map((detalle) => ({
-        id_participante: detalle.id_participante as number,
-        monto: Number(detalle.monto),
-        cantidad_cuotas: Number(detalle.cantidad_cuotas),
-        cuotas: detalle.cuotas,
-      }));
+      const titularMetodoPagoId = formValue.forma_pago as number;
+      payload.participantes_detalle = participantesDetalle.map((detalle) => {
+        const item: {
+          id_participante: number;
+          monto: number;
+          cantidad_cuotas: number;
+          cuotas: typeof detalle.cuotas;
+          id_metodo_pago?: number;
+        } = {
+          id_participante: detalle.id_participante as number,
+          monto: Number(detalle.monto),
+          cantidad_cuotas: Number(detalle.cantidad_cuotas),
+          cuotas: detalle.cuotas,
+        };
+        const participanteMetodo = detalle.id_metodo_pago;
+        if (participanteMetodo && participanteMetodo !== titularMetodoPagoId) {
+          item.id_metodo_pago = participanteMetodo;
+        }
+        return item;
+      });
     }
 
     this.saving = true;

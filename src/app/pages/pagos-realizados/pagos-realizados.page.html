@@ -560,6 +560,10 @@
                       *ngIf="det.es_titular"
                       style="display:inline-flex;width:fit-content;align-items:center;padding:.15rem .45rem;border-radius:999px;background:#fff7e6;color:#d48a00;font-size:.72rem;font-weight:800;"
                     >Titular</span>
+                    <span
+                      *ngIf="det.id_metodo_pago !== detailModalTransaccion.id_metodo_pago"
+                      style="color:#7a90a8;font-size:.72rem;font-weight:700;"
+                    >{{ det.nombre_forma_pago || '-' }}</span>
                   </div>
                 </td>
                 <td style="white-space:nowrap;">{{ formatDetalleDate(det.fecha_programada) }}</td>

@@ -1753,6 +1753,23 @@
                       />
                     </div>
 
+                    <div
+                      class="field participant-field participant-field--metodo"
+                      *ngIf="!participanteGroup.controls.es_titular.value"
+                    >
+                      <label [for]="'edit_participante_metodo_' + i">Forma de pago</label>
+                      <select
+                        [id]="'edit_participante_metodo_' + i"
+                        formControlName="id_metodo_pago"
+                        class="participant-metodo-select"
+                      >
+                        <option [ngValue]="null">Heredar del titular</option>
+                        <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                          {{ forma.nombre_forma }}
+                        </option>
+                      </select>
+                    </div>
+
                     <div class="participant-actions" style="display:flex;gap:.55rem;align-items:end;flex-wrap:wrap;">
                       <button
                         type="button"
@@ -2121,7 +2138,7 @@
           </article>
           <article class="payment-modal-chip">
             <span>Metodo</span>
-            <strong>{{ detailModalTransaccion.nombre_forma_pago || '-' }}</strong>
+            <strong>{{ getDetailModalMetodoPago() }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Interes anual</span>
