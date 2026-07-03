@@ -2346,8 +2346,12 @@
             <strong>{{ paymentModalTransaccion.nombre_forma_pago || '-' }}</strong>
           </article>
           <article class="payment-modal-chip">
-            <span>Participacion</span>
-            <strong>{{ paymentModalTransaccion.pagocompartido ? 'Compartido' : 'Titular' }}</strong>
+            <span>Saldo pendiente</span>
+            <strong>${{ paymentModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Monto cuota</span>
+            <strong>${{ getPaymentModalMontoCuota() | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Ultimo pago</span>

@@ -4678,6 +4678,14 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
+  getPaymentModalMontoCuota(): number {
+    return this.roundMoneyValue(
+      this.getParticipantesDetalleSafe(this.paymentModalTransaccion)
+        .filter((d) => d.numero_cuota === 1)
+        .reduce((sum, d) => sum + Number(d.monto ?? 0), 0),
+    );
+  }
+
   getDetailModalCuotaActual(): string {
     const userCuotas = this.getDetailModalCurrentUserCuotas()
       .slice()
