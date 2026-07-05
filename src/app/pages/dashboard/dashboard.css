@@ -157,6 +157,10 @@
   background: linear-gradient(180deg, #14b8a6, #0f766e);
 }
 
+.quick-link-chip.accent-blue::before {
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+}
+
 .scheduled-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -146,7 +146,7 @@ interface QuickAccessItem {
   label: string;
   helper: string;
   route: string;
-  accent: 'violet' | 'amber' | 'teal';
+  accent: 'violet' | 'amber' | 'teal' | 'blue';
 }
 
 interface RankingItem {
@@ -344,6 +344,12 @@ export class Dashboard implements OnInit {
       helper: 'Miembros y cuotas',
       route: '/participantes',
       accent: 'teal',
+    },
+    {
+      label: 'Estado de pagos',
+      helper: 'Reporte de pagos realizados',
+      route: '/reportes/pagos-realizados',
+      accent: 'blue',
     },
   ];
 
