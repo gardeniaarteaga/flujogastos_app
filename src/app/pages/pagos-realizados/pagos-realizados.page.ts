@@ -1161,35 +1161,31 @@ export class PagosRealizadosPage implements OnInit {
     lines.push(`*Detalle:*`);
     lines.push('```');
 
-    const D = 14;
-    const F = 10;
-    const M = 11;
+    const F = 13;
+    const D = 13;
     const A = 9;
     const E = 9;
-    const FU = 10;
+    const V = 13;
 
     lines.push(
-      `${'Fecha'.padEnd(F)}  ${'Descripcion'.padEnd(D)}  ${'Metodo'.padEnd(M)}  ${'Monto'.padStart(A)}  ${'Estado'.padEnd(E)}  F. Límite Pago`,
+      `${'Fecha'.padEnd(F)} ${'Desc'.padEnd(D)} ${'Monto'.padStart(A)} ${'Estado'.padEnd(E)} ${'Vence'.padEnd(V)}`,
     );
     lines.push(
-      `${'-'.repeat(F)}  ${'-'.repeat(D)}  ${'-'.repeat(M)}  ${'-'.repeat(A)}  ${'-'.repeat(E)}  ${'-'.repeat(FU)}`,
+      `${'-'.repeat(F)} ${'-'.repeat(D)} ${'-'.repeat(A)} ${'-'.repeat(E)} ${'-'.repeat(V)}`,
     );
 
     const sortedRows = [...rows].sort((a, b) => a.metodoPagoNombre.localeCompare(b.metodoPagoNombre));
 
     for (const row of sortedRows) {
-      const fecha = row.fechaTransaccionLabel.padEnd(F);
+      const fecha = this.dayMonthNameLabel(row.fechaTransaccionLabel).padEnd(F);
       const desc = row.descripcion.length > D
         ? row.descripcion.substring(0, D - 1) + '.'
         : row.descripcion.padEnd(D);
-      const metodo = row.metodoPagoNombre.length > M
-        ? row.metodoPagoNombre.substring(0, M - 1) + '.'
-        : row.metodoPagoNombre.padEnd(M);
       const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
       const monto = this.formatCurrency(montoVal).padStart(A);
-      const estado = (row.estadoKey === 'pendiente' ? (row.isVencido ? 'Vencido' : 'Pendiente') : 'Pagado').padEnd(E);
-      const fechaUltPago = row.fechaProgramadaLabel || '-';
-      lines.push(`${fecha}  ${desc}  ${metodo}  ${monto}  ${estado}  ${fechaUltPago}`);
+      const estado = (row.estadoKey === 'pendiente' ? (row.isVencido ? 'VENCIDO' : 'PENDIENTE') : 'PAGADO').padEnd(E);
+      const vence = this.dayMonthNameLabel(row.fechaProgramadaLabel).padEnd(V);
+      lines.push(`${fecha} ${desc} ${monto} ${estado} ${vence}`);
     }
 
     lines.push('```');
@@ -1369,5 +1365,17 @@ export class PagosRealizadosPage implements OnInit {
     if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return '-';
     const [year, month, day] = parts;
     return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+
+  private dayMonthNameLabel(label: string): string {
+    if (!label || label === '-') return '-';
+    const [day, month] = label.split('/');
+    const meses = [
+      'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+      'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+    ];
+    const nombreMes = meses[Number(month) - 1];
+    if (!day || !nombreMes) return '-';
+    return `${day}-${nombreMes}`;
   }
 }
