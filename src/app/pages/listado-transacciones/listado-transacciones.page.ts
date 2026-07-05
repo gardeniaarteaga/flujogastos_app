@@ -470,7 +470,7 @@ export class ListadoTransaccionesPage implements OnInit {
       [Validators.required, Validators.min(0.01), this.maxTwoDecimalsValidator()],
     ],
     descripcion: ['', [Validators.maxLength(250)]],
-    comentario: [null as string | null, [Validators.maxLength(50)]],
+    comentario: [null as string | null, [Validators.maxLength(75)]],
   });
 
   readonly aplicarPagosForm = this.fb.group({
@@ -4107,17 +4107,20 @@ export class ListadoTransaccionesPage implements OnInit {
       } else {
         this.refreshParticipantesMontos();
       }
+    } else {
+      this.syncStandaloneMontoToTitular();
     }
 
     this.refreshEstadoTransaccionForEdit();
   }
 
   onMontoInput(event?: Event): void {
-    if (!this.usarParticipantesControl.value) {
+    if (this.isMoneyInputPendingDecimal(event)) {
       return;
     }
 
-    if (this.isMoneyInputPendingDecimal(event)) {
+    if (!this.usarParticipantesControl.value) {
+      this.syncStandaloneMontoToTitular();
       return;
     }
 
@@ -6539,6 +6542,29 @@ export class ListadoTransaccionesPage implements OnInit {
     titularGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
     titularGroup.controls.porcentaje.setValue(porcentajeTitular, { emitEvent: false });
     titularGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+    this.syncCuotasWithMonto(titularGroup);
+  }
+
+  private syncStandaloneMontoToTitular(): void {
+    if (this.isEditingSharedExpenseMode || this.isEditingIncomeMode) {
+      return;
+    }
+
+    const titularGroup = this.titularDetalleGroup;
+
+    if (!titularGroup) {
+      return;
+    }
+
+    const montoTotal = this.normalizeDecimalValue(
+      Number(this.transaccionForm.controls.monto.value ?? 0),
+    );
+
+    titularGroup.controls.monto.setValue(
+      this.getMontoInputValueForTarget(titularGroup, montoTotal),
+      { emitEvent: false },
+    );
+    titularGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
     this.syncCuotasWithMonto(titularGroup);
   }
 

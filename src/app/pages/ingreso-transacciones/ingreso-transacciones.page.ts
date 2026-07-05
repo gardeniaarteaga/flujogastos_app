@@ -299,6 +299,20 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isIncomeMode || Boolean(this.transaccionForm.controls.forma_pago.value);
   }
 
+  get shouldShowFechaLimitePago(): boolean {
+    const titularGroup = this.titularDetalleGroup;
+    return (
+      this.shouldShowEstadoPago &&
+      Number(titularGroup?.controls.cantidad_cuotas.value ?? 1) === 1
+    );
+  }
+
+  get fechaLimitePagoDisplay(): string {
+    const titularGroup = this.titularDetalleGroup;
+    const primeraCuota = titularGroup ? this.getCuotasArray(titularGroup).at(0) : null;
+    return this.getFechaProgramadaDisplay(primeraCuota?.controls.fecha_programada.value ?? null);
+  }
+
   get estadosIngresoDisponibles(): CatalogoEstadoTransaccion[] {
     return this.estadosTransaccion.filter((item) => {
       const nombreEstado = item.nombre_estado.trim().toUpperCase();
@@ -479,6 +493,7 @@ export class IngresoTransaccionesPage implements OnInit {
   titularSectionDismissed = false;
   private titularManualOverride = false;
   selectedFormaPago: CatalogoFormaPago | null = null;
+  private previousTitularFormaPagoId: number | null = null;
   readonly today = new Date();
   readonly cuotasPageSize = 12;
 
@@ -521,7 +536,7 @@ export class IngresoTransaccionesPage implements OnInit {
       [Validators.required, Validators.min(0.01), this.maxTwoDecimalsValidator()],
     ],
     descripcion: ['', [this.requiredTrimmedValidator(), Validators.maxLength(250)]],
-    comentario: [null as string | null, [Validators.maxLength(50)]],
+    comentario: [null as string | null, [Validators.maxLength(75)]],
   });
 
   ngOnInit(): void {
@@ -1209,6 +1224,15 @@ export class IngresoTransaccionesPage implements OnInit {
 
   onFormaPagoChange(forceSingleCuotaDefault = false): void {
     const formaPagoId = this.transaccionForm.controls.forma_pago.value;
+
+    if (forceSingleCuotaDefault && formaPagoId !== this.previousTitularFormaPagoId) {
+      this.syncParticipantesFormaPagoWithTitular(
+        this.previousTitularFormaPagoId,
+        formaPagoId,
+      );
+    }
+    this.previousTitularFormaPagoId = formaPagoId;
+
     this.selectedFormaPago =
       this.formasPago.find((item) => item.id_forma === formaPagoId) ?? null;
 
@@ -1253,6 +1277,24 @@ export class IngresoTransaccionesPage implements OnInit {
       this.refreshProgramacionForAllGroups(true);
     }
     this.focusSharedExpenseMontoWhenReady();
+  }
+
+  private syncParticipantesFormaPagoWithTitular(
+    previousFormaPagoId: number | null,
+    newFormaPagoId: number | null,
+  ): void {
+    if (!this.isSharedExpenseMode) {
+      return;
+    }
+
+    this.participantesDetalleArray.controls
+      .filter((group) => !group.controls.es_titular.value)
+      .forEach((group) => {
+        const metodoControl = group.controls.id_metodo_pago;
+        if (metodoControl.value === previousFormaPagoId) {
+          metodoControl.setValue(newFormaPagoId);
+        }
+      });
   }
 
   onCategoriaChange(): void {

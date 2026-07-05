@@ -78,6 +78,8 @@ interface PagoRealizadoRow {
   detalleId: number;
   transaccionId: number;
   descripcion: string;
+  fechaTransaccion: string;
+  fechaTransaccionLabel: string;
   fechaReferencia: string;
   fechaReferenciaLabel: string;
   fechaProgramada: string;
@@ -631,8 +633,11 @@ export class PagosRealizadosPage implements OnInit {
       return true;
     });
 
+    const getSortDate = (row: PagoRealizadoRow) =>
+      this.isOnlyPagadoFilter ? row.fechaPago : row.fechaTransaccion;
+
     return [...filtered].sort((a, b) => {
-      const cmp = a.fechaReferencia.localeCompare(b.fechaReferencia);
+      const cmp = getSortDate(a).localeCompare(getSortDate(b));
       return sortOrder === 'asc' ? cmp : -cmp;
     });
   }
@@ -979,8 +984,9 @@ export class PagosRealizadosPage implements OnInit {
     const metodoPagoId = this.resolveMetodoPagoId(detalle, transaccion);
     const fechaProgramada = this.resolveFechaProgramada(detalle) ?? '';
     const fechaPago = this.resolveFechaPago(detalle) ?? '';
+    const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha) || '';
     const fechaReferencia =
-      (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago || this.normalizeDateOnly(transaccion.fecha) || '';
+      (estadoKey === 'pagado' ? fechaPago : '') || fechaProgramada || fechaPago || fechaTransaccion || '';
     const montoPagado = Number(detalle.monto_pagado ?? 0);
     const interesPagado = Number(detalle.interes_pagado ?? 0);
     const interesPendiente = Number(detalle.interes_pendiente ?? 0);
@@ -994,6 +1000,8 @@ export class PagosRealizadosPage implements OnInit {
       detalleId: detalle.id,
       transaccionId: transaccion.id_transaccion,
       descripcion: this.getTransaccionTitle(transaccion),
+      fechaTransaccion,
+      fechaTransaccionLabel: this.formatDateLabel(fechaTransaccion),
       fechaReferencia,
       fechaReferenciaLabel: this.formatDateLabel(fechaReferencia),
       fechaProgramada,
@@ -1158,16 +1166,19 @@ export class PagosRealizadosPage implements OnInit {
     const M = 11;
     const A = 9;
     const E = 9;
+    const FU = 10;
 
     lines.push(
-      `${'Fecha'.padEnd(F)}  ${'Descripcion'.padEnd(D)}  ${'Metodo'.padEnd(M)}  ${'Monto'.padStart(A)}  Estado`,
+      `${'Fecha'.padEnd(F)}  ${'Descripcion'.padEnd(D)}  ${'Metodo'.padEnd(M)}  ${'Monto'.padStart(A)}  ${'Estado'.padEnd(E)}  F. Límite Pago`,
     );
-    lines.push(`${'-'.repeat(F)}  ${'-'.repeat(D)}  ${'-'.repeat(M)}  ${'-'.repeat(A)}  ${'-'.repeat(E)}`);
+    lines.push(
+      `${'-'.repeat(F)}  ${'-'.repeat(D)}  ${'-'.repeat(M)}  ${'-'.repeat(A)}  ${'-'.repeat(E)}  ${'-'.repeat(FU)}`,
+    );
 
     const sortedRows = [...rows].sort((a, b) => a.metodoPagoNombre.localeCompare(b.metodoPagoNombre));
 
     for (const row of sortedRows) {
-      const fecha = (row.fechaProgramadaLabel !== '-' ? row.fechaProgramadaLabel : row.fechaReferenciaLabel).padEnd(F);
+      const fecha = row.fechaTransaccionLabel.padEnd(F);
       const desc = row.descripcion.length > D
         ? row.descripcion.substring(0, D - 1) + '.'
         : row.descripcion.padEnd(D);
@@ -1176,8 +1187,9 @@ export class PagosRealizadosPage implements OnInit {
         : row.metodoPagoNombre.padEnd(M);
       const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
       const monto = this.formatCurrency(montoVal).padStart(A);
-      const estado = row.estadoKey === 'pendiente' ? (row.isVencido ? 'Vencido' : 'Pendiente') : 'Pagado';
-      lines.push(`${fecha}  ${desc}  ${metodo}  ${monto}  ${estado}`);
+      const estado = (row.estadoKey === 'pendiente' ? (row.isVencido ? 'Vencido' : 'Pendiente') : 'Pagado').padEnd(E);
+      const fechaUltPago = row.fechaProgramadaLabel || '-';
+      lines.push(`${fecha}  ${desc}  ${metodo}  ${monto}  ${estado}  ${fechaUltPago}`);
     }
 
     lines.push('```');

@@ -365,7 +365,7 @@
               <tbody>
                 <tr *ngFor="let row of getGroupPagedRows(group); trackBy: trackPago">
                   <td>{{ row.transaccionId }}</td>
-                  <td>{{ row.fechaReferenciaLabel }}</td>
+                  <td>{{ isOnlyPagadoFilter ? row.fechaPagoLabel : row.fechaTransaccionLabel }}</td>
                   <td *ngIf="!isOnlyPagadoFilter">{{ row.fechaProgramadaLabel }}</td>
                   <td class="payments-col-descripcion">
                     <div class="payments-transaction-cell">

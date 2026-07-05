@@ -244,13 +244,13 @@
                 <input
                   id="comentario"
                   type="text"
-                  maxlength="50"
+                  maxlength="75"
                   formControlName="comentario"
                   placeholder="Nota corta sobre este gasto..."
                   autocomplete="off"
                 />
                 <small *ngIf="transaccionForm.controls.comentario.touched && transaccionForm.controls.comentario.errors?.['maxlength']">
-                  El comentario no puede superar los 50 caracteres.
+                  El comentario no puede superar los 75 caracteres.
                 </small>
               </div>
 
@@ -350,6 +350,16 @@
                 <small *ngIf="ingresoEstadoHint" class="field-hint">
                   {{ ingresoEstadoHint }}
                 </small>
+              </div>
+
+              <div *ngIf="shouldShowFechaLimitePago" class="field">
+                <label for="fecha_limite_pago">Fecha limite pago</label>
+                <input
+                  id="fecha_limite_pago"
+                  type="text"
+                  [value]="fechaLimitePagoDisplay"
+                  readonly
+                />
               </div>
             </div>
           </section>
@@ -454,7 +464,7 @@
                     </label>
                     <input
                       [id]="'cuota_ingreso_' + cuotaItem.index"
-                      type="number"
+                      type="text"
                       min="0"
                       step="0.01"
                       inputmode="decimal"
