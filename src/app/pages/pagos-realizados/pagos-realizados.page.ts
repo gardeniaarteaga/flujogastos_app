@@ -1161,11 +1161,11 @@ export class PagosRealizadosPage implements OnInit {
     lines.push(`*Detalle:*`);
     lines.push('```');
 
-    const F = 13;
+    const F = 6;
     const D = 13;
     const A = 9;
     const E = 9;
-    const V = 13;
+    const V = 6;
 
     lines.push(
       `${'Fecha'.padEnd(F)} ${'Desc'.padEnd(D)} ${'Monto'.padStart(A)} ${'Estado'.padEnd(E)} ${'Vence'.padEnd(V)}`,
@@ -1371,8 +1371,8 @@ export class PagosRealizadosPage implements OnInit {
     if (!label || label === '-') return '-';
     const [day, month] = label.split('/');
     const meses = [
-      'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-      'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+      'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+      'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC',
     ];
     const nombreMes = meses[Number(month) - 1];
     if (!day || !nombreMes) return '-';
