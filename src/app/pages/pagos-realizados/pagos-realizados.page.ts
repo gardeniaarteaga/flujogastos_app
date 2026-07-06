@@ -1159,36 +1159,19 @@ export class PagosRealizadosPage implements OnInit {
 
     lines.push('');
     lines.push(`*Detalle:*`);
-    lines.push('```');
-
-    const F = 6;
-    const D = 13;
-    const A = 9;
-    const E = 9;
-    const V = 6;
-
-    lines.push(
-      `${'Fecha'.padEnd(F)} ${'Desc'.padEnd(D)} ${'Monto'.padStart(A)} ${'Estado'.padEnd(E)} ${'Vence'.padEnd(V)}`,
-    );
-    lines.push(
-      `${'-'.repeat(F)} ${'-'.repeat(D)} ${'-'.repeat(A)} ${'-'.repeat(E)} ${'-'.repeat(V)}`,
-    );
 
     const sortedRows = [...rows].sort((a, b) => a.metodoPagoNombre.localeCompare(b.metodoPagoNombre));
 
     for (const row of sortedRows) {
-      const fecha = this.dayMonthNameLabel(row.fechaTransaccionLabel).padEnd(F);
-      const desc = row.descripcion.length > D
-        ? row.descripcion.substring(0, D - 1) + '.'
-        : row.descripcion.padEnd(D);
+      const fecha = this.dayMonthNameLabel(row.fechaTransaccionLabel);
       const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
-      const monto = this.formatCurrency(montoVal).padStart(A);
-      const estado = (row.estadoKey === 'pendiente' ? (row.isVencido ? 'VENCIDO' : 'PENDIENTE') : 'PAGADO').padEnd(E);
-      const vence = this.dayMonthNameLabel(row.fechaProgramadaLabel).padEnd(V);
-      lines.push(`${fecha} ${desc} ${monto} ${estado} ${vence}`);
+      const monto = this.formatCurrency(montoVal);
+      const estado = row.estadoKey === 'pendiente' ? (row.isVencido ? 'VENCIDO' : 'PENDIENTE') : 'PAGADO';
+      const vence = this.dayMonthNameLabel(row.fechaProgramadaLabel);
+      lines.push('');
+      lines.push(`• *${fecha}* ${row.descripcion} - *${monto}*`);
+      lines.push(`   ${estado} · Vence ${vence}`);
     }
-
-    lines.push('```');
 
     const message = encodeURIComponent(lines.join('\n'));
     const celular = this.getParticipanteCelular(group.participanteKey);

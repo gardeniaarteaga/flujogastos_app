@@ -585,6 +585,19 @@
                     Monto faltante:
                     {{ ((transaccionForm.controls.monto.value ?? 0) - sharedExpenseCalculatedTotal) | number: '1.2-2' }}
                   </p>
+                  <p
+                    *ngIf="
+                      !isVariablePaymentMode &&
+                      isSharedExpenseMode &&
+                      participanteGroup.controls.es_titular.value &&
+                      sharedExpenseCalculatedTotal > (transaccionForm.controls.monto.value ?? 0)
+                    "
+                    class="participant-missing-amount"
+                    [class.participant-missing-amount--with-clear]="canRemoveTitularCuota(participanteGroup)"
+                  >
+                    Monto excedente:
+                    {{ (sharedExpenseCalculatedTotal - (transaccionForm.controls.monto.value ?? 0)) | number: '1.2-2' }}
+                  </p>
                   <div
                     class="participant-inline-controls"
                     *ngIf="participanteGroup.controls.es_titular.value && !isVariablePaymentMode"
