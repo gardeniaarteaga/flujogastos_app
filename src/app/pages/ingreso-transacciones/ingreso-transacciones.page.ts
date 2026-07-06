@@ -568,7 +568,24 @@ export class IngresoTransaccionesPage implements OnInit {
     this.transaccionForm.controls.descripcion.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((descripcion) => {
-        this.refreshDescripcionAutocomplete(descripcion);
+        const descripcionMayusculas = (descripcion ?? '').toUpperCase();
+        if (descripcion !== descripcionMayusculas) {
+          this.transaccionForm.controls.descripcion.setValue(descripcionMayusculas, { emitEvent: false });
+        }
+        this.refreshDescripcionAutocomplete(descripcionMayusculas);
+      });
+
+    this.transaccionForm.controls.comentario.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((comentario) => {
+        if (!comentario) {
+          return;
+        }
+
+        const comentarioCapitalizado = comentario.charAt(0).toUpperCase() + comentario.slice(1);
+        if (comentario !== comentarioCapitalizado) {
+          this.transaccionForm.controls.comentario.setValue(comentarioCapitalizado, { emitEvent: false });
+        }
       });
 
     this.applyScreenModeRestrictions();
@@ -614,7 +631,7 @@ export class IngresoTransaccionesPage implements OnInit {
 
   selectDescripcionSuggestion(descripcion: string, event: Event): void {
     event.preventDefault();
-    this.transaccionForm.controls.descripcion.setValue(descripcion);
+    this.transaccionForm.controls.descripcion.setValue(descripcion.toUpperCase());
     this.isDescripcionAutocompleteOpen = false;
     this.cdr.detectChanges();
   }
