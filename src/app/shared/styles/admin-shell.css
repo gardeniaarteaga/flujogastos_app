@@ -58,7 +58,18 @@ h3 {
   min-width: 0;
 }
 
-.brand::before {
+.brand-link {
+  display: contents;
+  cursor: pointer;
+}
+
+.brand-link:focus-visible .brand-copy {
+  outline: 2px solid var(--color-primary-strong, #2f61df);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
+.brand-link::before {
   content: '';
   grid-column: 1;
   grid-row: 1 / span 2;
@@ -77,7 +88,7 @@ h3 {
     0 0.9rem 1.45rem rgba(37, 99, 235, 0.16);
 }
 
-.brand::after {
+.brand-link::after {
   content: 'Workspace financiero';
   grid-column: 2;
   grid-row: 2;
@@ -639,7 +650,7 @@ h3 {
   padding-right: 0.2rem;
 }
 
-.sidebar-collapsed .brand::before {
+.sidebar-collapsed .brand-link::before {
   grid-column: 1;
   grid-row: 1;
   width: 2.35rem;
@@ -658,7 +669,7 @@ h3 {
   display: none;
 }
 
-.sidebar-collapsed .brand::after,
+.sidebar-collapsed .brand-link::after,
 .sidebar-collapsed .nav::before,
 .sidebar-collapsed .sidebar-card {
   display: none;
@@ -1223,7 +1234,7 @@ tbody tr:hover {
     --sidebar-width: 1fr;
   }
 
-  .sidebar-collapsed .brand::after,
+  .sidebar-collapsed .brand-link::after,
   .sidebar-collapsed .nav::before {
     display: block;
   }

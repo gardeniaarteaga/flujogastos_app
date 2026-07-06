@@ -1,10 +1,16 @@
 ﻿<div class="dashboard-page" [class.sidebar-collapsed]="sidebarCollapsed">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-copy">
+      <a
+        class="brand-link"
+        routerLink="/dashboard"
+        aria-label="Ir al inicio del panel"
+      >
+        <div class="brand-copy">
         <p class="eyebrow">Flujo de Gastos</p>
         <h1>Panel</h1>
-      </div>
+        </div>
+      </a>
       <button
         type="button"
         class="sidebar-toggle"
@@ -57,14 +63,6 @@
         </div>
       </div>
       <a
-        class="nav-item"
-        routerLink="/ingresos/ingreso"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
-        Ingresos
-      </a>
-      <a
         class="nav-item nav-item-expense-single"
         routerLink="/gastos/individual"
         routerLinkActive="active"
@@ -79,6 +77,14 @@
         [routerLinkActiveOptions]="{ exact: true }"
       >
         Cuotas/Compartidos
+      </a>
+      <a
+        class="nav-item"
+        routerLink="/ingresos/ingreso"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Ingresos
       </a>
       <div class="nav-group" [class.open]="maintenanceOpen || isMaintenanceMenuOpen()">
         <button type="button" class="nav-item nav-item-group" (click)="toggleMaintenanceMenu()">

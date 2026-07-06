@@ -291,6 +291,10 @@
   right: 3.5rem;
 }
 
+.participant-missing-amount--excess {
+  color: #c26a00;
+}
+
 .participant-inline-controls {
   display: flex;
   align-items: center;

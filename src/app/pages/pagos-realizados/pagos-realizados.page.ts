@@ -1139,38 +1139,33 @@ export class PagosRealizadosPage implements OnInit {
       entry.pagado += row.totalPagado;
     }
 
-    const lines: string[] = [
-      `*Estado de Pagos*`,
-      `Hola ${group.label}`,
-      '',
-      `*Saldo por metodo de pago:*`,
-    ];
+    const lines: string[] = [`Estado de Pagos - *${group.label}*`, ''];
 
     for (const [method, totals] of byMethod.entries()) {
       const parts: string[] = [];
-      if (totals.pendiente > 0) parts.push(`Pendiente: *${this.formatCurrency(totals.pendiente)}*`);
-      if (totals.pagado > 0) parts.push(`Pagado: *${this.formatCurrency(totals.pagado)}*`);
-      lines.push(`• *${method}* - ${parts.join(' | ')}`);
+      if (totals.pendiente > 0) parts.push(`Pendiente ${this.formatCurrency(totals.pendiente)}`);
+      if (totals.pagado > 0) parts.push(this.formatCurrency(totals.pagado));
+      lines.push(`*${method}*:  ${parts.join(' · ')}`);
     }
 
-    lines.push('');
-    if (totalPendiente > 0) lines.push(`*Total pendiente: ${this.formatCurrency(totalPendiente)}*`);
-    if (totalPagado > 0) lines.push(`*Total pagado: ${this.formatCurrency(totalPagado)}*`);
-
-    lines.push('');
-    lines.push(`*Detalle:*`);
+    if (totalPendiente > 0 || totalPagado > 0) {
+      lines.push('');
+      if (totalPendiente > 0) lines.push(`*Total pendiente: ${this.formatCurrency(totalPendiente)}*`);
+      if (totalPagado > 0) lines.push(`*Total pagado: ${this.formatCurrency(totalPagado)}*`);
+    }
 
     const sortedRows = [...rows].sort((a, b) => a.metodoPagoNombre.localeCompare(b.metodoPagoNombre));
 
-    for (const row of sortedRows) {
-      const fecha = this.dayMonthNameLabel(row.fechaTransaccionLabel);
-      const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
-      const monto = this.formatCurrency(montoVal);
-      const estado = row.estadoKey === 'pendiente' ? (row.isVencido ? 'VENCIDO' : 'PENDIENTE') : 'PAGADO';
-      const vence = this.dayMonthNameLabel(row.fechaProgramadaLabel);
+    if (sortedRows.length > 0) {
       lines.push('');
-      lines.push(`• *${fecha}* ${row.descripcion} - *${monto}*`);
-      lines.push(`   ${estado} · Vence ${vence}`);
+      lines.push('Detalle:');
+
+      for (const row of sortedRows) {
+        const montoVal = row.estadoKey === 'pendiente' ? row.montoPendiente : row.totalPagado;
+        const monto = this.formatCurrency(montoVal);
+
+        lines.push(`${row.descripcion}    *${row.metodoPagoNombre}*:   ${monto}`);
+      }
     }
 
     const message = encodeURIComponent(lines.join('\n'));
@@ -1350,15 +1345,4 @@ export class PagosRealizadosPage implements OnInit {
     return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
   }
 
-  private dayMonthNameLabel(label: string): string {
-    if (!label || label === '-') return '-';
-    const [day, month] = label.split('/');
-    const meses = [
-      'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
-      'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC',
-    ];
-    const nombreMes = meses[Number(month) - 1];
-    if (!day || !nombreMes) return '-';
-    return `${day}-${nombreMes}`;
-  }
 }
