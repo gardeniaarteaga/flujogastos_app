@@ -22,6 +22,8 @@ const loadResumenNotificacionesPage = () =>
   import('./pages/resumen-notificaciones/resumen-notificaciones.page').then(
     (module) => module.ResumenNotificacionesPage,
   );
+const loadEstadoCuentaPage = () =>
+  import('./pages/estado-cuenta/estado-cuenta.page').then((module) => module.EstadoCuentaPage);
 const loadCategoriasPage = () =>
   import('./pages/categorias/categorias.page').then((module) => module.CategoriasPage);
 const loadSubcategoriasPage = () =>
@@ -87,6 +89,10 @@ export const routes: Routes = [
   {
     path: 'resumen/notificaciones',
     loadComponent: loadResumenNotificacionesPage,
+  },
+  {
+    path: 'resumen/estado-cuenta',
+    loadComponent: loadEstadoCuentaPage,
   },
   {
     path: 'reportes/analisis-financiero',

@@ -94,6 +94,16 @@ interface FinalizarConfiguracionNotificacionPagoPayload {
   estado: boolean;
 }
 
+interface RecordatorioCuotaApiItem {
+  id_transaccion?: number | string | null;
+  descripcion?: string | null;
+}
+
+export interface RecordatorioCuota {
+  id_transaccion: number;
+  descripcion: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class NotificacionesService {
   private readonly http = inject(HttpClient);
@@ -101,6 +111,7 @@ export class NotificacionesService {
   private readonly timeoutMs = 10000;
   private readonly baseUrl = apiUrl('notificaciones');
   private readonly periodicidadUrl = apiUrl('periodicidad');
+  private readonly transaccionesUrl = apiUrl('transacciones');
 
   async loadResumen(limite = 8): Promise<NotificacionesResumen> {
     const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
@@ -211,6 +222,24 @@ export class NotificacionesService {
 
       return b.id_notificacion_programada - a.id_notificacion_programada;
     });
+  }
+
+  async loadRecordatoriosCuotas(): Promise<RecordatorioCuota[]> {
+    const idUsuario = await this.catalogosTransaccionService.syncCurrentUserId();
+
+    const response = await firstValueFrom(
+      this.http
+        .get<RecordatorioCuotaApiItem[]>(`${this.transaccionesUrl}/recordatorios`, {
+          params: { id_usuario: idUsuario },
+        })
+        .pipe(timeout(this.timeoutMs)),
+    );
+
+    return Array.isArray(response)
+      ? response
+          .map((item) => this.normalizeRecordatorioCuota(item))
+          .filter((item): item is RecordatorioCuota => item !== null)
+      : [];
   }
 
   async saveConfiguracionPago(
@@ -446,5 +475,18 @@ export class NotificacionesService {
     } catch {
       return null;
     }
+  }
+
+  private normalizeRecordatorioCuota(item: RecordatorioCuotaApiItem): RecordatorioCuota | null {
+    const idTransaccion = Number(item.id_transaccion);
+
+    if (!Number.isInteger(idTransaccion) || idTransaccion < 1) {
+      return null;
+    }
+
+    return {
+      id_transaccion: idTransaccion,
+      descripcion: item.descripcion?.trim() || null,
+    };
   }
 }

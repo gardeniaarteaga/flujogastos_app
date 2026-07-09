@@ -136,6 +136,7 @@ interface TransaccionListado {
   monto: number;
   intereses: number;
   cuotas_sin_intereses?: boolean;
+  recordatorio_pago?: boolean;
   tasa_interes_anual?: number | null;
   saldo_pendiente: number;
   id_tipo_transaccion: TipoTransaccionId;
@@ -197,6 +198,7 @@ interface UpdateTransaccionPayload {
   pago_variable?: boolean;
   intereses?: number;
   cuotas_sin_intereses: boolean;
+  recordatorio_pago?: boolean;
   id_tipo_transaccion: TipoTransaccionId;
   id_metodo_pago: number;
   id_categoria: number;
@@ -462,6 +464,7 @@ export class ListadoTransaccionesPage implements OnInit {
     tipo_entidad: [{ value: '', disabled: true }],
     usar_participantes: [false],
     cuotas_sin_intereses: [false],
+    recordatorio_pago: [false],
     participantes_detalle: this.fb.array<ParticipanteDetalleForm>([]),
     id_estado: [null as number | null, [Validators.required]],
     intereses: [{ value: 0 as number | null, disabled: true }, [Validators.min(0), this.maxTwoDecimalsValidator()]],
@@ -870,6 +873,35 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return scheduledDate < this.getDateOnlyValue(new Date());
+  }
+
+  private isDetallePendienteEnPeriodoActual(detalle: ParticipanteDetalleListado): boolean {
+    if (detalle.id_estado === ESTADO_TRANSACCION_ANULADA_ID) {
+      return false;
+    }
+
+    const estadoNorm = this.normalizeText(detalle.nombre_estado ?? '');
+    if (estadoNorm === 'pagado' || estadoNorm === 'pagada') {
+      return false;
+    }
+
+    const hasPendingSaldo = Number(detalle.saldo_pendiente ?? 0) > 0;
+    const isPendingStatus = estadoNorm === 'pendiente' || estadoNorm === 'pago parcial';
+
+    if (!hasPendingSaldo && !isPendingStatus) {
+      return false;
+    }
+
+    const scheduledDate = this.parseIsoDateOnly(detalle.fecha_programada);
+
+    if (!scheduledDate) {
+      return false;
+    }
+
+    const today = this.getDateOnlyValue(new Date());
+    const finDeMesActual = this.getDateOnlyValue(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+
+    return scheduledDate <= finDeMesActual;
   }
 
   readonly isTransaccionVencida = (transaccion: TransaccionListado): boolean =>
@@ -2327,7 +2359,11 @@ export class ListadoTransaccionesPage implements OnInit {
     void this.openEditModal(transaccion);
   }
 
-  async openPaymentModal(transaccion: TransaccionListado, event?: Event): Promise<void> {
+  async openPaymentModal(
+    transaccion: TransaccionListado,
+    event?: Event,
+    detallesOverride?: ParticipanteDetalleListado[],
+  ): Promise<void> {
     event?.preventDefault();
     event?.stopPropagation();
     if (!this.canPagarTransaccion(transaccion)) {
@@ -2335,7 +2371,7 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     try {
-      const transaccionParaPago = this.buildPaymentModalTransaccion(transaccion);
+      const transaccionParaPago = this.buildPaymentModalTransaccion(transaccion, detallesOverride);
       this.editModalOpen = false;
       this.paymentTransaccionId = transaccion.id_transaccion;
       this.paymentModalTransaccion = transaccionParaPago;
@@ -3259,6 +3295,7 @@ export class ListadoTransaccionesPage implements OnInit {
       tipo_entidad: '',
       usar_participantes: false,
       cuotas_sin_intereses: false,
+      recordatorio_pago: false,
       participantes_detalle: [],
       id_estado: null,
       intereses: 0,
@@ -3319,6 +3356,7 @@ export class ListadoTransaccionesPage implements OnInit {
       tipo_entidad: '',
       usar_participantes: shouldEnableParticipantesEditor,
       cuotas_sin_intereses: Boolean(transaccion.cuotas_sin_intereses),
+      recordatorio_pago: Boolean(transaccion.recordatorio_pago),
       participantes_detalle: [],
       id_estado: transaccion.id_estado,
       intereses: transaccion.intereses,
@@ -3973,6 +4011,7 @@ export class ListadoTransaccionesPage implements OnInit {
       pago_variable: this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor,
       cuotas_sin_intereses:
         this.showCuotasSinInteresesOption && Boolean(formValue.cuotas_sin_intereses),
+      recordatorio_pago: Boolean(formValue.recordatorio_pago),
       id_tipo_transaccion: formValue.id_tipo_transaccion as TipoTransaccionId,
       id_metodo_pago: formValue.forma_pago as number,
       id_categoria: formValue.id_categoria as number,
@@ -9920,7 +9959,16 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.autoOpenPaymentHandledKey = requestKey;
-    await this.openPaymentModal(transaccion);
+    const detallesPropiosEnPeriodo = this.getParticipantesDetalleForPayment(transaccion).filter(
+      (detalle) =>
+        this.isDetalleDelUsuarioLogueado(detalle, transaccion.es_propietario) &&
+        this.isDetallePendienteEnPeriodoActual(detalle),
+    );
+    await this.openPaymentModal(
+      transaccion,
+      undefined,
+      detallesPropiosEnPeriodo.length > 0 ? detallesPropiosEnPeriodo : undefined,
+    );
     await this.clearAutoOpenPaymentRequestFromUrl();
   }
 

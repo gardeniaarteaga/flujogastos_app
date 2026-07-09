@@ -60,6 +60,14 @@
           >
             Configurar notificaciones
           </a>
+          <a
+            class="submenu-item submenu-item-child"
+            routerLink="/resumen/estado-cuenta"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Estado de cuenta
+          </a>
         </div>
       </div>
       <a
@@ -316,7 +324,45 @@
     <section *ngIf="!loading" class="panel scheduled-notifications-panel">
       <div class="panel-heading">
         <div>
-          <span class="panel-kicker">Primer plano</span>
+          <h3>Recordatorios de pago activos</h3>
+        </div>
+        <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">
+          Ver todos
+        </a>
+      </div>
+
+      <p class="panel-copy">
+        Haz clic en una tarjeta para ir directo a pagar esa cuota.
+      </p>
+
+      <div *ngIf="recordatoriosCuotas.length > 0; else emptyRecordatoriosCuotas" class="scheduled-grid">
+        <a
+          *ngFor="let item of recordatoriosCuotas"
+          class="scheduled-card tone-info scheduled-card-link"
+          routerLink="/resumen/detalle-transacciones"
+          [queryParams]="{ openPayment: 1, transactionId: item.id_transaccion }"
+        >
+          <strong class="scheduled-card-title">{{ item.descripcion || 'Sin descripcion' }}</strong>
+          <span class="scheduled-relative-label">Transaccion #{{ item.id_transaccion }}</span>
+        </a>
+      </div>
+
+      <div *ngIf="recordatoriosCuotasError" class="chart-empty">
+        <strong>No se pudieron cargar los recordatorios</strong>
+        <p>{{ recordatoriosCuotasError }}</p>
+      </div>
+    </section>
+
+    <ng-template #emptyRecordatoriosCuotas>
+      <div class="chart-empty">
+        <strong>No tienes cuotas pendientes con recordatorio activo</strong>
+        <p>Marca "Recordatorio de pago" al ingresar una transaccion en cuotas para verla aqui.</p>
+      </div>
+    </ng-template>
+
+    <section *ngIf="!loading" class="panel scheduled-notifications-panel">
+      <div class="panel-heading">
+        <div>
           <h3>Notificaciones programadas</h3>
         </div>
         <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">

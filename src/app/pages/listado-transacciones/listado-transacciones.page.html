@@ -39,6 +39,9 @@
           <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Configurar notificaciones
           </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/estado-cuenta" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Estado de cuenta
+          </a>
         </div>
       </div>
 
@@ -1304,6 +1307,11 @@
               />
               <span>Cuotas sin intereses/Desde fecha programada</span>
             </label>
+
+            <label class="checkbox-row" style="align-self:end;min-height:2.05rem;margin:0;">
+              <input type="checkbox" formControlName="recordatorio_pago" />
+              <span>Recordatorio de pago</span>
+            </label>
             </div>
           </section>
 
@@ -2172,6 +2180,10 @@
                 {{ getEstadoDisplayLabel(detailModalTransaccion.nombre_estado) }}
               </span>
             </strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Recordatorio</span>
+            <strong>{{ detailModalTransaccion.recordatorio_pago ? 'Activo' : 'Inactivo' }}</strong>
           </article>
         </section>
 

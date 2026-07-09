@@ -39,6 +39,9 @@
           <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Configurar notificaciones
           </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/estado-cuenta" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Estado de cuenta
+          </a>
         </div>
       </div>
 
@@ -554,6 +557,18 @@
                   <span class="help-badge" tabindex="0" aria-label="Ayuda sobre cuotas sin intereses">?</span>
                   <span class="help-tooltip-content">
                     Usa esta opcion cuando las cuotas no generen intereses antes de su fecha programada. El sistema empieza a considerar el cobro desde esa fecha.
+                  </span>
+                </span>
+              </span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" formControlName="recordatorio_pago" />
+              <span class="label-with-help">
+                <span>Recordatorio de pago</span>
+                <span class="help-tooltip">
+                  <span class="help-badge" tabindex="0" aria-label="Ayuda sobre recordatorio de pago">?</span>
+                  <span class="help-tooltip-content">
+                    Activa esta opcion para que todas las cuotas de esta transaccion aparezcan como recordatorio en la pantalla de notificaciones mientras sigan pendientes de pago.
                   </span>
                 </span>
               </span>

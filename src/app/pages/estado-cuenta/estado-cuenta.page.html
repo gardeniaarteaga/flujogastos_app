@@ -1,0 +1,442 @@
+
+<div class="module-page" [class.sidebar-collapsed]="sidebarCollapsed">
+  <aside class="sidebar">
+    <div class="brand">
+      <a class="brand-link" routerLink="/dashboard" aria-label="Ir al inicio del panel">
+        <div class="brand-copy">
+          <p class="eyebrow">Flujo de Gastos</p>
+          <h1>Panel</h1>
+        </div>
+      </a>
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="sidebarCollapsed = !sidebarCollapsed"
+        [attr.aria-label]="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'"
+        [attr.aria-pressed]="sidebarCollapsed"
+      >
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+        <span class="sidebar-toggle-bar"></span>
+      </button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group open">
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          Resumen
+        </a>
+        <div class="submenu">
+          <a class="submenu-item submenu-item-child" routerLink="/transacciones/listado" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Listado de Transacciones
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/detalle-transacciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Pago Rapido
+          </a>
+          <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Configurar notificaciones
+          </a>
+          <a class="submenu-item submenu-item-child active" routerLink="/resumen/estado-cuenta" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Estado de cuenta
+          </a>
+        </div>
+      </div>
+      <a class="nav-item nav-item-expense-single" routerLink="/gastos/individual" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos</a>
+      <a class="nav-item nav-item-expense-shared" routerLink="/gastos/compartidos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Cuotas/Compartidos</a>
+      <a class="nav-item" routerLink="/ingresos/ingreso" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Ingresos</a>
+      <div class="nav-group" [class.open]="maintenanceOpen">
+        <button type="button" class="nav-item nav-item-group" (click)="maintenanceOpen = !maintenanceOpen">
+          <span>Mantenimiento</span>
+          <span class="caret">v</span>
+        </button>
+        <div class="submenu">
+          <div class="submenu-section">
+            <div class="submenu-section-links">
+              <a class="submenu-item" routerLink="/categorias">Categorias</a>
+            </div>
+          </div>
+          <a class="submenu-item" routerLink="/formas-pago">Formas de Pago</a>
+          <a class="submenu-item" routerLink="/participantes">Participantes</a>
+          <details class="submenu-section submenu-section-collapsible">
+            <summary class="submenu-title">Otros Mantenimientos</summary>
+            <div class="submenu-section-links">
+              <a class="submenu-item submenu-item-child" routerLink="/subcategorias">Subcategorias</a>
+              <a class="submenu-item submenu-item-child" routerLink="/entidades-financieras">Entidades financieras</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-entidad">Tipo de entidad</a>
+              <a class="submenu-item submenu-item-child" routerLink="/tipo-producto">Tipo de producto</a>
+            </div>
+          </details>
+          <a class="submenu-item" routerLink="/usuarios">Usuarios</a>
+        </div>
+      </div>
+
+      <details class="nav-group" [attr.open]="reportesOpen ? '' : null" (toggle)="reportesOpen = $any($event.target).open">
+        <summary class="nav-item nav-item-group">
+          <span>Reportes</span>
+          <span class="caret">v</span>
+        </summary>
+        <div class="submenu">
+          <a class="submenu-item" routerLink="/reportes/analisis-financiero">Analisis Financiero</a>
+          <a class="submenu-item" routerLink="/reportes/gastos-por-categoria">Gastos por categoria</a>
+          <a class="submenu-item" routerLink="/reportes/pagos-realizados">Estado de pagos</a>
+        </div>
+      </details>
+
+      <a class="nav-item" routerLink="/perfil">Mi perfil</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <app-session-strip></app-session-strip>
+
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Resumen</p>
+        <h2>Estado de cuenta</h2>
+        <p class="lead">
+          Ingresa manualmente los valores de tu estado de cuenta bancario y compara el total de compras y pagos
+          contra lo que llevas registrado en la aplicacion.
+        </p>
+      </div>
+      <button type="button" class="secondary-button" (click)="cancelEdit()">Nuevo estado de cuenta</button>
+    </header>
+
+    <section *ngIf="errorMessage" class="panel state-panel state-panel-error">
+      <strong>Ocurrio un problema</strong>
+      <p>{{ errorMessage }}</p>
+    </section>
+
+    <section class="workspace">
+      <article class="panel form-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Formulario</p>
+            <h3>
+              {{
+                viewOnly
+                  ? 'Detalle de estado de cuenta'
+                  : (isEditing ? 'Editar estado de cuenta' : 'Registrar estado de cuenta')
+              }}
+            </h3>
+          </div>
+          <span class="pill">{{ viewOnly ? 'Detalle' : (isEditing ? 'Edicion' : 'Nuevo') }}</span>
+        </div>
+
+        <form [formGroup]="estadoCuentaForm" (ngSubmit)="onSubmit()" class="categoria-form" novalidate>
+          <div class="field">
+            <label for="id_metodo_pago">Forma de pago <span class="required-mark">*</span></label>
+            <select id="id_metodo_pago" formControlName="id_metodo_pago">
+              <option [ngValue]="null">Seleccione una forma de pago</option>
+              <option *ngFor="let forma of formasPago" [ngValue]="forma.id_forma">
+                {{ forma.nombre_forma }}
+              </option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="mes">Mes <span class="required-mark">*</span></label>
+              <select id="mes" formControlName="mes">
+                <option *ngFor="let mes of meses" [ngValue]="mes.value">{{ mes.label }}</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="anio">Anio <span class="required-mark">*</span></label>
+              <input id="anio" type="number" formControlName="anio" min="2000" />
+            </div>
+          </div>
+
+          <p class="field-example periodo-preview">
+            {{ resolvedPeriodoLabel }}
+            <span *ngIf="fechaLimitePagoLabel"> &middot; Fecha limite de pago: {{ fechaLimitePagoLabel }}</span>
+          </p>
+
+          <section class="linked-fields-panel">
+            <div class="linked-fields-header">
+              <p class="linked-fields-eyebrow">Saldo anterior</p>
+            </div>
+
+            <div class="field">
+              <label for="saldo_anterior_capital">Saldo anterior capital</label>
+              <input id="saldo_anterior_capital" type="number" step="0.01" formControlName="saldo_anterior_capital" />
+            </div>
+
+            <div class="field">
+              <label for="saldo_anterior_intereses">Saldo anterior intereses</label>
+              <input id="saldo_anterior_intereses" type="number" step="0.01" formControlName="saldo_anterior_intereses" />
+            </div>
+
+            <div class="field">
+              <label for="saldo_anterior_recargos">Saldo anterior recargos</label>
+              <input id="saldo_anterior_recargos" type="number" step="0.01" formControlName="saldo_anterior_recargos" />
+            </div>
+
+            <div class="field">
+              <label for="saldo_anterior_comisiones">Saldo anterior comisiones</label>
+              <input id="saldo_anterior_comisiones" type="number" step="0.01" formControlName="saldo_anterior_comisiones" />
+            </div>
+          </section>
+
+          <section class="linked-fields-panel">
+            <div class="linked-fields-header">
+              <p class="linked-fields-eyebrow">Movimientos del periodo</p>
+            </div>
+
+            <div class="field">
+              <label for="pagos_acreditaciones">Pagos / Acreditaciones</label>
+              <input id="pagos_acreditaciones" type="number" step="0.01" formControlName="pagos_acreditaciones" />
+            </div>
+
+            <div class="field">
+              <label for="devoluciones">Devoluciones</label>
+              <input id="devoluciones" type="number" step="0.01" formControlName="devoluciones" />
+            </div>
+
+            <div class="field">
+              <label for="cuota_extrafinanciamiento">Cuota extrafinanciamiento</label>
+              <input id="cuota_extrafinanciamiento" type="number" step="0.01" formControlName="cuota_extrafinanciamiento" />
+            </div>
+
+            <div class="field">
+              <label for="cuota_infrafinanciamiento">Cuota infrafinanciamiento</label>
+              <input id="cuota_infrafinanciamiento" type="number" step="0.01" formControlName="cuota_infrafinanciamiento" />
+            </div>
+
+            <div class="field">
+              <label for="compras_retiros">Compras y retiros</label>
+              <input id="compras_retiros" type="number" step="0.01" formControlName="compras_retiros" />
+            </div>
+
+            <div class="field">
+              <label for="interes_corriente_bonificable">Interes corriente bonificable</label>
+              <input id="interes_corriente_bonificable" type="number" step="0.01" formControlName="interes_corriente_bonificable" />
+            </div>
+
+            <div class="field">
+              <label for="interes_corriente">Interes corriente</label>
+              <input id="interes_corriente" type="number" step="0.01" formControlName="interes_corriente" />
+            </div>
+
+            <div class="field">
+              <label for="recargos_comisiones">Recargos / Comisiones</label>
+              <input id="recargos_comisiones" type="number" step="0.01" formControlName="recargos_comisiones" />
+            </div>
+
+            <div class="field">
+              <label for="debitos">Debitos</label>
+              <input id="debitos" type="number" step="0.01" formControlName="debitos" />
+            </div>
+          </section>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="saldo_contado">Saldo de Contado <span class="required-mark">*</span></label>
+              <input id="saldo_contado" type="number" step="0.01" formControlName="saldo_contado" />
+            </div>
+
+            <div class="field">
+              <label for="saldo_a_plazos">Saldo a Plazos <span class="required-mark">*</span></label>
+              <input id="saldo_a_plazos" type="number" step="0.01" formControlName="saldo_a_plazos" />
+            </div>
+
+            <div class="field">
+              <label for="pago_minimo">Pago minimo <span class="required-mark">*</span></label>
+              <input id="pago_minimo" type="number" step="0.01" formControlName="pago_minimo" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button *ngIf="!viewOnly" type="submit" [disabled]="saving">
+              {{ saving ? 'Guardando...' : (isEditing ? 'Actualizar estado de cuenta' : 'Guardar estado de cuenta') }}
+            </button>
+            <button *ngIf="isEditing || viewOnly" type="button" class="secondary-button" (click)="cancelEdit()">
+              {{ viewOnly ? 'Cerrar' : 'Cancelar' }}
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <article class="panel comparacion-panel" *ngIf="ultimoResultado as resultado">
+        <div class="panel-header">
+          <div>
+            <p class="panel-title">Comparacion</p>
+            <h3>{{ getMesLabel(resultado.mes) }} {{ resultado.anio }} - {{ resultado.nombre_forma }}</h3>
+          </div>
+        </div>
+
+        <div class="comparacion-grid">
+          <div class="comparacion-item">
+            <span class="comparacion-label">Total de la deuda</span>
+            <strong>{{ resultado.total_deuda | number: '1.2-2' }}</strong>
+          </div>
+
+          <div class="comparacion-item" [ngClass]="resultado.compras_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+            <span class="comparacion-label">Compras y retiros</span>
+            <span>Estado de cuenta: {{ resultado.compras_estado_cuenta | number: '1.2-2' }}</span>
+            <span>App: {{ resultado.compras_calculado | number: '1.2-2' }}</span>
+            <strong>Diferencia: {{ resultado.compras_diferencia | number: '1.2-2' }}</strong>
+          </div>
+
+          <div class="comparacion-item" [ngClass]="resultado.pagos_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+            <span class="comparacion-label">Pagos / Acreditaciones</span>
+            <span>Estado de cuenta: {{ resultado.pagos_acreditaciones | number: '1.2-2' }}</span>
+            <span>App: {{ resultado.pagos_calculado | number: '1.2-2' }}</span>
+            <strong>Diferencia: {{ resultado.pagos_diferencia | number: '1.2-2' }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-header">
+        <div>
+          <p class="panel-title">Historial</p>
+          <h3>Estados de cuenta registrados</h3>
+        </div>
+
+        <div class="historial-header-actions">
+          <div *ngIf="!loading && estadosCuenta.length > 0" class="filter-period-row">
+            <label class="filter-period-field">
+              <span>Mes</span>
+              <select #filterMesSelect (change)="onFilterMesChange(filterMesSelect.value)">
+                <option value="" [selected]="selectedFilterMes === null">Todos</option>
+                <option
+                  *ngFor="let mes of meses"
+                  [value]="mes.value"
+                  [selected]="mes.value === selectedFilterMes"
+                >
+                  {{ mes.label }}
+                </option>
+              </select>
+            </label>
+
+            <label class="filter-period-field">
+              <span>Anio</span>
+              <select #filterAnioSelect (change)="onFilterAnioChange(filterAnioSelect.value)">
+                <option value="" [selected]="selectedFilterAnio === null">Todos</option>
+                <option
+                  *ngFor="let anio of aniosConHistorial"
+                  [value]="anio"
+                  [selected]="anio === selectedFilterAnio"
+                >
+                  {{ anio }}
+                </option>
+              </select>
+            </label>
+
+            <button
+              *ngIf="selectedFilterMes !== null || selectedFilterAnio !== null"
+              type="button"
+              class="secondary-button table-button"
+              (click)="clearPeriodoFilter()"
+            >
+              Limpiar periodo
+            </button>
+          </div>
+
+          <button type="button" class="secondary-button" (click)="loadData()">Recargar</button>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && formasPagoConHistorial.length > 0" class="filter-chip-row">
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="selectedFilterFormaPago === null"
+          (click)="setFilterFormaPago(null)"
+        >
+          Todas
+        </button>
+        <button
+          *ngFor="let forma of formasPagoConHistorial"
+          type="button"
+          class="filter-chip"
+          [class.active]="selectedFilterFormaPago === forma.id_metodo_pago"
+          (click)="setFilterFormaPago(forma.id_metodo_pago)"
+        >
+          {{ forma.nombre_forma }}
+        </button>
+      </div>
+
+      <p *ngIf="loading" class="empty-text">Cargando estados de cuenta...</p>
+      <div *ngIf="!loading && filteredEstadosCuenta.length === 0" class="empty-box">
+        No hay registros de <strong>estados de cuenta</strong>.
+      </div>
+
+      <div *ngIf="!loading && filteredEstadosCuenta.length > 0" class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Periodo</th>
+              <th>Forma de pago</th>
+              <th>Saldo de Contado</th>
+              <th>Saldo a Plazos</th>
+              <th>Pago minimo</th>
+              <th>Total deuda</th>
+              <th>Dif. compras</th>
+              <th>Dif. pagos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of paginatedEstadosCuenta">
+              <td>{{ getMesLabel(item.mes) }} {{ item.anio }}</td>
+              <td>{{ item.nombre_forma }}</td>
+              <td>{{ item.saldo_contado | number: '1.2-2' }}</td>
+              <td>{{ item.saldo_a_plazos | number: '1.2-2' }}</td>
+              <td>{{ item.pago_minimo | number: '1.2-2' }}</td>
+              <td>{{ item.total_deuda | number: '1.2-2' }}</td>
+              <td [ngClass]="item.compras_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+                {{ item.compras_diferencia | number: '1.2-2' }}
+              </td>
+              <td [ngClass]="item.pagos_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+                {{ item.pagos_diferencia | number: '1.2-2' }}
+              </td>
+              <td class="actions-cell">
+                <app-maintenance-actions
+                  [deleteDisabled]="deletingId === item.id_estado_cuenta"
+                  (detail)="verEstadoCuentaDetalle(item)"
+                  (edit)="editEstadoCuenta(item)"
+                  (remove)="removeEstadoCuenta(item)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!loading && filteredEstadosCuenta.length > 0" class="pagination">
+        <button
+          type="button"
+          class="secondary-button table-button"
+          [disabled]="currentPage === 1"
+          (click)="goToPreviousPage()"
+        >
+          Anterior
+        </button>
+
+        <div class="pagination-pages">
+          <button
+            *ngFor="let page of pageNumbers"
+            type="button"
+            class="pagination-button"
+            [class.active]="page === currentPage"
+            (click)="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="secondary-button table-button"
+          [disabled]="currentPage === totalPages"
+          (click)="goToNextPage()"
+        >
+          Siguiente
+        </button>
+      </div>
+    </section>
+  </main>
+</div>

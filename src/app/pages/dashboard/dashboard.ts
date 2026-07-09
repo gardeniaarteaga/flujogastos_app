@@ -13,6 +13,7 @@ import {
 import {
   ConfiguracionNotificacionPago,
   NotificacionesService,
+  RecordatorioCuota,
 } from '../../shared/services/notificaciones.service';
 import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
@@ -356,6 +357,7 @@ export class Dashboard implements OnInit {
   loading = false;
   errorMessage = '';
   scheduledNotificationsError = '';
+  recordatoriosCuotasError = '';
   sidebarCollapsed = false;
   transactionsOpen = true;
   resumenOpen = true;
@@ -382,6 +384,7 @@ export class Dashboard implements OnInit {
   ];
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
+  recordatoriosCuotas: RecordatorioCuota[] = [];
   transactions: TransaccionListado[] = [];
   dashboardTransactionsModalOpen = false;
   dashboardTransactionsModalTitle = '';
@@ -403,6 +406,7 @@ export class Dashboard implements OnInit {
       '/transacciones/listado',
       '/resumen/detalle-transacciones',
       '/resumen/notificaciones',
+      '/resumen/estado-cuenta',
     ]);
   }
 
@@ -439,12 +443,13 @@ export class Dashboard implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     this.scheduledNotificationsError = '';
+    this.recordatoriosCuotasError = '';
 
     try {
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
       this.currentUserId = resolvedUserId > 0 ? resolvedUserId : this.currentUserId;
 
-      const [transacciones, programadas] = await Promise.all([
+      const [transacciones, programadas, recordatoriosCuotas] = await Promise.all([
         firstValueFrom(
           this.http
             .get<TransaccionListado[]>(this.apiUrl, {
@@ -457,18 +462,25 @@ export class Dashboard implements OnInit {
             'No se pudieron cargar las notificaciones programadas del usuario actual.';
           return [];
         }),
+        this.notificacionesService.loadRecordatoriosCuotas().catch(() => {
+          this.recordatoriosCuotasError =
+            'No se pudieron cargar los recordatorios de pago de las transacciones.';
+          return [];
+        }),
       ]);
 
       this.transactions = this.filterVisibleTransactions(Array.isArray(transacciones) ? transacciones : []);
       this.availableYears = this.buildAvailableYears(this.transactions);
       this.refreshDashboardSummary();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
+      this.recordatoriosCuotas = recordatoriosCuotas;
     } catch {
       this.transactions = [];
       this.availableYears = this.buildAvailableYears([]);
       this.analytics = this.createEmptyAnalytics();
       this.prepareDashboardTransactionsModalData();
       this.scheduledNotifications = [];
+      this.recordatoriosCuotas = [];
       this.errorMessage =
         'No se pudo construir la reporteria financiera con la informacion disponible.';
     } finally {

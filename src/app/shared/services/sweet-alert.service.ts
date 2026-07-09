@@ -56,7 +56,7 @@ export class SweetAlertService {
       html: `
         <div style="text-align:left;">
           ${subtitleHtml}
-          <div style="display:grid;gap:0.9rem;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));">
+          <div style="display:grid;gap:0.9rem;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));max-height:60vh;overflow-y:auto;padding-right:0.5rem;">
             ${rowsHtml}
           </div>
         </div>

@@ -59,6 +59,14 @@
           >
             Configurar notificaciones
           </a>
+          <a
+            class="submenu-item submenu-item-child"
+            routerLink="/resumen/estado-cuenta"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >
+            Estado de cuenta
+          </a>
         </div>
       </div>
 
@@ -441,6 +449,53 @@
                       (edit)="editConfiguracion(configuracion)"
                       (remove)="removeConfiguracion(configuracion)"
                     />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel table-panel">
+        <div class="panel-header">
+          <h4>Recordatorios de pago activos</h4>
+          <button type="button" class="secondary-button" (click)="loadRecordatorios()">
+            Recargar
+          </button>
+        </div>
+
+        <div *ngIf="loadingRecordatorios" class="empty-box">
+          Cargando recordatorios...
+        </div>
+
+        <div *ngIf="!loadingRecordatorios && recordatoriosErrorMessage" class="empty-box">
+          {{ recordatoriosErrorMessage }}
+        </div>
+
+        <div
+          *ngIf="!loadingRecordatorios && !recordatoriosErrorMessage && recordatorios.length === 0"
+          class="empty-box"
+        >
+          No tienes cuotas pendientes con recordatorio de pago activo.
+        </div>
+
+        <div
+          *ngIf="!loadingRecordatorios && !recordatoriosErrorMessage && recordatorios.length > 0"
+          class="table-wrap notifications-table-wrap"
+        >
+          <table class="notifications-table">
+            <thead>
+              <tr>
+                <th>Transaccion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let recordatorio of recordatorios; trackBy: trackRecordatorio">
+                <td>
+                  <div class="cell-main">
+                    <strong>{{ recordatorio.descripcion || 'Sin descripcion' }}</strong>
+                    <small>Transaccion #{{ recordatorio.id_transaccion }}</small>
                   </div>
                 </td>
               </tr>

@@ -1,5 +1,5 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -16,6 +16,7 @@ import {
   NotificacionesService,
   PeriodicidadCatalogo,
   PrioridadNotificacion,
+  RecordatorioCuota,
 } from '../../shared/services/notificaciones.service';
 import { MaintenanceActionsComponent } from '../../shared/maintenance-actions/maintenance-actions.component';
 import { isAdminUser, loadUserProfile } from '../../shared/user-profile';
@@ -132,6 +133,7 @@ export class ResumenNotificacionesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly alerts = inject(SweetAlertService);
   private readonly notificacionesService = inject(NotificacionesService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly dateFormatter = new Intl.DateTimeFormat('es-SV', {
     day: '2-digit',
     month: 'short',
@@ -156,6 +158,7 @@ export class ResumenNotificacionesPage implements OnInit {
   errorMessage = '';
   loadingPeriodicidades = false;
   loadingConfiguraciones = false;
+  loadingRecordatorios = false;
   periodicidadesDisponibles = false;
   readonly today = new Date();
   readonly todayDateInput = this.toDateInputValue(this.today);
@@ -163,6 +166,8 @@ export class ResumenNotificacionesPage implements OnInit {
   readonly userProfile = loadUserProfile();
   configuraciones: ConfiguracionNotificacionPago[] = [];
   periodicidadOptions: PeriodicidadCatalogo[] = [];
+  recordatorios: RecordatorioCuota[] = [];
+  recordatoriosErrorMessage = '';
   readonly prioridadOptions: PrioridadOption[] = [
     {
       value: 'alta',
@@ -237,7 +242,11 @@ export class ResumenNotificacionesPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.loadPeriodicidades(), this.loadConfiguraciones()]);
+    await Promise.all([
+      this.loadPeriodicidades(),
+      this.loadConfiguraciones(),
+      this.loadRecordatorios(),
+    ]);
     this.mergePeriodicidadesFromConfiguraciones();
     this.applyPeriodicidadRules();
 
@@ -330,7 +339,28 @@ export class ResumenNotificacionesPage implements OnInit {
         'No se pudieron cargar las notificaciones programadas del usuario actual.';
     } finally {
       this.loadingConfiguraciones = false;
+      this.cdr.markForCheck();
     }
+  }
+
+  async loadRecordatorios(): Promise<void> {
+    this.loadingRecordatorios = true;
+    this.recordatoriosErrorMessage = '';
+
+    try {
+      this.recordatorios = await this.notificacionesService.loadRecordatoriosCuotas();
+    } catch (error) {
+      console.error('[ResumenNotificaciones] Error al cargar recordatorios de cuotas:', error);
+      this.recordatorios = [];
+      this.recordatoriosErrorMessage = 'No se pudieron cargar los recordatorios de pago.';
+    } finally {
+      this.loadingRecordatorios = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  trackRecordatorio(index: number, recordatorio: RecordatorioCuota): number {
+    return recordatorio.id_transaccion;
   }
 
   async loadPeriodicidades(): Promise<void> {
@@ -356,6 +386,7 @@ export class ResumenNotificacionesPage implements OnInit {
         'No se pudo cargar la tabla de periodicidad desde el backend. El formulario queda bloqueado hasta que exista ese endpoint.';
     } finally {
       this.loadingPeriodicidades = false;
+      this.cdr.markForCheck();
     }
   }
 

@@ -81,6 +81,7 @@ interface CreateTransaccionPayload {
   comentario?: string;
   pago_variable?: boolean;
   cuotas_sin_intereses: boolean;
+  recordatorio_pago?: boolean;
   pagocompartido: boolean;
   titular_cuota_unica_pagada?: boolean;
   cantidad_cuotas_titular: number;
@@ -526,6 +527,7 @@ export class IngresoTransaccionesPage implements OnInit {
     usar_participantes: [false],
     pago_variable: [false],
     cuotas_sin_intereses: [false],
+    recordatorio_pago: [false],
     titular_cuota_unica_pagada: [false],
     participantes_detalle: this.fb.array<ParticipanteDetalleForm>([]),
     id_estado: [null as number | null, [Validators.required]],
@@ -1471,6 +1473,7 @@ export class IngresoTransaccionesPage implements OnInit {
       pago_variable: this.isVariablePaymentMode,
       cuotas_sin_intereses:
         this.showCuotasSinInteresesOption && Boolean(formValue.cuotas_sin_intereses),
+      recordatorio_pago: Boolean(formValue.recordatorio_pago),
       pagocompartido: Boolean(usarParticipantes && hasAdditionalParticipants),
       titular_cuota_unica_pagada: titularCuotaUnicaPagada,
       cantidad_cuotas_titular: cantidadCuotasTitularPayload,
@@ -2152,6 +2155,7 @@ export class IngresoTransaccionesPage implements OnInit {
       usar_participantes: false,
       pago_variable: false,
       cuotas_sin_intereses: false,
+      recordatorio_pago: false,
       titular_cuota_unica_pagada: false,
       participantes_detalle: [],
       id_estado: null,
