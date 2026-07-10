@@ -294,9 +294,9 @@
             class="quick-link-chip"
             [ngClass]="'accent-' + item.accent"
             [routerLink]="item.route"
+            [title]="item.helper"
           >
             <span class="quick-link-label">{{ item.label }}</span>
-            <small>{{ item.helper }}</small>
           </a>
         </nav>
       </section>

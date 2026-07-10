@@ -300,20 +300,6 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.isIncomeMode || Boolean(this.transaccionForm.controls.forma_pago.value);
   }
 
-  get shouldShowFechaLimitePago(): boolean {
-    const titularGroup = this.titularDetalleGroup;
-    return (
-      this.shouldShowEstadoPago &&
-      Number(titularGroup?.controls.cantidad_cuotas.value ?? 1) === 1
-    );
-  }
-
-  get fechaLimitePagoDisplay(): string {
-    const titularGroup = this.titularDetalleGroup;
-    const primeraCuota = titularGroup ? this.getCuotasArray(titularGroup).at(0) : null;
-    return this.getFechaProgramadaDisplay(primeraCuota?.controls.fecha_programada.value ?? null);
-  }
-
   get estadosIngresoDisponibles(): CatalogoEstadoTransaccion[] {
     return this.estadosTransaccion.filter((item) => {
       const nombreEstado = item.nombre_estado.trim().toUpperCase();
