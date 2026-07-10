@@ -423,6 +423,7 @@ export class ListadoTransaccionesPage implements OnInit {
     number[]
   >();
   private autoOpenPaymentHandledKey: string | null = null;
+  private cameFromDashboardReminder = false;
   private readonly quickPayMetodoGroupExpansionState: Record<string, boolean> = {};
   readonly listadoPageSize = 10;
   readonly cuotasPageSize = 12;
@@ -2777,6 +2778,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.applyingPaymentDetailId = null;
     this.applyingPaymentGroupId = null;
     this.montoAplicarDrafts = {};
+    this.cameFromDashboardReminder = false;
     this.refreshPagosDetalleGroups();
   }
 
@@ -5906,8 +5908,13 @@ export class ListadoTransaccionesPage implements OnInit {
       await this.loadTransacciones();
 
       if (this.isDetalleViewMode) {
+        const shouldReturnToDashboard = this.cameFromDashboardReminder;
         this.closePaymentModal();
         this.clearSelection(false);
+
+        if (shouldReturnToDashboard) {
+          await this.router.navigate(['/dashboard']);
+        }
       }
     } catch (error) {
       this.errorMessage = this.getErrorMessage(error, fallbackErrorMessage);
@@ -6015,7 +6022,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private normalizeDecimalValue(value: number): number {
-    return this.centsToAmount(Math.trunc(Math.max(0, value) * 100));
+    return this.centsToAmount(Math.round(Math.max(0, value) * 100));
   }
 
   private roundMoneyValue(value: number): number {
@@ -9959,6 +9966,7 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.autoOpenPaymentHandledKey = requestKey;
+    this.cameFromDashboardReminder = true;
     const detallesPropiosEnPeriodo = this.getParticipantesDetalleForPayment(transaccion).filter(
       (detalle) =>
         this.isDetalleDelUsuarioLogueado(detalle, transaccion.es_propietario) &&
