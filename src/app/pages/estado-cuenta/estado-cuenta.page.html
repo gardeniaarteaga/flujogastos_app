@@ -142,7 +142,7 @@
             </div>
 
             <div class="field">
-              <label for="anio">Anio <span class="required-mark">*</span></label>
+              <label for="anio">Año <span class="required-mark">*</span></label>
               <input id="anio" type="number" formControlName="anio" min="2000" />
             </div>
           </div>
@@ -312,7 +312,7 @@
             </label>
 
             <label class="filter-period-field">
-              <span>Anio</span>
+              <span>Año</span>
               <select #filterAnioSelect (change)="onFilterAnioChange(filterAnioSelect.value)">
                 <option value="" [selected]="selectedFilterAnio === null">Todos</option>
                 <option

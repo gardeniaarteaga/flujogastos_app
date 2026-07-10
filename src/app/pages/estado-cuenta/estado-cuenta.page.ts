@@ -221,7 +221,7 @@ export class EstadoCuentaPage implements OnInit {
     const mes = this.estadoCuentaForm.controls.mes.value;
 
     if (!idMetodoPago || !anio || !mes) {
-      return 'Selecciona forma de pago, mes y anio para ver el periodo.';
+      return 'Selecciona forma de pago, mes y año para ver el periodo.';
     }
 
     const forma = this.formasPago.find((item) => item.id_forma === idMetodoPago);
