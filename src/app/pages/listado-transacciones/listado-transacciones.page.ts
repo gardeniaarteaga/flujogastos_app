@@ -3504,6 +3504,22 @@ export class ListadoTransaccionesPage implements OnInit {
     this.onFormaPagoChange();
     this.onCategoriaChange();
     this.refreshEstadoTransaccionForEdit();
+
+    const diagTitular = this.titularDetalleGroup;
+    console.warn('[Editor diagnostico] estado tras cargar', {
+      transaccionMonto: transaccion.monto,
+      formMonto: this.transaccionForm.controls.monto.value,
+      titularMontoControl: diagTitular?.controls.monto.value,
+      titularModoCuotas: diagTitular?.controls.modo_cuotas.value,
+      titularCantidadCuotas: diagTitular?.controls.cantidad_cuotas.value,
+      getGroupMontoTarget: diagTitular ? this.getGroupMontoTarget(diagTitular) : null,
+      getCuotasTotal: diagTitular ? this.getCuotasTotal(diagTitular) : null,
+      getLockedGroupMontoTarget: diagTitular ? this.getLockedGroupMontoTarget(diagTitular) : null,
+      isEditingSharedExpenseMode: this.isEditingSharedExpenseMode,
+      isEditingSharedExpenseTotalEditable: this.isEditingSharedExpenseTotalEditable,
+      showZeroBalancePeriodGrouping: this.showZeroBalancePeriodGrouping,
+      hasAppliedPagosInEditor: this.hasAppliedPagosInEditor,
+    });
   }
 
   private async openEditModal(transaccion: TransaccionListado): Promise<void> {
@@ -3999,6 +4015,15 @@ export class ListadoTransaccionesPage implements OnInit {
         hasAdditionalParticipants,
       )
     ) {
+      console.warn('[Monto inconsistente] diagnostico', {
+        montoTotal,
+        montoTitular,
+        montoParticipantes,
+        hasAdditionalParticipants,
+        montoTotalCents: this.toCents(montoTotal),
+        montoTitularCents: this.toCents(montoTitular),
+        sumaCents: this.toCents(montoTitular + montoParticipantes),
+      });
       await this.alerts.warning(
         'Monto inconsistente',
         'La suma del titular y los participantes debe cubrir exactamente el monto total de la transaccion.',
@@ -9283,10 +9308,17 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.participantesDetalleArray.controls.forEach((group) => {
+      const wasFixedCuotasMode = this.isFixedCuotasMode(group);
+
       group.controls.dividir_monto.setValue(true, { emitEvent: false });
       group.controls.dividir_monto.updateValueAndValidity({ emitEvent: false });
       group.controls.modo_cuotas.setValue('divididas', { emitEvent: false });
       group.controls.modo_cuotas.updateValueAndValidity({ emitEvent: false });
+
+      if (wasFixedCuotasMode) {
+        group.controls.monto.setValue(this.getCuotasTotal(group), { emitEvent: false });
+        group.controls.monto.updateValueAndValidity({ emitEvent: false });
+      }
     });
   }
 
