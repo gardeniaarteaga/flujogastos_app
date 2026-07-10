@@ -3979,7 +3979,10 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const montoTotal = this.getResolvedSubmitMontoTotal(Number(formValue.monto ?? 0));
+    const montoTotal =
+      this.hasAppliedPagosInEditor && this.selectedTransaccion
+        ? Number(this.selectedTransaccion.monto)
+        : this.getResolvedSubmitMontoTotal(Number(formValue.monto ?? 0));
     const montoTitular = this.titularDetalleGroup
       ? this.getGroupMontoTarget(this.titularDetalleGroup)
       : 0;
