@@ -422,7 +422,7 @@
           <ng-template #filtrosListadoTransacciones>
             <div class="filter-toggle-group filter-toggle-group-compact">
               <label class="checkbox-row checkbox-row-compact" for="todos">
-                <input id="todos" type="checkbox" formControlName="todos" (change)="onTodosToggle($event)" />
+                <input id="todos" type="checkbox" formControlName="todos" (click)="onTodosToggle($event)" />
                 <span>Todos</span>
               </label>
 
@@ -431,20 +431,42 @@
                 <span>Hoy</span>
               </label>
 
-              <label class="checkbox-row checkbox-row-compact" for="mesActual">
-                <input id="mesActual" type="checkbox" formControlName="mesActual" (change)="onMesActualToggle($event)" />
-                <span>Mes actual</span>
+              <label class="checkbox-row checkbox-row-compact" for="vencidosListado">
+                <input id="vencidosListado" type="checkbox" formControlName="vencidos" (change)="onVencidosToggle($event)" />
+                <span>Vencido</span>
               </label>
 
-              <label class="checkbox-row" for="pendientePago">
+              <label class="checkbox-row checkbox-row-compact" for="pendientePago">
                 <input id="pendientePago" type="checkbox" formControlName="pendientePago" />
                 <span>Pendiente</span>
               </label>
 
-              <label class="checkbox-row" for="enviadas">
+              <label class="checkbox-row checkbox-row-compact" for="enviadas">
                 <input id="enviadas" type="checkbox" formControlName="enviadas" />
                 <span>Recibidas</span>
               </label>
+
+              <div class="mes-filter-row">
+                <label for="mesFiltro" class="mes-filter-label">Mes</label>
+                <select
+                  id="mesFiltro"
+                  class="mes-filter-select"
+                  formControlName="mesFiltro"
+                >
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let mes of mesesNombreFiltroOptions" [ngValue]="mes.value">{{ mes.label }}</option>
+                </select>
+
+                <label for="anioFiltro" class="mes-filter-label">Ano</label>
+                <select
+                  id="anioFiltro"
+                  class="mes-filter-select"
+                  formControlName="anioFiltro"
+                >
+                  <option [ngValue]="null">Todos</option>
+                  <option *ngFor="let anio of aniosFiltroOptions" [ngValue]="anio">{{ anio }}</option>
+                </select>
+              </div>
 
               <button
                 type="button"
@@ -632,15 +654,25 @@
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Fecha</th>
+                <th>
+                  <button
+                    type="button"
+                    class="qp-sort-header is-active"
+                    aria-label="Ordenar por fecha"
+                    (click)="toggleListadoSort()"
+                  >
+                    <span>Fecha</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator() === 'desc' ? '↓' : '↑' }}</span>
+                  </button>
+                </th>
                 <th>Tipo</th>
                 <th>Descripcion</th>
                 <th>Monto</th>
                 <th>Intereses</th>
                 <th>Saldo pendiente</th>
-                <th>Metodo</th>
-                <th>Pago</th>
-                <th style="text-align: center;">Participantes</th>
+                <th class="col-metodo">Metodo</th>
+                <th class="col-pago">Pago</th>
+                <th style="text-align: center;" title="Participantes">Partic.</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -655,49 +687,9 @@
                 (keydown.space)="$event.preventDefault(); openDetailModal(transaccion)"
               >
                 <td>{{ transaccion.id_transaccion }}</td>
-                <td>{{ transaccion.fecha | date: 'dd/MM/yyyy' }}</td>
-                <td>
-                  <div style="display: grid; gap: 0.35rem;">
-                    <span
-                      style="display: inline-flex; align-items: center; gap: 0.55rem; width: fit-content; font-weight: 900; color: var(--color-heading);"
-                    >
-                      <span
-                        style="display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; font-size: 1.15rem; font-weight: 900; line-height: 1; border: 1px solid currentColor; box-shadow: 0 0.2rem 0.45rem rgba(15, 23, 42, 0.12);"
-                        [style.background]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#d9f7e5' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#ffe1e5' : '#f3f4f6'"
-                        [style.color]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#0f8a4b' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#d11a2a' : 'currentColor'"
-                        aria-hidden="true"
-                      >
-                        {{ getTipoTransaccionSign(transaccion) }}
-                      </span>
-                      <span
-                        [style.color]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#0f8a4b' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#d11a2a' : 'var(--color-heading)'"
-                      >
-                        {{ transaccion.nombre_tipo_transaccion || '-' }}
-                      </span>
-                    </span>
-                    <span
-                      *ngIf="!transaccion.es_propietario"
-                      style="display: inline-flex; width: fit-content; align-items: center; gap: 0.4rem; padding: 0.2rem 0.58rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap;"
-                      [style.background]="transaccion.es_propietario ? '#e9f9ef' : '#f1e8ff'"
-                      [style.color]="transaccion.es_propietario ? '#18794e' : '#7a3db8'"
-                      [attr.title]="transaccion.es_propietario ? 'Gasto ingresado por ti' : 'Gasto recibido de otro miembro'"
-                      [attr.aria-label]="transaccion.es_propietario ? 'Gasto propio' : 'Gasto recibido de otro miembro'"
-                    >
-                      <span
-                        style="width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; flex: 0 0 auto;"
-                        aria-hidden="true"
-                      ></span>
-                      {{ transaccion.es_propietario ? 'Propio' : 'Recibido' }}
-                    </span>
-                  </div>
-                </td>
                 <td>
                   <div style="display:grid;gap:.3rem;">
-                    <span
-                      (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
-                      (mousemove)="moveNotaTooltip($event)"
-                      (mouseleave)="hideNotaTooltip()"
-                    >{{ getTransaccionTitle(transaccion) }}</span>
+                    <span>{{ transaccion.fecha | date: 'dd/MM/yyyy' }}</span>
                     <span
                       *ngIf="isTransaccionVencida(transaccion)"
                       style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
@@ -706,11 +698,45 @@
                     </span>
                   </div>
                 </td>
+                <td>
+                  <span
+                    style="display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; font-size: 1.15rem; font-weight: 900; line-height: 1; border: 1px solid currentColor; box-shadow: 0 0.2rem 0.45rem rgba(15, 23, 42, 0.12);"
+                    [style.background]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#d9f7e5' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#ffe1e5' : '#f3f4f6'"
+                    [style.color]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#0f8a4b' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#d11a2a' : 'currentColor'"
+                    [attr.title]="transaccion.nombre_tipo_transaccion || '-'"
+                    [attr.aria-label]="transaccion.nombre_tipo_transaccion || '-'"
+                  >
+                    {{ getTipoTransaccionSign(transaccion) }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display:grid;gap:.3rem;">
+                    <span
+                      (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
+                      (mousemove)="moveNotaTooltip($event)"
+                      (mouseleave)="hideNotaTooltip()"
+                    >{{ getTransaccionTitle(transaccion) }}</span>
+                    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                      <span
+                        *ngIf="!transaccion.es_propietario"
+                        style="display: inline-flex; width: fit-content; align-items: center; gap: 0.4rem; padding: 0.2rem 0.58rem; border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap; background:#f1e8ff; color:#7a3db8;"
+                        [attr.title]="'Gasto recibido de otro miembro'"
+                        [attr.aria-label]="'Gasto recibido de otro miembro'"
+                      >
+                        <span
+                          style="width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; flex: 0 0 auto;"
+                          aria-hidden="true"
+                        ></span>
+                        Recibido
+                      </span>
+                    </div>
+                  </div>
+                </td>
                 <td>${{ transaccion.monto | number: '1.2-2' }}</td>
                 <td>${{ transaccion.intereses | number: '1.2-2' }}</td>
                 <td>${{ transaccion.saldo_pendiente | number: '1.2-2' }}</td>
-                <td>{{ transaccion.nombre_forma_pago || '-' }}</td>
-                <td>
+                <td class="col-metodo">{{ transaccion.nombre_forma_pago || '-' }}</td>
+                <td class="col-pago">
                   <span
                     class="status-pill"
                     [ngClass]="getEstadoClass(transaccion.nombre_estado || 'Sin estado')"
@@ -718,7 +744,7 @@
                     {{ getEstadoDisplayLabel(transaccion.nombre_estado) }}
                   </span>
                 </td>
-                <td style="text-align: center; vertical-align: middle;">
+                <td style="text-align: center; vertical-align: middle;" [attr.title]="transaccion.pagocompartido ? 'Compartido' : 'Individual'">
                   <span
                     class="payment-icon"
                     style="display: flex; justify-content: center; width: 100%; min-height: 1.2rem;"
@@ -907,8 +933,34 @@
               <tr>
                 <th>Pagar</th>
                 <th>ID</th>
-                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>Transaccion</th>
-                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>Programada</th>
+                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getQuickPaySortIndicator('fecha_transaccion')"
+                    [attr.aria-label]="'Ordenar por fecha de transaccion'"
+                    (click)="toggleQuickPaySort('fecha_transaccion')"
+                  >
+                    <span>Fecha<br>Transaccion</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">
+                      {{ getQuickPaySortIndicator('fecha_transaccion') === 'desc' ? '↓' : getQuickPaySortIndicator('fecha_transaccion') === 'asc' ? '↑' : '↕' }}
+                    </span>
+                  </button>
+                </th>
+                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getQuickPaySortIndicator('fecha_programada')"
+                    [attr.aria-label]="'Ordenar por fecha programada'"
+                    (click)="toggleQuickPaySort('fecha_programada')"
+                  >
+                    <span>Fecha<br>Programada</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">
+                      {{ getQuickPaySortIndicator('fecha_programada') === 'desc' ? '↓' : getQuickPaySortIndicator('fecha_programada') === 'asc' ? '↑' : '↕' }}
+                    </span>
+                  </button>
+                </th>
                 <th *ngIf="isOnlyPagadoFilter" class="qp-col-fecha-sm">Fecha<br>de Pago</th>
                 <th class="qp-col-transaccion">Transaccion</th>
                 <th>Cuota</th>
@@ -2344,7 +2396,7 @@
             <button
               type="button"
               class="secondary-button compact-button"
-              (click)="closePaymentModal()"
+              (click)="dismissPaymentModal()"
             >
               Cerrar
             </button>

@@ -280,6 +280,8 @@ interface QuickPayMetodoGroup {
 }
 
 type FiltroDateControlName = 'fechaDesde' | 'fechaHasta';
+type QuickPaySortColumn = 'fecha_transaccion' | 'fecha_programada';
+type QuickPaySortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-listado-transacciones-page',
@@ -323,6 +325,24 @@ export class ListadoTransaccionesPage implements OnInit {
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly currentMonthStartValue = this.formatDateInput(this.getStartOfMonth(this.today));
   readonly currentMonthEndValue = this.formatDateInput(this.getEndOfMonth(this.today));
+  readonly mesesNombreFiltroOptions: Array<{ value: number; label: string }> = [
+    { value: 1, label: 'Enero' },
+    { value: 2, label: 'Febrero' },
+    { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Mayo' },
+    { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' },
+    { value: 11, label: 'Noviembre' },
+    { value: 12, label: 'Diciembre' },
+  ];
+  readonly aniosFiltroOptions: number[] = Array.from(
+    { length: 8 },
+    (_, index) => this.today.getFullYear() - index,
+  );
   get isAdminSession(): boolean {
     return isAdminUser();
   }
@@ -348,6 +368,8 @@ export class ListadoTransaccionesPage implements OnInit {
     todos: [this.viewMode !== 'detalle'],
     soloHoy: [false],
     mesActual: [false],
+    mesFiltro: [null as number | null],
+    anioFiltro: [null as number | null],
     prioritarios: [this.getInitialQuickPayPriorityFilterValue()],
     vencidos: [this.viewMode === 'detalle'],
     diasPrioridad: [
@@ -454,6 +476,10 @@ export class ListadoTransaccionesPage implements OnInit {
   private quickPayDetalleMetodoGroupsCache: QuickPayMetodoGroup[] = [];
   quickPayBulkAccentPalette: QuickPayAccentPalette =
     this.getQuickPayMethodAccentPalette(null, '');
+  quickPaySortColumn: QuickPaySortColumn | null =
+    this.viewMode === 'detalle' ? 'fecha_transaccion' : null;
+  quickPaySortDirection: QuickPaySortDirection = 'asc';
+  listadoSortDirection: 'asc' | 'desc' = 'desc';
 
   readonly transaccionForm = this.fb.group({
     fecha_transaccion: ['', [Validators.required, this.dateDisplayValidator()]],
@@ -579,14 +605,14 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    void this.loadPageForToday();
+    void this.reloadAll();
   }
 
   @HostListener('document:keydown.escape', ['$event'])
   handleEscapeKey(event: Event): void {
     if (this.paymentModalOpen) {
       event.preventDefault();
-      this.closePaymentModal();
+      this.dismissPaymentModal();
       return;
     }
 
@@ -657,6 +683,8 @@ export class ListadoTransaccionesPage implements OnInit {
     const mostrarTodas = !!filtros.todos;
     const prioridadActiva = !!filtros.prioritarios;
     const vencidosActivos = !!filtros.vencidos;
+    const mesFiltro = filtros.mesFiltro;
+    const anioFiltro = filtros.anioFiltro;
 
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
@@ -670,6 +698,19 @@ export class ListadoTransaccionesPage implements OnInit {
         !estadoCoincideFiltro
       ) {
         return false;
+      }
+
+      if (mesFiltro !== null || anioFiltro !== null) {
+        const anioTransaccion = Number(fechaTransaccion.slice(0, 4));
+        const mesTransaccion = Number(fechaTransaccion.slice(5, 7));
+
+        if (mesFiltro !== null && mesTransaccion !== mesFiltro) {
+          return false;
+        }
+
+        if (anioFiltro !== null && anioTransaccion !== anioFiltro) {
+          return false;
+        }
       }
 
       if (filtros.soloHoy && fechaTransaccion !== this.todayFilterValue) {
@@ -748,7 +789,31 @@ export class ListadoTransaccionesPage implements OnInit {
       }
 
       return true;
-    });
+    }).sort((left, right) => this.compareTransaccionesByFecha(left, right));
+  }
+
+  private compareTransaccionesByFecha(
+    left: TransaccionListado,
+    right: TransaccionListado,
+  ): number {
+    const direction = this.listadoSortDirection === 'desc' ? -1 : 1;
+    const fechaLeft = this.normalizeDateOnly(left.fecha);
+    const fechaRight = this.normalizeDateOnly(right.fecha);
+
+    if (fechaLeft !== fechaRight) {
+      return fechaLeft.localeCompare(fechaRight) * direction;
+    }
+
+    return (left.id_transaccion - right.id_transaccion) * direction;
+  }
+
+  toggleListadoSort(): void {
+    this.listadoSortDirection = this.listadoSortDirection === 'desc' ? 'asc' : 'desc';
+    this.listadoCurrentPage = 1;
+  }
+
+  getListadoSortIndicator(): 'asc' | 'desc' {
+    return this.listadoSortDirection;
   }
 
   get paginatedFilteredTransacciones(): TransaccionListado[] {
@@ -847,7 +912,14 @@ export class ListadoTransaccionesPage implements OnInit {
 
         return true;
       })
-      .sort((left, right) => this.compareDetalleRowsByFechaTransaccion(left, right));
+      .sort((left, right) => {
+        if (this.quickPaySortColumn) {
+          const direction = this.quickPaySortDirection === 'asc' ? 1 : -1;
+          return this.compareQuickPayRowsByDate(left, right, this.quickPaySortColumn) * direction;
+        }
+
+        return this.compareDetalleRowsByFechaTransaccion(left, right);
+      });
   }
 
   isDetalleVencido(detalle: ParticipanteDetalleListado): boolean {
@@ -1024,6 +1096,48 @@ export class ListadoTransaccionesPage implements OnInit {
     return Array.from(groups.values()).sort((left, right) =>
       this.compareQuickPayMetodoGroups(left, right),
     );
+  }
+
+  private compareQuickPayRowsByDate(
+    left: DetalleTransaccionListadoRow,
+    right: DetalleTransaccionListadoRow,
+    column: QuickPaySortColumn,
+  ): number {
+    const leftDate =
+      column === 'fecha_transaccion'
+        ? this.parseIsoDateOnly(left.transaccion.fecha)
+        : this.parseIsoDateOnly(left.detalle.fecha_programada);
+    const rightDate =
+      column === 'fecha_transaccion'
+        ? this.parseIsoDateOnly(right.transaccion.fecha)
+        : this.parseIsoDateOnly(right.detalle.fecha_programada);
+
+    if (leftDate && rightDate && leftDate.getTime() !== rightDate.getTime()) {
+      return leftDate.getTime() - rightDate.getTime();
+    }
+
+    if (leftDate && !rightDate) return -1;
+    if (!leftDate && rightDate) return 1;
+
+    return left.detalle.id - right.detalle.id;
+  }
+
+  toggleQuickPaySort(column: QuickPaySortColumn): void {
+    if (this.quickPaySortColumn === column) {
+      this.quickPaySortDirection = this.quickPaySortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.quickPaySortColumn = column;
+      this.quickPaySortDirection = 'asc';
+    }
+
+    this.filteredDetalleTransaccionesCache = this.computeFilteredDetalleTransacciones();
+    this.quickPayDetalleMetodoGroupsCache = this.buildQuickPayDetalleMetodoGroups(
+      this.filteredDetalleTransaccionesCache,
+    );
+  }
+
+  getQuickPaySortIndicator(column: QuickPaySortColumn): QuickPaySortDirection | null {
+    return this.quickPaySortColumn === column ? this.quickPaySortDirection : null;
   }
 
   isQuickPayMetodoGroupExpanded(group: QuickPayMetodoGroup, index: number): boolean {
@@ -2782,6 +2896,15 @@ export class ListadoTransaccionesPage implements OnInit {
     this.refreshPagosDetalleGroups();
   }
 
+  dismissPaymentModal(): void {
+    const shouldReturnToDashboard = this.cameFromDashboardReminder;
+    this.closePaymentModal();
+
+    if (shouldReturnToDashboard) {
+      void this.router.navigate(['/dashboard']);
+    }
+  }
+
   onPaymentBackdropClick(event: MouseEvent): void {
     if (event.target !== event.currentTarget) {
       return;
@@ -2791,7 +2914,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    this.closePaymentModal();
+    this.dismissPaymentModal();
   }
 
   closeEditModal(): void {
@@ -9426,11 +9549,13 @@ export class ListadoTransaccionesPage implements OnInit {
     const useTodayDefaults = false;
     const useAllListadoDefaults = this.viewMode !== 'detalle';
     const usePriorityDefaults = false;
-    const useOverdueDefaults = false;
+    const useOverdueDefaults = this.viewMode === 'detalle';
     this.filtrosForm.reset({
       todos: useAllListadoDefaults,
       soloHoy: useTodayDefaults,
       mesActual: false,
+      mesFiltro: null,
+      anioFiltro: null,
       prioritarios: usePriorityDefaults,
       vencidos: useOverdueDefaults,
       diasPrioridad: this.viewMode === 'detalle'
@@ -9455,6 +9580,9 @@ export class ListadoTransaccionesPage implements OnInit {
     this.listadoCurrentPage = 1;
     this.showAdvancedFilters = false;
     this.sharedParticipantFilterAutoReset = false;
+    this.quickPaySortColumn = this.viewMode === 'detalle' ? 'fecha_transaccion' : null;
+    this.quickPaySortDirection = 'asc';
+    this.listadoSortDirection = 'desc';
   }
 
   private getInitialQuickPayPriorityFilterValue(): boolean {
@@ -9656,6 +9784,8 @@ export class ListadoTransaccionesPage implements OnInit {
         todos: false,
         soloHoy: true,
         mesActual: false,
+        mesFiltro: null,
+        anioFiltro: null,
         prioritarios: false,
         vencidos: false,
         fechaDesde: this.formatDateDisplayFromApi(this.todayFilterValue),
@@ -9671,6 +9801,8 @@ export class ListadoTransaccionesPage implements OnInit {
         todos: false,
         soloHoy: false,
         mesActual: true,
+        mesFiltro: null,
+        anioFiltro: null,
         prioritarios: false,
         vencidos: false,
         fechaDesde: this.formatDateDisplayFromApi(this.currentMonthStartValue),
@@ -9723,6 +9855,8 @@ export class ListadoTransaccionesPage implements OnInit {
         todos: true,
         soloHoy: false,
         mesActual: false,
+        mesFiltro: null,
+        anioFiltro: null,
         prioritarios: false,
         vencidos: false,
         pendientePago: false,
@@ -9760,6 +9894,8 @@ export class ListadoTransaccionesPage implements OnInit {
       !filtros.enviadas &&
       !filtros.compartidos &&
       !filtros.pendienteRegistro &&
+      filtros.mesFiltro === null &&
+      filtros.anioFiltro === null &&
       !this.normalizeDateInputValue(filtros.fechaDesde ?? '') &&
       !this.normalizeDateInputValue(filtros.fechaHasta ?? '') &&
       !this.normalizeText(filtros.estado ?? '') &&
@@ -9897,6 +10033,7 @@ export class ListadoTransaccionesPage implements OnInit {
         {
           soloHoy: false,
           mesActual: false,
+          ...(this.isDetalleViewMode ? {} : { mesFiltro: null, anioFiltro: null }),
           fechaDesde: '',
           fechaHasta: '',
         },

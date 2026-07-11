@@ -133,6 +133,60 @@
 .filter-toggle-group { display:flex; gap:.75rem; flex-wrap:wrap; }
 .filter-toggle-group-compact { align-items:center; gap:.6rem; }
 
+.mes-filter-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: .2rem;
+}
+
+.mes-filter-label {
+  font-size: .82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #2457b8;
+}
+
+.mes-filter-select {
+  min-height: 2.7rem;
+  padding: .5rem 2.2rem .5rem .9rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1d3a66;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  border: 1.5px solid #8fb0ec;
+  border-radius: .75rem;
+  box-shadow: 0 .25rem .6rem rgba(37, 99, 235, .12);
+  cursor: pointer;
+  min-width: 200px;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.mes-filter-select:hover {
+  border-color: #3b6fe8;
+  transform: translateY(-1px);
+  box-shadow: 0 .4rem .9rem rgba(37, 99, 235, .18);
+}
+
+.mes-filter-select:focus {
+  outline: none;
+  border-color: #3b6fe8;
+  box-shadow: 0 0 0 3px rgba(59, 111, 232, .18), 0 .25rem .6rem rgba(37, 99, 235, .12);
+}
+
+@media (max-width: 640px) {
+  .mes-filter-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .35rem;
+  }
+
+  .mes-filter-select {
+    width: 100%;
+  }
+}
+
 .icon-actions { display:inline-flex; align-items:center; gap:.35rem; position:relative; z-index:1; }
 .icon-action-button { width:2.2rem; height:2.2rem; display:inline-flex; align-items:center; justify-content:center; padding:0; border:1px solid #d6dfec; border-radius:999px; background:#fff; color:#48617f; cursor:pointer; }
 .icon-action-button svg { width:1.35rem; height:1.35rem; pointer-events:none; }
@@ -322,6 +376,14 @@
 .table-wrap {
   max-height: 65vh;
   overflow: auto;
+}
+
+.col-metodo {
+  width: 9rem;
+}
+
+.col-pago {
+  width: 6.3rem;
 }
 
 .quick-pay-detail-table thead th {
@@ -801,6 +863,40 @@
   word-break: break-word;
 }
 
+.qp-sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: #5b6b82;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qp-sort-header:hover,
+.qp-sort-header:focus-visible,
+.qp-sort-header.is-active {
+  color: #2457b8;
+}
+
+.qp-sort-arrow {
+  font-size: .8rem;
+  line-height: 1;
+  color: #97a4b7;
+}
+
+.qp-sort-header.is-active .qp-sort-arrow {
+  color: #2457b8;
+  font-weight: 900;
+}
+
 .quick-pay-date-field .date-entry input:not([type="date"]) {
   min-height: 1.85rem;
   padding: 0.25rem 0.5rem;
@@ -814,9 +910,7 @@
 }
 
 #busquedaDescripcionDetalle {
-  min-height: 3.64rem;
-  padding-top: 0.85rem;
-  padding-bottom: 0.85rem;
+  min-height: 2.6rem;
 }
 
 @media (max-width: 640px) {

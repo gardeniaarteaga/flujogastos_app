@@ -136,7 +136,10 @@
             7 dias
           </button>
           <button type="button" class="filter-preset-button" [class.is-active]="isCurrentMonthRange()" (click)="setCurrentMonthFilters()">
-            Mes
+            Mes Act.
+          </button>
+          <button type="button" class="filter-preset-button" [class.is-active]="isLastMonthRange()" (click)="setLastMonthFilters()">
+            Mes Ant.
           </button>
         </div>
       </div>

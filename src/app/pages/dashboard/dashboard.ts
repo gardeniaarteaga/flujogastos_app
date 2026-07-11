@@ -406,6 +406,7 @@ export class Dashboard implements OnInit {
       '/transacciones/listado',
       '/resumen/detalle-transacciones',
       '/resumen/notificaciones',
+      '/reportes/pagos-realizados',
       '/resumen/estado-cuenta',
     ]);
   }
@@ -427,7 +428,6 @@ export class Dashboard implements OnInit {
     return this.isCurrentRouteIn([
       '/reportes/analisis-financiero',
       '/reportes/gastos-por-categoria',
-      '/reportes/pagos-realizados',
     ]);
   }
 

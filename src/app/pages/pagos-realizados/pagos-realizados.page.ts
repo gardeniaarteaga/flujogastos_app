@@ -159,14 +159,16 @@ export class PagosRealizadosPage implements OnInit {
   readonly todayFilterValue = this.formatDateInput(this.today);
   readonly currentMonthStart = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
   readonly currentMonthEnd = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth() + 1, 0));
+  readonly lastMonthStart = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth() - 1, 1));
+  readonly lastMonthEnd = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth(), 0));
   readonly pageSize = 25;
   readonly filtrosForm = this.fb.group({
     fechaDesde: [this.currentMonthStart],
     fechaHasta: [this.currentMonthEnd],
     metodoPagoId: [''],
     participanteKey: [''],
-    incluirPagados: [true],
-    incluirPendientes: [false],
+    incluirPagados: [false],
+    incluirPendientes: [true],
   });
 
   sidebarCollapsed = false;
@@ -487,8 +489,8 @@ export class PagosRealizadosPage implements OnInit {
       fechaHasta: this.currentMonthEnd,
       metodoPagoId: '',
       participanteKey: this.getDefaultParticipanteKey(),
-      incluirPagados: true,
-      incluirPendientes: false,
+      incluirPagados: false,
+      incluirPendientes: true,
     });
   }
 
@@ -548,6 +550,16 @@ export class PagosRealizadosPage implements OnInit {
     });
   }
 
+  setLastMonthFilters(): void {
+    const start = new Date(this.today.getFullYear(), this.today.getMonth() - 1, 1);
+    const end = new Date(this.today.getFullYear(), this.today.getMonth(), 0);
+
+    this.filtrosForm.patchValue({
+      fechaDesde: this.formatDateInput(start),
+      fechaHasta: this.formatDateInput(end),
+    });
+  }
+
   isTodayRange(): boolean {
     const filtros = this.filtrosForm.getRawValue();
     return (
@@ -577,6 +589,14 @@ export class PagosRealizadosPage implements OnInit {
     const monthEnd = this.formatDateInput(
       new Date(this.today.getFullYear(), this.today.getMonth() + 1, 0),
     );
+
+    return (filtros.fechaDesde ?? '') === monthStart && (filtros.fechaHasta ?? '') === monthEnd;
+  }
+
+  isLastMonthRange(): boolean {
+    const filtros = this.filtrosForm.getRawValue();
+    const monthStart = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth() - 1, 1));
+    const monthEnd = this.formatDateInput(new Date(this.today.getFullYear(), this.today.getMonth(), 0));
 
     return (filtros.fechaDesde ?? '') === monthStart && (filtros.fechaHasta ?? '') === monthEnd;
   }
