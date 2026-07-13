@@ -407,7 +407,30 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
 }
 
 .module-page .payment-modal-summary-pay {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.module-page .payment-modal-summary-pay .payment-modal-chip {
+  padding: 0.6rem 0.65rem;
+  border-radius: 0.65rem;
+  overflow: hidden;
+}
+
+.module-page .payment-modal-summary-pay .payment-modal-chip span {
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.module-page .payment-modal-summary-pay .payment-modal-chip strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .module-page .payment-group-summary-pay {

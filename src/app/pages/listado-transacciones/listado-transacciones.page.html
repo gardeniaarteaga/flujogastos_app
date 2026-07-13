@@ -929,8 +929,8 @@
           style="max-height:70vh;overscroll-behavior:contain;"
         >
           <table class="quick-pay-detail-table" style="border-collapse:separate;border-spacing:0;">
-            <thead>
-              <tr>
+            <ng-template #quickPayColumnHeaderRow let-expanded="expanded">
+              <tr class="quick-pay-column-header-row" [style.display]="expanded ? '' : 'none'">
                 <th>Pagar</th>
                 <th>ID</th>
                 <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
@@ -969,7 +969,7 @@
                 <th>Participante</th>
                 <th>Acciones</th>
               </tr>
-            </thead>
+            </ng-template>
             <tbody>
               <ng-container *ngFor="let group of quickPayDetalleMetodoGroups; let groupIndex = index; trackBy: trackQuickPayMetodoGroup">
                 <tr class="quick-pay-method-group-row">
@@ -1024,6 +1024,9 @@
                     </div>
                   </td>
                 </tr>
+                <ng-container
+                  *ngTemplateOutlet="quickPayColumnHeaderRow; context: { expanded: group.expanded }"
+                ></ng-container>
                 <tr *ngFor="let row of getGroupPagedRows(group); trackBy: trackDetalleTransaccion" [style.display]="group.expanded ? '' : 'none'">
                   <td>
                     <label
@@ -1133,31 +1136,43 @@
                   </td>
                 </tr>
                 <tr *ngIf="group.expanded && getGroupTotalPages(group) > 1">
-                  <td colspan="9" style="padding:.45rem .85rem;background:#f8fafd;border-top:1px solid #e5eaf2;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;">
-                      <span style="font-size:.8rem;color:#64748b;font-weight:600;">
-                        Pág. {{ group.currentPage }} / {{ getGroupTotalPages(group) }} &middot; {{ group.rows.length }} cuotas
+                  <td [attr.colspan]="isOnlyPagadoFilter ? 9 : 10" class="quick-pay-group-pagination-cell">
+                    <div class="quick-pay-group-pagination">
+                      <span class="quick-pay-group-pagination-summary">
+                        Pagina {{ group.currentPage }} de {{ getGroupTotalPages(group) }}
+                        <span class="quick-pay-group-pagination-count">{{ group.rows.length }} cuotas</span>
                       </span>
-                      <div style="display:flex;align-items:center;gap:.3rem;">
+                      <div class="quick-pay-group-pagination-actions">
                         <button
                           type="button"
-                          class="filter-preset-button"
+                          class="quick-pay-page-button quick-pay-page-nav"
                           [disabled]="group.currentPage <= 1"
                           (click)="changeGroupPage(group, -1)"
-                        >← Ant.</button>
+                          aria-label="Pagina anterior"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </button>
                         <button
                           *ngFor="let p of getGroupVisiblePages(group)"
                           type="button"
-                          class="filter-preset-button"
+                          class="quick-pay-page-button"
                           [class.is-active]="p === group.currentPage"
+                          [attr.aria-current]="p === group.currentPage ? 'page' : null"
                           (click)="goToGroupPage(group, p)"
                         >{{ p }}</button>
                         <button
                           type="button"
-                          class="filter-preset-button"
+                          class="quick-pay-page-button quick-pay-page-nav"
                           [disabled]="group.currentPage >= getGroupTotalPages(group)"
                           (click)="changeGroupPage(group, 1)"
-                        >Sig. →</button>
+                          aria-label="Pagina siguiente"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -2400,12 +2415,12 @@
 
         <section class="payment-modal-summary payment-modal-summary-pay">
           <article class="payment-modal-chip">
-            <span>Monto</span>
-            <strong>${{ paymentModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
+            <span>Fecha transaccion</span>
+            <strong>{{ paymentModalTransaccion.fecha | date: 'dd/MM/yyyy' }}</strong>
           </article>
           <article class="payment-modal-chip">
-            <span>Estado</span>
-            <strong>{{ getEstadoDisplayLabel(paymentModalTransaccion.nombre_estado) }}</strong>
+            <span>Monto</span>
+            <strong>${{ paymentModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Metodo</span>

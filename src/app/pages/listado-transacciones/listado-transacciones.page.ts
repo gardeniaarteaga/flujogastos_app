@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { DatePipe, DecimalPipe, NgClass, NgFor, NgIf, NgTemplateOutlet } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectorRef,
@@ -293,6 +293,7 @@ type QuickPaySortDirection = 'asc' | 'desc';
       NgIf,
     NgFor,
     NgClass,
+    NgTemplateOutlet,
     DatePipe,
     DecimalPipe,
     SessionStripComponent,
@@ -4874,8 +4875,18 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getPaymentModalMontoCuota(): number {
+    const transaccionOriginal =
+      this.transacciones.find((item) => item.id_transaccion === this.paymentTransaccionId) ??
+      this.paymentModalTransaccion;
+
+    if (!transaccionOriginal) {
+      return 0;
+    }
+
+    const transaccionConInteres = this.buildTransaccionWithInteresEnCuotas(transaccionOriginal);
+
     return this.roundMoneyValue(
-      this.getParticipantesDetalleSafe(this.paymentModalTransaccion)
+      this.getParticipantesDetalleSafe(transaccionConInteres)
         .filter((d) => d.numero_cuota === 1)
         .reduce((sum, d) => sum + Number(d.monto ?? 0), 0),
     );
