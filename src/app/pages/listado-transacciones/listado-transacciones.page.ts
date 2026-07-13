@@ -5328,6 +5328,23 @@ export class ListadoTransaccionesPage implements OnInit {
     return detallesAsociados.length > 0 ? detallesAsociados : detalles;
   }
 
+  private getParticipantesDetalleParaQuickPayRows(
+    transaccion: Pick<
+      TransaccionListado,
+      'es_propietario' | 'participantes_detalle'
+    > | null | undefined,
+  ): ParticipanteDetalleListado[] {
+    const detalles = this.getParticipantesDetalleSafe(transaccion).filter(
+      (detalle) => detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID,
+    );
+
+    const detallesAsociados = detalles.filter((detalle) =>
+      this.isDetalleDelUsuarioLogueado(detalle, !!transaccion?.es_propietario),
+    );
+
+    return detallesAsociados.length > 0 ? detallesAsociados : detalles;
+  }
+
   private syncQuickPayBulkSelectionWithFilters(): void {
     this.refreshQuickPayFilterState(true);
   }
@@ -5492,7 +5509,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private buildDetalleTransaccionRows(): DetalleTransaccionListadoRow[] {
     return this.transacciones.flatMap((transaccion) =>
-      this.getParticipantesDetalleForPayment(transaccion).map((detalle) => {
+      this.getParticipantesDetalleParaQuickPayRows(transaccion).map((detalle) => {
         const quickPayMetodoPagoId = this.resolveQuickPayMetodoPagoId(detalle, transaccion);
         const quickPayMetodoPagoNombre = this.resolveQuickPayMetodoPagoNombre(
           detalle,
@@ -5556,6 +5573,22 @@ export class ListadoTransaccionesPage implements OnInit {
       this.currentUserProfileValue.username ||
       'Participante'
     );
+  }
+
+  getQuickPayParticipanteDisplay(row: DetalleTransaccionListadoRow): string {
+    if (row.detalle.es_titular) {
+      return 'Titular';
+    }
+
+    if (!row.transaccion.es_propietario) {
+      return this.getFirstName(row.transaccion.titular) || 'Titular';
+    }
+
+    return this.getFirstName(row.nombre_mostrado);
+  }
+
+  private getFirstName(fullName: string | null | undefined): string {
+    return fullName?.trim().split(/\s+/)[0] ?? '';
   }
 
   private hasPriorityPendingSchedule(transaccion: TransaccionListado): boolean {
