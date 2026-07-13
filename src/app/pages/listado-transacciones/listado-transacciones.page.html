@@ -2208,13 +2208,8 @@
             <strong>{{ getDetailModalMetodoPago() }}</strong>
           </article>
           <article class="payment-modal-chip">
-            <span>Interes anual</span>
-            <strong>
-              <ng-container *ngIf="detailModalTransaccion.tasa_interes_anual !== null && detailModalTransaccion.tasa_interes_anual !== undefined; else noTasaInteres">
-                {{ detailModalTransaccion.tasa_interes_anual | number: '1.0-2' }}%
-              </ng-container>
-              <ng-template #noTasaInteres>-</ng-template>
-            </strong>
+            <span>Monto total</span>
+            <strong>${{ detailModalTransaccion.monto | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Categoria</span>
