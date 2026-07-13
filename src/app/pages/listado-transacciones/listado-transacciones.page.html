@@ -669,7 +669,7 @@
                 <th>Descripcion</th>
                 <th>Monto</th>
                 <th>Intereses</th>
-                <th>Saldo pendiente</th>
+                <th class="col-saldo">Saldo pendiente</th>
                 <th class="col-metodo">Metodo</th>
                 <th class="col-pago">Pago</th>
                 <th style="text-align: center;" title="Participantes">Partic.</th>
@@ -734,7 +734,7 @@
                 </td>
                 <td>${{ transaccion.monto | number: '1.2-2' }}</td>
                 <td>${{ transaccion.intereses | number: '1.2-2' }}</td>
-                <td>${{ transaccion.saldo_pendiente | number: '1.2-2' }}</td>
+                <td class="col-saldo">${{ transaccion.saldo_pendiente | number: '1.2-2' }}</td>
                 <td class="col-metodo">{{ transaccion.nombre_forma_pago || '-' }}</td>
                 <td class="col-pago">
                   <span

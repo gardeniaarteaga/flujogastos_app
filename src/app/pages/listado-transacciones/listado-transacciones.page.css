@@ -378,8 +378,12 @@
   overflow: auto;
 }
 
+.col-saldo {
+  width: 6.5rem;
+}
+
 .col-metodo {
-  width: 9rem;
+  width: 12rem;
 }
 
 .col-pago {
