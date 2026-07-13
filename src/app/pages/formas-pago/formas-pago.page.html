@@ -478,6 +478,7 @@
           <table>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Forma de pago</th>
                 <th>Entidad financiera</th>
                 <th>Tipo producto</th>
@@ -487,6 +488,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let forma of paginatedFormasPago">
+                <td>{{ forma.id_forma }}</td>
                 <td>{{ forma.nombre_forma }}</td>
                 <td>{{ forma.entidad_financiera.nombre_entidad }}</td>
                 <td>{{ forma.tipo_producto.nombre_tipo }}</td>
