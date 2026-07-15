@@ -607,6 +607,10 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
+    if (this.editModalOpen) {
+      return;
+    }
+
     void this.reloadAll();
   }
 
