@@ -790,20 +790,14 @@ export class ListadoTransaccionesPage implements OnInit {
       }
 
       return true;
-    }).sort((left, right) => this.compareTransaccionesByFecha(left, right));
+    }).sort((left, right) => this.compareTransaccionesById(left, right));
   }
 
-  private compareTransaccionesByFecha(
+  private compareTransaccionesById(
     left: TransaccionListado,
     right: TransaccionListado,
   ): number {
     const direction = this.listadoSortDirection === 'desc' ? -1 : 1;
-    const fechaLeft = this.normalizeDateOnly(left.fecha);
-    const fechaRight = this.normalizeDateOnly(right.fecha);
-
-    if (fechaLeft !== fechaRight) {
-      return fechaLeft.localeCompare(fechaRight) * direction;
-    }
 
     return (left.id_transaccion - right.id_transaccion) * direction;
   }
@@ -4321,7 +4315,10 @@ export class ListadoTransaccionesPage implements OnInit {
     } else if (this.usarParticipantesControl.value) {
       if (this.isEditingSharedExpenseTotalEditable) {
         this.syncCalculatedExpenseMontoForEdit();
-      } else {
+      } else if (!this.showZeroBalancePeriodGrouping) {
+        // En modo pago variable (periodos) los montos por cuota ya estan definidos
+        // por periodo; refreshParticipantesMontos() los reconstruye desde el
+        // porcentaje agregado del grupo y machaca los valores exactos por periodo.
         this.refreshParticipantesMontos();
       }
     } else {
@@ -7698,11 +7695,23 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    cuotaGroup.controls.monto.setValue(this.normalizeDecimalValue(Number(monto ?? 0)), {
-      emitEvent: false,
-    });
-    cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
-    this.syncZeroBalancePeriodPercentagesFromCurrentMontos(periodIndex);
+    const periodTotal = this.getZeroBalancePeriodTotal(periodIndex);
+    const normalizedMonto = this.normalizeDecimalValue(Number(monto ?? 0));
+    const nextPercentage =
+      periodTotal > 0
+        ? this.normalizePercentageValue((normalizedMonto * 100) / periodTotal)
+        : this.getZeroBalanceGroupsForPeriod(periodIndex).length <= 1
+          ? 100
+          : 0;
+
+    const percentages = this.ensureZeroBalancePeriodPercentages(group);
+    percentages[periodIndex] = nextPercentage;
+    this.zeroBalancePeriodPercentagesByGroup.set(group, percentages);
+    // Redistribuye el resto de participantes de este periodo (rebalanceZeroBalancePeriodPercentages)
+    // para que el total del periodo se mantenga; sin esto, editar un solo participante dejaba a
+    // los demas con montos desactualizados.
+    this.rebalanceZeroBalancePeriodPercentages(periodIndex, group);
+    this.setZeroBalancePeriodTotal(periodIndex, Math.max(periodTotal, normalizedMonto), false);
     this.syncZeroBalanceSharedStateFromPeriods();
   }
 
@@ -7820,7 +7829,10 @@ export class ListadoTransaccionesPage implements OnInit {
     );
     const editableTargetCentavos = Math.max(0, targetTotalCentavos - blockedTotalCentavos);
     const weights = this.getZeroBalanceDistributionWeights(editableGroups, periodIndex);
-    let assignedCentavos = 0;
+    const cuotaCentavosByIndex = this.distributeCentavosProporcionalmente(
+      editableTargetCentavos,
+      weights,
+    );
 
     editableGroups.forEach((group, index) => {
       const cuotaGroup = this.getCuotasArray(group).at(periodIndex);
@@ -7829,13 +7841,7 @@ export class ListadoTransaccionesPage implements OnInit {
         return;
       }
 
-      const cuotaCentavos =
-        index === editableGroups.length - 1
-          ? Math.max(0, editableTargetCentavos - assignedCentavos)
-          : Math.max(0, Math.floor(editableTargetCentavos * (weights[index] ?? 0)));
-
-      assignedCentavos += cuotaCentavos;
-      cuotaGroup.controls.monto.setValue(this.centsToAmount(cuotaCentavos), {
+      cuotaGroup.controls.monto.setValue(this.centsToAmount(cuotaCentavosByIndex[index] ?? 0), {
         emitEvent: false,
       });
       cuotaGroup.controls.monto.updateValueAndValidity({ emitEvent: false });
@@ -7844,6 +7850,41 @@ export class ListadoTransaccionesPage implements OnInit {
     if (syncState) {
       this.syncZeroBalanceSharedStateFromPeriods();
     }
+  }
+
+  // Metodo del mayor residuo: prioriza dar al menos 1 centavo a los pesos positivos
+  // que el truncamiento dejaria en 0, evitando cuotas invalidas para montos pequenos.
+  private distributeCentavosProporcionalmente(totalCentavos: number, weights: number[]): number[] {
+    if (weights.length === 0) {
+      return [];
+    }
+
+    const rawCentavos = weights.map((weight) => Math.max(0, totalCentavos * weight));
+    const flooredCentavos = rawCentavos.map((value) => Math.floor(value));
+    const assignedCentavos = flooredCentavos.reduce((sum, value) => sum + value, 0);
+    let remainingCentavos = Math.max(0, Math.round(totalCentavos) - assignedCentavos);
+
+    const order = flooredCentavos
+      .map((_value, index) => index)
+      .sort((a, b) => {
+        const aNeedsMinimum = flooredCentavos[a] === 0 && weights[a] > 0 ? 1 : 0;
+        const bNeedsMinimum = flooredCentavos[b] === 0 && weights[b] > 0 ? 1 : 0;
+
+        if (aNeedsMinimum !== bNeedsMinimum) {
+          return bNeedsMinimum - aNeedsMinimum;
+        }
+
+        return (rawCentavos[b] - flooredCentavos[b]) - (rawCentavos[a] - flooredCentavos[a]);
+      });
+
+    const finalCentavos = [...flooredCentavos];
+
+    for (let i = 0; i < order.length && remainingCentavos > 0; i += 1) {
+      finalCentavos[order[i]] += 1;
+      remainingCentavos -= 1;
+    }
+
+    return finalCentavos;
   }
 
   private syncZeroBalanceSharedStateFromPeriods(): void {
@@ -9105,7 +9146,11 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private normalizeFormForSubmit(): void {
-    this.onFechaTransaccionBlur();
+    // No usar onFechaTransaccionBlur(): ademas de normalizar el campo, esa funcion
+    // reprograma TODAS las fechas de cuotas (refreshProgramacionForAllGroups), lo que
+    // sobrescribia fechas ya definidas en cada guardado aunque el usuario no tocara
+    // la fecha de la transaccion.
+    this.normalizeAndValidateDateControl(this.transaccionForm.controls.fecha_transaccion);
     this.normalizeMoneyInput('monto');
     const interesesControl = this.transaccionForm.controls.intereses;
 

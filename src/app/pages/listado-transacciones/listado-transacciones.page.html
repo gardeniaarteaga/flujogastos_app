@@ -655,19 +655,19 @@
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th class="col-tipo" style="text-align: center;">Tipo</th>
                 <th>
                   <button
                     type="button"
                     class="qp-sort-header is-active"
-                    aria-label="Ordenar por fecha"
+                    aria-label="Ordenar por ID"
                     (click)="toggleListadoSort()"
                   >
-                    <span>Fecha</span>
+                    <span>ID</span>
                     <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator() === 'desc' ? '↓' : '↑' }}</span>
                   </button>
                 </th>
+                <th class="col-tipo" style="text-align: center;">Tipo</th>
+                <th>Fecha</th>
                 <th class="col-descripcion">Descripcion</th>
                 <th>Monto</th>
                 <th>Intereses</th>
