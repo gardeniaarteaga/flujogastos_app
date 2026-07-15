@@ -1455,90 +1455,83 @@
               </p>
 
               <ng-container *ngIf="showZeroBalancePeriodGrouping; else participantCardsEditor">
-                <div class="zero-balance-summary-grid" style="display:grid;gap:.65rem;">
+                <div class="zero-balance-summary-grid">
                   <div
                     *ngFor="let participanteGroup of getZeroBalanceParticipantGroups(); let i = index"
-                    class="participant-block payment-group-card"
+                    class="participant-block payment-group-card zero-balance-participant-row"
                     [formGroup]="participanteGroup"
                     [style.--group-accent]="getPaymentGroupAccentColor(i)"
-                    style="gap:.55rem;"
                   >
-                    <div class="participant-block-header payment-group-header">
-                      <div class="participant-block-title payment-group-summary">
-                        <span class="payment-role-badge" [style.color]="getPaymentGroupAccentColor(i)">
-                          {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
-                        </span>
-                        <strong [style.color]="getPaymentGroupAccentColor(i)">
-                          {{ getZeroBalanceParticipantLabel(participanteGroup) }}
-                        </strong>
-                        <span>
-                          {{ participanteGroup.controls.cantidad_cuotas.value ?? 0 }}
-                          {{ (participanteGroup.controls.cantidad_cuotas.value ?? 0) === 1 ? 'cuota' : 'cuotas' }}
-                        </span>
-                      </div>
+                    <div class="zero-balance-participant-identity">
+                      <span class="payment-role-badge" [style.color]="getPaymentGroupAccentColor(i)">
+                        {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
+                      </span>
+                      <strong [style.color]="getPaymentGroupAccentColor(i)">
+                        {{ getZeroBalanceParticipantLabel(participanteGroup) }}
+                      </strong>
+                      <span class="zero-balance-participant-cuotas">
+                        {{ participanteGroup.controls.cantidad_cuotas.value ?? 0 }}
+                        {{ (participanteGroup.controls.cantidad_cuotas.value ?? 0) === 1 ? 'cuota' : 'cuotas' }}
+                      </span>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.55rem;align-items:end;">
-                      <div class="field participant-field participant-field--identity">
-                        <label [for]="'zero_participante_' + i">
-                          {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
-                        </label>
-                        <input
-                          *ngIf="participanteGroup.controls.es_titular.value"
-                          [id]="'zero_participante_' + i"
-                          type="text"
-                          formControlName="nombre_mostrado"
-                          readonly
-                        />
-                        <select
-                          *ngIf="!participanteGroup.controls.es_titular.value"
-                          [id]="'zero_participante_' + i"
-                          formControlName="id_participante"
-                          [disabled]="hasAppliedPagosInEditor"
-                          (change)="onParticipanteSelectionChange(participanteGroup)"
+                    <div class="field participant-field participant-field--identity">
+                      <label [for]="'zero_participante_' + i">
+                        {{ participanteGroup.controls.es_titular.value ? 'Titular' : 'Participante' }}
+                      </label>
+                      <input
+                        *ngIf="participanteGroup.controls.es_titular.value"
+                        [id]="'zero_participante_' + i"
+                        type="text"
+                        formControlName="nombre_mostrado"
+                        readonly
+                      />
+                      <select
+                        *ngIf="!participanteGroup.controls.es_titular.value"
+                        [id]="'zero_participante_' + i"
+                        formControlName="id_participante"
+                        [disabled]="hasAppliedPagosInEditor"
+                        (change)="onParticipanteSelectionChange(participanteGroup)"
+                      >
+                        <option [ngValue]="null">Seleccione un participante</option>
+                        <option
+                          *ngFor="let participante of selectableParticipantes"
+                          [ngValue]="participante.id_participante"
+                          [disabled]="isParticipanteOptionDisabled(participante.id_participante, participanteGroup)"
                         >
-                          <option [ngValue]="null">Seleccione un participante</option>
-                          <option
-                            *ngFor="let participante of selectableParticipantes"
-                            [ngValue]="participante.id_participante"
-                            [disabled]="isParticipanteOptionDisabled(participante.id_participante, participanteGroup)"
-                          >
-                            {{ getParticipanteDisplayName(participante) }}
-                          </option>
-                        </select>
-                      </div>
-
-                      <div class="field">
-                        <label>Porcentaje base</label>
-                        <input
-                          type="text"
-                          [value]="participanteGroup.controls.porcentaje.value ?? 0"
-                          readonly
-                        />
-                      </div>
-
-                      <div class="field">
-                        <label>Monto acumulado</label>
-                        <input
-                          type="text"
-                          [value]="getEditorParticipanteMontoTotal(participanteGroup) | number: '1.2-2'"
-                          style="font-weight:800;text-align:right;"
-                          readonly
-                        />
-                      </div>
-
-                      <div style="display:flex;align-items:end;justify-content:flex-end;">
-                        <button
-                          *ngIf="!participanteGroup.controls.es_titular.value"
-                          type="button"
-                          class="secondary-button table-button"
-                          [disabled]="hasAppliedPagosInEditor"
-                          (click)="removeParticipanteDetalle(participantesDetalleArray.controls.indexOf(participanteGroup))"
-                        >
-                          Quitar
-                        </button>
-                      </div>
+                          {{ getParticipanteDisplayName(participante) }}
+                        </option>
+                      </select>
                     </div>
+
+                    <div class="field zero-balance-participant-field--percentage">
+                      <label>Porcentaje base</label>
+                      <input
+                        type="text"
+                        [value]="participanteGroup.controls.porcentaje.value ?? 0"
+                        readonly
+                      />
+                    </div>
+
+                    <div class="field zero-balance-participant-field--monto">
+                      <label>Monto acumulado</label>
+                      <input
+                        type="text"
+                        [value]="getEditorParticipanteMontoTotal(participanteGroup) | number: '1.2-2'"
+                        style="font-weight:800;text-align:right;"
+                        readonly
+                      />
+                    </div>
+
+                    <button
+                      *ngIf="!participanteGroup.controls.es_titular.value"
+                      type="button"
+                      class="secondary-button table-button zero-balance-participant-remove"
+                      [disabled]="hasAppliedPagosInEditor"
+                      (click)="removeParticipanteDetalle(participantesDetalleArray.controls.indexOf(participanteGroup))"
+                    >
+                      Quitar
+                    </button>
                   </div>
                 </div>
 

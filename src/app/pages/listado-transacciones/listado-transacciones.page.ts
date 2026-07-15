@@ -3518,49 +3518,73 @@ export class ListadoTransaccionesPage implements OnInit {
         modoCuotas,
       );
 
-      this.participantesDetalleArray.push(
-        this.registerParticipanteDetalleGroup(this.fb.group({
-          id_participante: this.fb.control<number | null>(detalle.id_participante),
-          nombre_mostrado: this.fb.control(
-            detalle.es_titular
-              ? this.currentUserDisplayName
-              : (detalle.nombre_participante ?? ''),
-            { nonNullable: true },
-          ),
-          es_titular: this.fb.control(detalle.es_titular, { nonNullable: true }),
-          dividir_monto: this.fb.control(
-            !this.isCreditoTransaccion(transaccion) && shouldEnableParticipantesEditor
-              ? dividirMontoInicial
-              : false,
-            { nonNullable: true },
-          ),
-          modo_cuotas: this.fb.control<ModoCuotas>(modoCuotas, {
-            nonNullable: true,
-          }),
-          cantidad_cuotas: this.fb.control<number | null>(detalle.total_cuotas, [
-            Validators.required,
-            Validators.min(detalle.es_titular ? 0 : 1),
-            this.wholeNumberValidator(),
-          ]),
-          tipo_programacion: this.fb.control<ProgramacionCuotaTipo>(programacion.tipo, {
-            nonNullable: true,
-          }),
-          dia_programado: this.fb.control<number | null>(programacion.dia),
-          porcentaje: this.fb.control<number | null>(
-            this.resolveDetallePercentageFromMonto(Number(transaccion.monto ?? 0), montoParticipante),
-            this.getPorcentajeValidatorsForEditor(),
-          ),
-          monto: this.fb.control<number | null>(
-            montoParticipante,
-            this.getEditorParticipanteMontoValidators(detalle.es_titular),
-          ),
-          id_metodo_pago: this.fb.control<number | null>(
-            detalle.id_metodo_pago ?? null,
-          ),
-          cuotas: this.createCuotasArray(cuotasParticipante, detalle.monto, detalle.total_cuotas),
-        })),
-      );
+      const participanteGroup = this.registerParticipanteDetalleGroup(this.fb.group({
+        id_participante: this.fb.control<number | null>(detalle.id_participante),
+        nombre_mostrado: this.fb.control(
+          detalle.es_titular
+            ? this.currentUserDisplayName
+            : (detalle.nombre_participante ?? ''),
+          { nonNullable: true },
+        ),
+        es_titular: this.fb.control(detalle.es_titular, { nonNullable: true }),
+        dividir_monto: this.fb.control(
+          !this.isCreditoTransaccion(transaccion) && shouldEnableParticipantesEditor
+            ? dividirMontoInicial
+            : false,
+          { nonNullable: true },
+        ),
+        modo_cuotas: this.fb.control<ModoCuotas>(modoCuotas, {
+          nonNullable: true,
+        }),
+        cantidad_cuotas: this.fb.control<number | null>(detalle.total_cuotas, [
+          Validators.required,
+          Validators.min(detalle.es_titular ? 0 : 1),
+          this.wholeNumberValidator(),
+        ]),
+        tipo_programacion: this.fb.control<ProgramacionCuotaTipo>(programacion.tipo, {
+          nonNullable: true,
+        }),
+        dia_programado: this.fb.control<number | null>(programacion.dia),
+        porcentaje: this.fb.control<number | null>(
+          this.resolveDetallePercentageFromMonto(Number(transaccion.monto ?? 0), montoParticipante),
+          this.getPorcentajeValidatorsForEditor(),
+        ),
+        monto: this.fb.control<number | null>(
+          montoParticipante,
+          this.getEditorParticipanteMontoValidators(detalle.es_titular),
+        ),
+        id_metodo_pago: this.fb.control<number | null>(
+          detalle.id_metodo_pago ?? null,
+        ),
+        cuotas: this.createCuotasArray(cuotasParticipante, detalle.monto, detalle.total_cuotas),
+      }));
+
+      if (this.isVariablePaymentTransactionInEditor && !detalle.es_titular) {
+        const porcentajeConfigurado = this.getParticipantePorcentajeSugerido(participanteGroup);
+
+        if (porcentajeConfigurado !== null) {
+          participanteGroup.controls.porcentaje.setValue(porcentajeConfigurado, { emitEvent: false });
+          participanteGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+        }
+      }
+
+      this.participantesDetalleArray.push(participanteGroup);
     });
+
+    if (this.isVariablePaymentTransactionInEditor) {
+      const titularGroup = this.participantesDetalleArray.controls.find(
+        (group) => group.controls.es_titular.value,
+      );
+      const porcentajeOtros = this.participantesDetalleArray.controls
+        .filter((group) => !group.controls.es_titular.value)
+        .reduce((sum, group) => sum + this.normalizePercentageValue(Number(group.controls.porcentaje.value ?? 0)), 0);
+
+      if (titularGroup) {
+        const porcentajeTitular = this.normalizePercentageValue(Math.max(0, 100 - porcentajeOtros));
+        titularGroup.controls.porcentaje.setValue(porcentajeTitular, { emitEvent: false });
+        titularGroup.controls.porcentaje.updateValueAndValidity({ emitEvent: false });
+      }
+    }
 
     if (this.hasAppliedPagosInEditor) {
       this.participantesDetalleArray.controls.forEach((group) => {

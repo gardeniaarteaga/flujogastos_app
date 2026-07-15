@@ -813,6 +813,85 @@
   padding: 0.7rem 0.75rem;
 }
 
+.zero-balance-summary-grid {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.edit-modal .zero-balance-participant-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.zero-balance-participant-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.zero-balance-participant-identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zero-balance-participant-cuotas {
+  color: #6b7a90;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.zero-balance-participant-row .field {
+  gap: 0.15rem;
+  flex: 1 1 130px;
+  min-width: 110px;
+}
+
+.zero-balance-participant-row .zero-balance-participant-field--percentage {
+  flex: 0 1 100px;
+  min-width: 90px;
+  max-width: 130px;
+}
+
+.zero-balance-participant-row .zero-balance-participant-field--monto {
+  flex: 0 1 120px;
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.zero-balance-participant-row .participant-field--identity {
+  flex: 0 1 160px;
+  min-width: 130px;
+  max-width: 190px;
+}
+
+.zero-balance-participant-row .field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7a90;
+  white-space: nowrap;
+}
+
+.zero-balance-participant-row .field input,
+.zero-balance-participant-row .field select {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.88rem;
+}
+
+.zero-balance-participant-remove {
+  flex: 0 0 auto;
+  min-height: 2.35rem;
+  padding: 0 0.75rem;
+  margin-left: auto;
+}
+
 .edit-modal .participant-row {
   gap: 0.55rem;
   grid-template-columns:
