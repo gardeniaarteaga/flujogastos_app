@@ -221,6 +221,7 @@ interface ApplyPagosPayload {
   pagos: Array<{
     id_detalle: number;
     monto: number;
+    fecha_pago?: string;
   }>;
   cuotas_actualizadas?: Array<{
     id_detalle: number;
@@ -2947,6 +2948,14 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.applyingPaymentDetailId === group.controls.id_detalle.value;
   }
 
+  isPagoCuotaPagada(group: PagoDetalleForm): boolean {
+    return (
+      this.toCents(group.controls.saldo_pendiente.value) <= 0 &&
+      (this.toCents(group.controls.monto_pagado.value) > 0 ||
+        this.toCents(group.controls.interes_pagado.value) > 0)
+    );
+  }
+
   isApplyingPagoGroup(group: PagoDetalleGroupView): boolean {
     return this.applyingPaymentGroupId === group.id_participante;
   }
@@ -3142,6 +3151,7 @@ export class ListadoTransaccionesPage implements OnInit {
         {
           id_detalle: group.controls.id_detalle.value,
           monto: montoAplicar,
+          fecha_pago: this.getPagoFechaPagoValue(group),
         },
       ],
     };
@@ -3192,6 +3202,7 @@ export class ListadoTransaccionesPage implements OnInit {
         return {
           id_detalle: cuota.controls.id_detalle.value,
           monto: montoAplicar,
+          fecha_pago: this.getPagoFechaPagoValue(cuota),
           nombre: cuota.controls.nombre_mostrado.value,
           saldoPendiente: cuota.controls.saldo_pendiente.value,
         };
@@ -3202,6 +3213,7 @@ export class ListadoTransaccionesPage implements OnInit {
         ): pago is {
           id_detalle: number;
           monto: number;
+          fecha_pago: string | undefined;
           nombre: string;
           saldoPendiente: number;
         } => pago !== null,
@@ -3227,9 +3239,10 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const pagos = pagosConContexto.map(({ id_detalle, monto }) => ({
+    const pagos = pagosConContexto.map(({ id_detalle, monto, fecha_pago }) => ({
       id_detalle,
       monto,
+      fecha_pago,
     }));
 
     this.applyingPaymentGroupId = group.id_participante;
@@ -3267,6 +3280,7 @@ export class ListadoTransaccionesPage implements OnInit {
       .map((cuota) => ({
         id_detalle: cuota.controls.id_detalle.value,
         monto: cuota.controls.saldo_pendiente.value,
+        fecha_pago: this.getPagoFechaPagoValue(cuota),
       }));
 
     if (pagos.length === 0) {
@@ -3332,6 +3346,7 @@ export class ListadoTransaccionesPage implements OnInit {
       .map((cuota) => ({
         id_detalle: cuota.controls.id_detalle.value,
         monto: cuota.controls.saldo_pendiente.value,
+        fecha_pago: this.getPagoFechaPagoValue(cuota),
       }));
 
     if (pagos.length === 0) {
@@ -3616,7 +3631,9 @@ export class ListadoTransaccionesPage implements OnInit {
               Validators.min(0.01),
               this.maxTwoDecimalsValidator(),
             ]),
-          fecha_pago: this.fb.control<string | null>(detalle.fecha_pago),
+          fecha_pago: this.fb.control<string | null>(
+            this.normalizeDateOnly(detalle.fecha_pago) || this.getCentroamericaTodayIso(),
+          ),
           fecha_programada: this.fb.control<string | null>(detalle.fecha_programada),
           nombre_estado: this.fb.control(detalle.nombre_estado ?? 'Sin estado', {
             nonNullable: true,
@@ -6366,6 +6383,12 @@ export class ListadoTransaccionesPage implements OnInit {
     return Number(value ?? 0).toFixed(2);
   }
 
+  private getPagoFechaPagoValue(group: PagoDetalleForm): string | undefined {
+    const normalizedValue = this.normalizeDateOnly(group.controls.fecha_pago.value);
+
+    return normalizedValue || undefined;
+  }
+
   private getMontoAplicarNumericValue(group: PagoDetalleForm): number {
     const rawValue = this.getMontoAplicarDisplay(group);
 
@@ -9030,6 +9053,15 @@ export class ListadoTransaccionesPage implements OnInit {
       Number(group.controls.interes_pagado.value ?? 0) +
         Number(group.controls.interes_pendiente.value ?? 0),
     );
+  }
+
+  private getCentroamericaTodayIso(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/El_Salvador',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
   }
 
   private formatDateInput(date: Date): string {

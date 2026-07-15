@@ -2480,17 +2480,25 @@
             <div class="payment-details-list">
               <div
                 class="payment-detail-row"
-                [class.is-paid]="pagoGroup.controls.saldo_pendiente.value <= 0"
+                [class.is-paid]="isPagoCuotaPagada(pagoGroup)"
                 *ngFor="let pagoGroup of paymentGroup.cuotas"
                 [formGroup]="pagoGroup"
               >
-                <ng-container *ngIf="pagoGroup.controls.saldo_pendiente.value > 0; else paidCuotaRow">
+                <ng-container *ngIf="!isPagoCuotaPagada(pagoGroup); else paidCuotaRow">
                   <div class="payment-detail-summary payment-detail-summary-pay">
                     <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }} de {{ pagoGroup.controls.total_cuotas.value }}</strong>
                     <span>Monto ya pagado: ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</span>
                     <span class="payment-saldo">Monto de esta cuota: ${{ pagoGroup.controls.saldo_pendiente.value | number: '1.2-2' }}</span>
                     <span>Fecha programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</span>
-                    <span>Fecha de Pago: {{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</span>
+                    <span class="payment-fecha-pago-field">
+                      Fecha de Pago:
+                      <input
+                        [id]="'fecha_pago_' + pagoGroup.controls.id_detalle.value"
+                        class="fecha-pago-inline-input"
+                        type="date"
+                        formControlName="fecha_pago"
+                      />
+                    </span>
                   </div>
 
                   <div class="field payment-detail-input">

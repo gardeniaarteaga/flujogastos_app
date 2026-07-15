@@ -462,6 +462,24 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   min-height: 2.55rem;
 }
 
+.module-page .payment-fecha-pago-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.module-page .fecha-pago-inline-input {
+  border: 1px solid #dbe5f1;
+  border-radius: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  font: inherit;
+  font-size: 0.8rem;
+  color: inherit;
+  background: #fff;
+  line-height: 1.4;
+  height: 1.5rem;
+}
+
 .module-page .payment-modal-pay .payment-detail-actions {
   align-self: center;
 }
