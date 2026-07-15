@@ -55,6 +55,8 @@ interface ParticipanteDetalleListado {
   saldo_pendiente: number;
   fecha_programada: string | null;
   es_titular: boolean;
+  id_estado?: number | null;
+  nombre_estado?: string | null;
 }
 
 interface TransaccionListado {
@@ -1065,7 +1067,9 @@ export class Dashboard implements OnInit {
           continue;
         }
 
-        rows.push(this.createDashboardTransactionModalRow(transaction, transactionDate, transaction.monto));
+        rows.push(
+          this.createDashboardTransactionModalRow(transaction, null, transactionDate, transaction.monto),
+        );
         continue;
       }
 
@@ -1081,6 +1085,7 @@ export class Dashboard implements OnInit {
         rows.push(
           this.createDashboardTransactionModalRow(
             transaction,
+            detail,
             detailDate,
             Math.max(0, this.normalizeAmount(detail.monto)),
           ),
@@ -1111,6 +1116,7 @@ export class Dashboard implements OnInit {
         rows.push(
           this.createDashboardTransactionModalRow(
             transaction,
+            detail,
             detailDate,
             this.getExpenseDetailAmountForPeriod(detail, detailDate, selectedPeriod),
             transaction.es_propietario ? null : this.getTransactionSenderName(transaction),
@@ -1143,6 +1149,7 @@ export class Dashboard implements OnInit {
         rows.push(
           this.createDashboardTransactionModalRow(
             transaction,
+            detail,
             detailDate,
             Math.max(0, this.normalizeAmount(detail.monto)) +
               Math.max(0, this.normalizeAmount(detail.interes_pagado)) +
@@ -1159,12 +1166,13 @@ export class Dashboard implements OnInit {
 
   private createDashboardTransactionModalRow(
     transaction: TransaccionListado,
+    detail: ParticipanteDetalleListado | null,
     detailDate: Date | null,
     amount: number,
     senderName: string | null = null,
     isOverdue = false,
   ): DashboardTransactionModalRow {
-    const statusLabel = this.getDashboardTransactionStatusLabel(transaction);
+    const statusLabel = this.getDashboardDetailStatusLabel(detail, transaction);
 
     return {
       transactionId: transaction.id_transaccion,
@@ -2566,6 +2574,28 @@ export class Dashboard implements OnInit {
       transaccion.nombre_estado?.trim() ||
       transaccion.nombre_estado_registro?.trim() ||
       'Sin estado';
+
+    return this.formatDashboardStatusLabel(rawStatus);
+  }
+
+  private getDashboardDetailStatusLabel(
+    detail: ParticipanteDetalleListado | null,
+    transaction: TransaccionListado,
+  ): string {
+    if (!detail) {
+      return this.getDashboardTransactionStatusLabel(transaction);
+    }
+
+    const rawStatus = detail.nombre_estado?.trim();
+
+    if (rawStatus) {
+      return this.formatDashboardStatusLabel(rawStatus);
+    }
+
+    return Number(detail.saldo_pendiente ?? 0) > 0 ? 'PENDIENTE' : 'PAGADO';
+  }
+
+  private formatDashboardStatusLabel(rawStatus: string): string {
     const normalizedStatus = this.normalizeTransactionStatus(rawStatus);
 
     switch (normalizedStatus) {
