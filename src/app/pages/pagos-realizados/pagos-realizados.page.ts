@@ -192,7 +192,6 @@ export class PagosRealizadosPage implements OnInit {
   readonly groupPageSize = 10;
   private lastParticipanteKey: string | null = null;
   detailModalTransaccion: TransaccionListado | null = null;
-  detailModalLoading = false;
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -203,6 +202,7 @@ export class PagosRealizadosPage implements OnInit {
       '/transacciones/listado',
       '/resumen/detalle-transacciones',
       '/resumen/notificaciones',
+      '/reportes/pagos-realizados',
     ]);
   }
 
@@ -223,7 +223,6 @@ export class PagosRealizadosPage implements OnInit {
     return this.isCurrentRouteIn([
       '/reportes/analisis-financiero',
       '/reportes/gastos-por-categoria',
-      '/reportes/pagos-realizados',
     ]);
   }
 
@@ -734,26 +733,6 @@ export class PagosRealizadosPage implements OnInit {
 
   openDetailModal(t: TransaccionListado): void {
     this.detailModalTransaccion = t;
-    this.detailModalLoading = true;
-
-    firstValueFrom(
-      this.http
-        .get<TransaccionListado>(`${this.apiUrl}/${t.id_transaccion}`)
-        .pipe(timeout(this.timeoutMs)),
-    )
-      .then((full) => {
-        if (
-          this.detailModalTransaccion?.id_transaccion === t.id_transaccion &&
-          full &&
-          Array.isArray(full.participantes_detalle)
-        ) {
-          this.detailModalTransaccion = { ...t, participantes_detalle: full.participantes_detalle };
-        }
-      })
-      .catch(() => { /* mantiene datos existentes */ })
-      .finally(() => {
-        this.detailModalLoading = false;
-      });
   }
 
   @HostListener('document:keydown.escape')
@@ -767,6 +746,11 @@ export class PagosRealizadosPage implements OnInit {
 
   getModalCompartidoCon(t: TransaccionListado): string | null {
     if (!t.pagocompartido) return null;
+
+    if (!t.es_propietario) {
+      return t.titular?.trim() || null;
+    }
+
     const seen = new Set<string>();
     const nombres: string[] = [];
     for (const d of t.participantes_detalle) {
@@ -784,6 +768,32 @@ export class PagosRealizadosPage implements OnInit {
     if (t.id_tipo_transaccion === 1) return false;
     const n = (t.nombre_tipo_transaccion ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     return n === 'credito';
+  }
+
+  private resolveTipoTransaccion(
+    t: Pick<TransaccionListado, 'id_tipo_transaccion' | 'nombre_tipo_transaccion'>,
+  ): 'credito' | 'debito' | null {
+    if (t.id_tipo_transaccion === 2) return 'credito';
+    if (t.id_tipo_transaccion === 1) return 'debito';
+    const n = (t.nombre_tipo_transaccion ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (n === 'credito') return 'credito';
+    if (n === 'debito') return 'debito';
+    return null;
+  }
+
+  getTipoTransaccionSign(
+    t: Pick<TransaccionListado, 'id_tipo_transaccion' | 'nombre_tipo_transaccion'>,
+  ): string {
+    const tipo = this.resolveTipoTransaccion(t);
+    if (tipo === 'credito') return '+';
+    if (tipo === 'debito') return '-';
+    return '';
+  }
+
+  getTipoTransaccionColor(
+    t: Pick<TransaccionListado, 'id_tipo_transaccion' | 'nombre_tipo_transaccion'>,
+  ): 'credito' | 'debito' | null {
+    return this.resolveTipoTransaccion(t);
   }
 
   formatDetalleDate(value: string | null): string {

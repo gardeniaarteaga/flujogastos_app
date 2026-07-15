@@ -346,12 +346,23 @@
 
 .payments-table th:nth-child(2),
 .payments-table td:nth-child(2) {
-  min-width: 9.5rem;
+  min-width: 0;
+  width: 2.5rem;
+  max-width: 2.5rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
   white-space: nowrap;
+  text-align: center;
 }
 
 .payments-table th:nth-child(3),
 .payments-table td:nth-child(3) {
+  min-width: 9.5rem;
+  white-space: nowrap;
+}
+
+.payments-table th:nth-child(4),
+.payments-table td:nth-child(4) {
   min-width: 9.5rem;
   white-space: nowrap;
 }

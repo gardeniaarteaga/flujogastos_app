@@ -266,6 +266,7 @@ export class GastosPorCategoriaPage implements OnInit {
       '/transacciones/listado',
       '/resumen/detalle-transacciones',
       '/resumen/notificaciones',
+      '/reportes/pagos-realizados',
     ]);
   }
 
@@ -286,7 +287,6 @@ export class GastosPorCategoriaPage implements OnInit {
     return this.isCurrentRouteIn([
       '/reportes/analisis-financiero',
       '/reportes/gastos-por-categoria',
-      '/reportes/pagos-realizados',
     ]);
   }
 

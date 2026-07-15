@@ -39,6 +39,9 @@
           <a class="submenu-item submenu-item-child" routerLink="/resumen/notificaciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Configurar notificaciones
           </a>
+          <a class="submenu-item submenu-item-child" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            Estado de pagos
+          </a>
           <a class="submenu-item submenu-item-child" routerLink="/resumen/estado-cuenta" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
             Estado de cuenta
           </a>
@@ -95,7 +98,6 @@
         <div class="submenu">
           <a class="submenu-item" routerLink="/reportes/analisis-financiero" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Analisis Financiero</a>
           <a class="submenu-item" routerLink="/reportes/gastos-por-categoria" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Gastos por categoria</a>
-          <a class="submenu-item" routerLink="/reportes/pagos-realizados" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Estado de pagos</a>
         </div>
       </details>
 
@@ -654,6 +656,7 @@
             <thead>
               <tr>
                 <th>ID</th>
+                <th class="col-tipo" style="text-align: center;">Tipo</th>
                 <th>
                   <button
                     type="button"
@@ -665,15 +668,14 @@
                     <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator() === 'desc' ? '↓' : '↑' }}</span>
                   </button>
                 </th>
-                <th>Tipo</th>
-                <th>Descripcion</th>
+                <th class="col-descripcion">Descripcion</th>
                 <th>Monto</th>
                 <th>Intereses</th>
-                <th class="col-saldo">Saldo pendiente</th>
+                <th class="col-saldo">Pendiente</th>
                 <th class="col-metodo">Metodo</th>
                 <th class="col-pago">Pago</th>
-                <th style="text-align: center;" title="Participantes">Partic.</th>
-                <th>Acciones</th>
+                <th class="col-partic" style="text-align: center;" title="Participantes">Partic.</th>
+                <th class="col-acciones">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -687,18 +689,7 @@
                 (keydown.space)="$event.preventDefault(); openDetailModal(transaccion)"
               >
                 <td>{{ transaccion.id_transaccion }}</td>
-                <td>
-                  <div style="display:grid;gap:.3rem;">
-                    <span>{{ transaccion.fecha | date: 'dd/MM/yyyy' }}</span>
-                    <span
-                      *ngIf="isTransaccionVencida(transaccion)"
-                      style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
-                    >
-                      Vencido
-                    </span>
-                  </div>
-                </td>
-                <td>
+                <td class="col-tipo" style="text-align: center;">
                   <span
                     style="display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; font-size: 1.15rem; font-weight: 900; line-height: 1; border: 1px solid currentColor; box-shadow: 0 0.2rem 0.45rem rgba(15, 23, 42, 0.12);"
                     [style.background]="getTipoTransaccionClass(transaccion) === 'transaction-type-credito' ? '#d9f7e5' : getTipoTransaccionClass(transaccion) === 'transaction-type-debito' ? '#ffe1e5' : '#f3f4f6'"
@@ -710,6 +701,17 @@
                   </span>
                 </td>
                 <td>
+                  <div style="display:grid;gap:.3rem;">
+                    <span>{{ transaccion.fecha | date: 'dd/MM/yyyy' }}</span>
+                    <span
+                      *ngIf="isTransaccionVencida(transaccion)"
+                      style="display:inline-flex;width:fit-content;align-items:center;padding:.18rem .52rem;border-radius:999px;background:#ffe8ea;color:#c62839;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;"
+                    >
+                      Vencido
+                    </span>
+                  </div>
+                </td>
+                <td class="col-descripcion">
                   <div style="display:grid;gap:.3rem;">
                     <span
                       (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
@@ -744,7 +746,7 @@
                     {{ getEstadoDisplayLabel(transaccion.nombre_estado) }}
                   </span>
                 </td>
-                <td style="text-align: center; vertical-align: middle;" [attr.title]="transaccion.pagocompartido ? 'Compartido' : 'Individual'">
+                <td class="col-partic" style="text-align: center; vertical-align: middle;" [attr.title]="transaccion.pagocompartido ? 'Compartido' : 'Individual'">
                   <span
                     class="payment-icon"
                     style="display: flex; justify-content: center; width: 100%; min-height: 1.2rem;"
@@ -767,7 +769,7 @@
                     </ng-template>
                   </span>
                 </td>
-                <td class="table-actions-cell" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                <td class="table-actions-cell col-acciones" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
                   <div class="icon-actions" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
                     <button
                       type="button"
@@ -966,7 +968,7 @@
                 <th>Cuota</th>
                 <th>Monto</th>
                 <th>Estado</th>
-                <th>Participante</th>
+                <th class="qp-col-participante">Participante</th>
                 <th>Acciones</th>
               </tr>
             </ng-template>
@@ -1003,6 +1005,7 @@
                           <strong
                             [style.color]="getQuickPayMetodoGroupTextColor(groupIndex)"
                             [attr.title]="group.metodoPagoNombre"
+                            style="font-size:1.15rem;"
                           >
                             {{ group.metodoPagoNombre }}
                           </strong>
@@ -1086,7 +1089,7 @@
                       {{ row.quickPayEstadoLabel }}
                     </span>
                   </td>
-                  <td>{{ getQuickPayParticipanteDisplay(row) }}</td>
+                  <td class="qp-col-participante" [attr.title]="getQuickPayParticipanteDisplay(row)">{{ getQuickPayParticipanteDisplay(row) }}</td>
                   <td class="table-actions-cell">
                     <div class="icon-actions">
                       <button

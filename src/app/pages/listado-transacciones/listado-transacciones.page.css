@@ -386,8 +386,33 @@
   width: 12rem;
 }
 
+.col-descripcion {
+  width: 15rem;
+  max-width: 15rem;
+  overflow-wrap: anywhere;
+}
+
 .col-pago {
-  width: 6.3rem;
+  width: 6.6rem;
+}
+
+.col-tipo {
+  width: 3.6rem;
+  max-width: 3.6rem;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.col-partic {
+  width: 3.6rem;
+  max-width: 3.6rem;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.col-acciones {
+  padding-left: 2rem !important;
+  text-align: center;
 }
 
 .quick-pay-column-header-row th {
@@ -943,11 +968,24 @@
 }
 
 .qp-col-fecha-sm {
-  width: 5.5rem;
-  max-width: 5.5rem;
+  width: 9rem;
+  max-width: 9rem;
   padding-left: .45rem !important;
   padding-right: .45rem !important;
   word-break: break-word;
+}
+
+.qp-col-participante {
+  width: 5.5rem;
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qp-col-transaccion {
+  min-width: 9rem;
+  max-width: 11rem;
 }
 
 .qp-sort-header {
@@ -961,8 +999,11 @@
   box-shadow: none;
   margin: 0;
   padding: 0;
-  font: inherit;
-  color: #5b6b82;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b98a7;
   text-align: left;
   cursor: pointer;
 }
