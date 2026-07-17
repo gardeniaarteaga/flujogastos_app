@@ -283,6 +283,7 @@ interface QuickPayMetodoGroup {
 type FiltroDateControlName = 'fechaDesde' | 'fechaHasta';
 type QuickPaySortColumn = 'fecha_transaccion' | 'fecha_programada';
 type QuickPaySortDirection = 'asc' | 'desc';
+type ListadoSortColumn = 'id' | 'fecha' | 'descripcion' | 'monto' | 'intereses' | 'metodo' | 'pago';
 
 @Component({
   selector: 'app-listado-transacciones-page',
@@ -481,6 +482,7 @@ export class ListadoTransaccionesPage implements OnInit {
   quickPaySortColumn: QuickPaySortColumn | null =
     this.viewMode === 'detalle' ? 'fecha_transaccion' : null;
   quickPaySortDirection: QuickPaySortDirection = 'asc';
+  listadoSortColumn: ListadoSortColumn = 'id';
   listadoSortDirection: 'asc' | 'desc' = 'desc';
 
   readonly transaccionForm = this.fb.group({
@@ -795,25 +797,64 @@ export class ListadoTransaccionesPage implements OnInit {
       }
 
       return true;
-    }).sort((left, right) => this.compareTransaccionesById(left, right));
+    }).sort((left, right) => this.compareTransacciones(left, right));
   }
 
-  private compareTransaccionesById(
+  private compareTransacciones(
     left: TransaccionListado,
     right: TransaccionListado,
   ): number {
     const direction = this.listadoSortDirection === 'desc' ? -1 : 1;
 
-    return (left.id_transaccion - right.id_transaccion) * direction;
+    switch (this.listadoSortColumn) {
+      case 'fecha':
+        return (
+          this.normalizeDateOnly(left.fecha).localeCompare(this.normalizeDateOnly(right.fecha)) *
+          direction
+        );
+      case 'descripcion':
+        return (
+          this.getTransaccionTitle(left).localeCompare(this.getTransaccionTitle(right), 'es', {
+            sensitivity: 'base',
+          }) * direction
+        );
+      case 'monto':
+        return ((left.monto ?? 0) - (right.monto ?? 0)) * direction;
+      case 'intereses':
+        return ((left.intereses ?? 0) - (right.intereses ?? 0)) * direction;
+      case 'metodo':
+        return (
+          (left.nombre_forma_pago ?? '').localeCompare(right.nombre_forma_pago ?? '', 'es', {
+            sensitivity: 'base',
+          }) * direction
+        );
+      case 'pago':
+        return (
+          this.getEstadoDisplayLabel(left.nombre_estado).localeCompare(
+            this.getEstadoDisplayLabel(right.nombre_estado),
+            'es',
+            { sensitivity: 'base' },
+          ) * direction
+        );
+      case 'id':
+      default:
+        return (left.id_transaccion - right.id_transaccion) * direction;
+    }
   }
 
-  toggleListadoSort(): void {
-    this.listadoSortDirection = this.listadoSortDirection === 'desc' ? 'asc' : 'desc';
+  toggleListadoSort(column: ListadoSortColumn): void {
+    if (this.listadoSortColumn === column) {
+      this.listadoSortDirection = this.listadoSortDirection === 'desc' ? 'asc' : 'desc';
+    } else {
+      this.listadoSortColumn = column;
+      this.listadoSortDirection = 'asc';
+    }
+
     this.listadoCurrentPage = 1;
   }
 
-  getListadoSortIndicator(): 'asc' | 'desc' {
-    return this.listadoSortDirection;
+  getListadoSortIndicator(column: ListadoSortColumn): 'asc' | 'desc' | null {
+    return this.listadoSortColumn === column ? this.listadoSortDirection : null;
   }
 
   get paginatedFilteredTransacciones(): TransaccionListado[] {
@@ -9731,6 +9772,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.sharedParticipantFilterAutoReset = false;
     this.quickPaySortColumn = this.viewMode === 'detalle' ? 'fecha_transaccion' : null;
     this.quickPaySortDirection = 'asc';
+    this.listadoSortColumn = 'id';
     this.listadoSortDirection = 'desc';
   }
 

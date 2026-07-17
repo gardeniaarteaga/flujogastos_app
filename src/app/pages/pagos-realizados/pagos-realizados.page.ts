@@ -1,4 +1,4 @@
-import { DecimalPipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { DecimalPipe, NgClass, NgFor, NgIf, NgTemplateOutlet } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
@@ -123,6 +123,50 @@ interface ParticipanteGroup {
   rows: PagoRealizadoRow[];
 }
 
+type ColumnFilterKey =
+  | 'id'
+  | 'tipo'
+  | 'fecha'
+  | 'fechaProgramada'
+  | 'descripcion'
+  | 'metodo'
+  | 'cuota'
+  | 'montoCuota'
+  | 'capitalPagado'
+  | 'interes'
+  | 'saldoPendiente'
+  | 'totalPagado'
+  | 'estado';
+
+const COLUMN_FILTER_KEYS: ColumnFilterKey[] = [
+  'id',
+  'tipo',
+  'fecha',
+  'fechaProgramada',
+  'descripcion',
+  'metodo',
+  'cuota',
+  'montoCuota',
+  'capitalPagado',
+  'interes',
+  'saldoPendiente',
+  'totalPagado',
+  'estado',
+];
+
+const COLUMN_FILTER_EMPTY_LABEL = '(Vacio)';
+
+const GROUP_ACCENT_COLORS = [
+  '#2a78d6', // azul
+  '#008300', // verde
+  '#e87ba4', // magenta
+  '#eda100', // amarillo
+  '#1baf7a', // aqua
+  '#eb6834', // naranja
+  '#4a3aa7', // violeta
+  '#e34948', // rojo
+];
+
 @Component({
   selector: 'app-pagos-realizados-page',
   imports: [
@@ -132,6 +176,7 @@ interface ParticipanteGroup {
     NgClass,
     NgIf,
     NgFor,
+    NgTemplateOutlet,
     DecimalPipe,
     SessionStripComponent,
   ],
@@ -189,6 +234,9 @@ export class PagosRealizadosPage implements OnInit {
   readonly fechaSortOrders = new Map<string, 'asc' | 'desc'>();
   readonly groupCurrentPages = new Map<string, number>();
   readonly expandedGroups = new Set<string>();
+  readonly columnFilters = new Map<string, Set<string>>();
+  readonly columnFilterSearchTerms = new Map<string, string>();
+  openColumnFilterKey: string | null = null;
   readonly groupPageSize = 10;
   private lastParticipanteKey: string | null = null;
   detailModalTransaccion: TransaccionListado | null = null;
@@ -572,6 +620,25 @@ export class PagosRealizadosPage implements OnInit {
     return !filtros.fechaDesde && !filtros.fechaHasta;
   }
 
+  clearGroupFilters(group: ParticipanteGroup): void {
+    this.activeMethodFilters.delete(group.participanteKey);
+
+    const prefix = `${group.participanteKey}::`;
+    for (const key of Array.from(this.columnFilters.keys())) {
+      if (key.startsWith(prefix)) {
+        this.columnFilters.delete(key);
+      }
+    }
+    for (const key of Array.from(this.columnFilterSearchTerms.keys())) {
+      if (key.startsWith(prefix)) {
+        this.columnFilterSearchTerms.delete(key);
+      }
+    }
+    if (this.openColumnFilterKey?.startsWith(prefix)) {
+      this.openColumnFilterKey = null;
+    }
+  }
+
   isLastDaysRange(days: number): boolean {
     const filtros = this.filtrosForm.getRawValue();
     const expectedEnd = this.todayFilterValue;
@@ -612,6 +679,10 @@ export class PagosRealizadosPage implements OnInit {
     return group.participanteKey;
   }
 
+  getGroupColor(index: number): string {
+    return GROUP_ACCENT_COLORS[index % GROUP_ACCENT_COLORS.length];
+  }
+
   getGroupAvailableMethods(group: ParticipanteGroup): SelectOption[] {
     const seen = new Set<string>();
     const options: SelectOption[] = [];
@@ -635,6 +706,143 @@ export class PagosRealizadosPage implements OnInit {
     this.groupCurrentPages.set(group.participanteKey, 1);
   }
 
+  getColumnValue(row: PagoRealizadoRow, column: ColumnFilterKey): string {
+    switch (column) {
+      case 'id':
+        return String(row.transaccionId);
+      case 'tipo':
+        return row.transaccionData.nombre_tipo_transaccion || '-';
+      case 'fecha':
+        return this.isOnlyPagadoFilter ? row.fechaPagoLabel : row.fechaTransaccionLabel;
+      case 'fechaProgramada':
+        return row.fechaProgramadaLabel;
+      case 'descripcion':
+        return row.descripcion;
+      case 'metodo':
+        return row.metodoPagoNombre;
+      case 'cuota':
+        return row.cuotaLabel;
+      case 'montoCuota':
+        return this.formatCurrency(row.montoCuota);
+      case 'capitalPagado':
+        return this.formatCurrency(row.montoPagado);
+      case 'interes':
+        return this.formatCurrency(this.isOnlyPendienteFilter ? row.interesPendiente : row.interesPagado);
+      case 'saldoPendiente':
+        return this.formatCurrency(row.montoPendiente);
+      case 'totalPagado':
+        return this.formatCurrency(this.isOnlyPendienteFilter ? row.montoPendiente : row.totalPagado);
+      case 'estado':
+        return row.estadoNombre;
+    }
+  }
+
+  private columnFilterMapKey(groupKey: string, column: ColumnFilterKey): string {
+    return `${groupKey}::${column}`;
+  }
+
+  private normalizeColumnFilterValue(value: string): string {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : COLUMN_FILTER_EMPTY_LABEL;
+  }
+
+  getColumnFilterOptions(group: ParticipanteGroup, column: ColumnFilterKey): SelectOption[] {
+    const seen = new Set<string>();
+    const options: SelectOption[] = [];
+
+    for (const row of group.rows) {
+      const value = this.normalizeColumnFilterValue(this.getColumnValue(row, column));
+      if (seen.has(value)) continue;
+      seen.add(value);
+      options.push({ value, label: value });
+    }
+
+    options.sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true }));
+
+    const search = this.getColumnFilterSearch(group.participanteKey, column).trim().toLowerCase();
+    if (!search) return options;
+
+    return options.filter((option) => option.label.toLowerCase().includes(search));
+  }
+
+  isColumnFilterOpen(groupKey: string, column: ColumnFilterKey): boolean {
+    return this.openColumnFilterKey === this.columnFilterMapKey(groupKey, column);
+  }
+
+  toggleColumnFilter(event: Event, groupKey: string, column: ColumnFilterKey): void {
+    event.stopPropagation();
+    const key = this.columnFilterMapKey(groupKey, column);
+    this.openColumnFilterKey = this.openColumnFilterKey === key ? null : key;
+  }
+
+  closeColumnFilter(): void {
+    this.openColumnFilterKey = null;
+  }
+
+  @HostListener('document:click')
+  onDocumentClickCloseColumnFilter(): void {
+    this.openColumnFilterKey = null;
+  }
+
+  isColumnFilterActive(groupKey: string, column: ColumnFilterKey): boolean {
+    return this.columnFilters.has(this.columnFilterMapKey(groupKey, column));
+  }
+
+  isColumnValueSelected(groupKey: string, column: ColumnFilterKey, value: string): boolean {
+    const selected = this.columnFilters.get(this.columnFilterMapKey(groupKey, column));
+    return !selected || selected.has(value);
+  }
+
+  toggleColumnValue(group: ParticipanteGroup, column: ColumnFilterKey, value: string): void {
+    const key = this.columnFilterMapKey(group.participanteKey, column);
+    let selected = this.columnFilters.get(key);
+
+    if (!selected) {
+      selected = new Set<string>();
+      for (const row of group.rows) {
+        selected.add(this.normalizeColumnFilterValue(this.getColumnValue(row, column)));
+      }
+      this.columnFilters.set(key, selected);
+    }
+
+    if (selected.has(value)) {
+      selected.delete(value);
+    } else {
+      selected.add(value);
+    }
+
+    this.groupCurrentPages.set(group.participanteKey, 1);
+  }
+
+  selectAllColumnValues(group: ParticipanteGroup, column: ColumnFilterKey): void {
+    this.columnFilters.delete(this.columnFilterMapKey(group.participanteKey, column));
+    this.groupCurrentPages.set(group.participanteKey, 1);
+  }
+
+  clearAllColumnValues(group: ParticipanteGroup, column: ColumnFilterKey): void {
+    this.columnFilters.set(this.columnFilterMapKey(group.participanteKey, column), new Set<string>());
+    this.groupCurrentPages.set(group.participanteKey, 1);
+  }
+
+  getColumnFilterSearch(groupKey: string, column: ColumnFilterKey): string {
+    return this.columnFilterSearchTerms.get(this.columnFilterMapKey(groupKey, column)) ?? '';
+  }
+
+  onColumnFilterSearch(event: Event, groupKey: string, column: ColumnFilterKey): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.columnFilterSearchTerms.set(this.columnFilterMapKey(groupKey, column), value);
+  }
+
+  private rowMatchesColumnFilters(groupKey: string, row: PagoRealizadoRow): boolean {
+    for (const column of COLUMN_FILTER_KEYS) {
+      const selected = this.columnFilters.get(this.columnFilterMapKey(groupKey, column));
+      if (!selected) continue;
+      const value = this.normalizeColumnFilterValue(this.getColumnValue(row, column));
+      if (!selected.has(value)) return false;
+    }
+    return true;
+  }
+
   getFechaSortOrder(groupKey: string): 'asc' | 'desc' {
     return this.fechaSortOrders.get(groupKey) ?? 'asc';
   }
@@ -649,6 +857,7 @@ export class PagosRealizadosPage implements OnInit {
     const sortOrder = this.getFechaSortOrder(group.participanteKey);
     const filtered = group.rows.filter((row) => {
       if (activeMethod !== null && row.metodoPagoId !== activeMethod) return false;
+      if (!this.rowMatchesColumnFilters(group.participanteKey, row)) return false;
       return true;
     });
 
@@ -962,6 +1171,9 @@ export class PagosRealizadosPage implements OnInit {
     }
 
     this.groupCurrentPages.clear();
+    this.columnFilters.clear();
+    this.columnFilterSearchTerms.clear();
+    this.openColumnFilterKey = null;
 
     const currentKey = participanteKey ?? '';
     if (currentKey !== (this.lastParticipanteKey ?? '')) {

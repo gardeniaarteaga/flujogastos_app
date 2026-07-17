@@ -286,8 +286,9 @@
 
     <div *ngIf="!loading && filteredPagos.length > 0" class="payments-groups-section">
       <details
-        *ngFor="let group of groupedPagos; trackBy: trackGroup"
+        *ngFor="let group of groupedPagos; let i = index; trackBy: trackGroup"
         class="panel payments-group-accordion"
+        [style.--group-accent]="getGroupColor(i)"
         [attr.open]="expandedGroups.has(group.participanteKey) ? '' : null"
         (toggle)="onGroupToggle(group.participanteKey, $any($event.target).open)"
       >
@@ -322,11 +323,11 @@
         </summary>
 
         <div class="payments-group-body">
-          <div
-            *ngIf="getGroupAvailableMethods(group).length > 1"
-            class="payments-filters-bar"
-          >
-            <div class="payments-method-filter">
+          <div class="payments-filters-bar">
+            <div
+              *ngIf="getGroupAvailableMethods(group).length > 1"
+              class="payments-method-filter"
+            >
               <span class="payments-filter-strip-label">Metodo</span>
               <button
                 type="button"
@@ -346,34 +347,154 @@
                 {{ method.label }}
               </button>
             </div>
+
+            <button
+              type="button"
+              class="filter-clear-button payments-group-clear-btn"
+              title="Quitar filtros de esta tabla"
+              aria-label="Quitar filtros de esta tabla"
+              (click)="clearGroupFilters(group)"
+            >
+              Quitar filtros
+            </button>
           </div>
+
+          <ng-template #colFilter let-group="group" let-column="column">
+            <button
+              type="button"
+              class="col-filter-btn"
+              [class.is-active]="isColumnFilterActive(group.participanteKey, column)"
+              (click)="toggleColumnFilter($event, group.participanteKey, column)"
+              aria-label="Filtrar columna"
+            >
+              <svg viewBox="0 0 16 16" width="9" height="9" fill="currentColor" aria-hidden="true">
+                <path d="M1 1.5h14a.5.5 0 0 1 .39.81l-5.39 6.74v4.6a.5.5 0 0 1-.2.4l-2.5 1.9a.5.5 0 0 1-.8-.4V9.05L.61 2.31A.5.5 0 0 1 1 1.5Z"/>
+              </svg>
+            </button>
+            <div
+              *ngIf="isColumnFilterOpen(group.participanteKey, column)"
+              class="col-filter-popup"
+              (click)="$event.stopPropagation()"
+            >
+              <input
+                type="text"
+                class="col-filter-search"
+                placeholder="Buscar..."
+                [value]="getColumnFilterSearch(group.participanteKey, column)"
+                (input)="onColumnFilterSearch($event, group.participanteKey, column)"
+              />
+              <div class="col-filter-quick-actions">
+                <button type="button" (click)="selectAllColumnValues(group, column)">Todo</button>
+                <button type="button" (click)="clearAllColumnValues(group, column)">Ninguno</button>
+              </div>
+              <div class="col-filter-options">
+                <label *ngFor="let opt of getColumnFilterOptions(group, column)" class="col-filter-option">
+                  <input
+                    type="checkbox"
+                    [checked]="isColumnValueSelected(group.participanteKey, column, opt.value)"
+                    (change)="toggleColumnValue(group, column, opt.value)"
+                  />
+                  <span>{{ opt.label }}</span>
+                </label>
+                <span *ngIf="getColumnFilterOptions(group, column).length === 0" class="col-filter-empty">Sin resultados</span>
+              </div>
+              <div class="col-filter-footer">
+                <button type="button" class="col-filter-accept" (click)="closeColumnFilter()">Aceptar</button>
+              </div>
+            </div>
+          </ng-template>
 
           <div class="table-wrap payments-table-wrap">
             <table class="payments-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Tipo</th>
+                  <th>
+                    <div class="th-content">
+                      <span>ID</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'id' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>Tipo</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'tipo' }"></ng-container>
+                    </div>
+                  </th>
                   <th
                     class="th-sortable"
                     (click)="toggleFechaSort(group.participanteKey)"
                     [attr.aria-sort]="getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending'"
                     title="Ordenar por fecha"
                   >
-                    <ng-container *ngIf="isOnlyPagadoFilter">Fecha Pago</ng-container>
-                    <ng-container *ngIf="!isOnlyPagadoFilter">Fecha<br>Transaccion</ng-container>
-                    <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
+                    <div class="th-content">
+                      <span>
+                        <ng-container *ngIf="isOnlyPagadoFilter">Fecha Pago</ng-container>
+                        <ng-container *ngIf="!isOnlyPagadoFilter">Fecha<br>Transaccion</ng-container>
+                        <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
+                      </span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'fecha' }"></ng-container>
+                    </div>
                   </th>
-                  <th *ngIf="!isOnlyPagadoFilter">Fecha<br>Programada</th>
-                  <th class="payments-col-descripcion">Descripcion</th>
-                  <th class="payments-col-metodo">Metodo</th>
-                  <th>Cuota</th>
-                  <th>{{ isOnlyPendienteFilter ? 'Monto' : 'Monto cuota' }}</th>
-                  <th *ngIf="!isOnlyPendienteFilter">Capital pagado</th>
-                  <th>{{ isOnlyPendienteFilter ? 'Interes' : 'Interes pagado' }}</th>
-                  <th *ngIf="!isOnlyPendienteFilter && !isOnlyPagadoFilter">Saldo pendiente</th>
-                  <th>{{ isOnlyPendienteFilter ? 'Total Pendiente' : 'Total pagado' }}</th>
-                  <th>Estado</th>
+                  <th *ngIf="!isOnlyPagadoFilter">
+                    <div class="th-content">
+                      <span>Fecha<br>Programada</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'fechaProgramada' }"></ng-container>
+                    </div>
+                  </th>
+                  <th class="payments-col-descripcion">
+                    <div class="th-content">
+                      <span>Descripcion</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'descripcion' }"></ng-container>
+                    </div>
+                  </th>
+                  <th class="payments-col-metodo">
+                    <div class="th-content">
+                      <span>Metodo</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'metodo' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>Cuota</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'cuota' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>{{ isOnlyPendienteFilter ? 'Monto' : 'Monto cuota' }}</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'montoCuota' }"></ng-container>
+                    </div>
+                  </th>
+                  <th *ngIf="!isOnlyPendienteFilter">
+                    <div class="th-content">
+                      <span>Capital pagado</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'capitalPagado' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>{{ isOnlyPendienteFilter ? 'Interes' : 'Interes pagado' }}</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'interes' }"></ng-container>
+                    </div>
+                  </th>
+                  <th *ngIf="!isOnlyPendienteFilter && !isOnlyPagadoFilter">
+                    <div class="th-content">
+                      <span>Saldo pendiente</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'saldoPendiente' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>{{ isOnlyPendienteFilter ? 'Total Pendiente' : 'Total pagado' }}</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'totalPagado' }"></ng-container>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-content">
+                      <span>Estado</span>
+                      <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'estado' }"></ng-container>
+                    </div>
+                  </th>
                   <th></th>
                 </tr>
               </thead>

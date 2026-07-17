@@ -658,22 +658,89 @@
                 <th>
                   <button
                     type="button"
-                    class="qp-sort-header is-active"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('id')"
                     aria-label="Ordenar por ID"
-                    (click)="toggleListadoSort()"
+                    (click)="toggleListadoSort('id')"
                   >
                     <span>ID</span>
-                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator() === 'desc' ? '↓' : '↑' }}</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('id') === 'desc' ? '↓' : getListadoSortIndicator('id') === 'asc' ? '↑' : '↕' }}</span>
                   </button>
                 </th>
                 <th class="col-tipo" style="text-align: center;">Tipo</th>
-                <th>Fecha</th>
-                <th class="col-descripcion">Descripcion</th>
-                <th>Monto</th>
-                <th>Intereses</th>
+                <th>
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('fecha')"
+                    aria-label="Ordenar por fecha"
+                    (click)="toggleListadoSort('fecha')"
+                  >
+                    <span>Fecha</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('fecha') === 'desc' ? '↓' : getListadoSortIndicator('fecha') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
+                <th class="col-descripcion">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('descripcion')"
+                    aria-label="Ordenar por descripcion"
+                    (click)="toggleListadoSort('descripcion')"
+                  >
+                    <span>Descripcion</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('descripcion') === 'desc' ? '↓' : getListadoSortIndicator('descripcion') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('monto')"
+                    aria-label="Ordenar por monto"
+                    (click)="toggleListadoSort('monto')"
+                  >
+                    <span>Monto</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('monto') === 'desc' ? '↓' : getListadoSortIndicator('monto') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('intereses')"
+                    aria-label="Ordenar por intereses"
+                    (click)="toggleListadoSort('intereses')"
+                  >
+                    <span>Intereses</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('intereses') === 'desc' ? '↓' : getListadoSortIndicator('intereses') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
                 <th class="col-saldo">Pendiente</th>
-                <th class="col-metodo">Metodo</th>
-                <th class="col-pago">Pago</th>
+                <th class="col-metodo">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('metodo')"
+                    aria-label="Ordenar por metodo"
+                    (click)="toggleListadoSort('metodo')"
+                  >
+                    <span>Metodo</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('metodo') === 'desc' ? '↓' : getListadoSortIndicator('metodo') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
+                <th class="col-pago">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getListadoSortIndicator('pago')"
+                    aria-label="Ordenar por pago"
+                    (click)="toggleListadoSort('pago')"
+                  >
+                    <span>Pago</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('pago') === 'desc' ? '↓' : getListadoSortIndicator('pago') === 'asc' ? '↑' : '↕' }}</span>
+                  </button>
+                </th>
                 <th class="col-partic" style="text-align: center;" title="Participantes">Partic.</th>
                 <th class="col-acciones">Acciones</th>
               </tr>
