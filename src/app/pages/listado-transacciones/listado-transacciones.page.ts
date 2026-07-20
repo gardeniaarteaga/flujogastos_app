@@ -132,6 +132,8 @@ interface ParticipanteDetalleListado {
 interface TransaccionListado {
   id_transaccion: number;
   es_propietario: boolean;
+  id_usuario_origen?: number;
+  enviado_por?: string | null;
   fecha: string;
   monto: number;
   intereses: number;
@@ -5076,7 +5078,7 @@ export class ListadoTransaccionesPage implements OnInit {
   getDetailModalRelationText(
     transaccion: Pick<
       TransaccionListado,
-      'pagocompartido' | 'participantes_detalle' | 'es_propietario' | 'titular'
+      'pagocompartido' | 'participantes_detalle' | 'es_propietario' | 'enviado_por'
     > | null | undefined,
   ): string {
     if (!transaccion?.pagocompartido) {
@@ -5084,7 +5086,7 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     if (!transaccion.es_propietario) {
-      return `Recibido de: ${transaccion.titular?.trim() || 'Titular'}`;
+      return `Recibido de: ${transaccion.enviado_por?.trim() || 'Titular'}`;
     }
 
     const participantes = Array.from(
@@ -5735,7 +5737,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   getQuickPayParticipanteDisplay(row: DetalleTransaccionListadoRow): string {
     if (!row.transaccion.es_propietario) {
-      return this.getFirstName(row.transaccion.titular) || 'Titular';
+      return this.getFirstName(row.transaccion.enviado_por) || 'Titular';
     }
 
     if (row.quickPayIsOwnedByCurrentUser) {
