@@ -5734,12 +5734,12 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getQuickPayParticipanteDisplay(row: DetalleTransaccionListadoRow): string {
-    if (row.detalle.es_titular) {
-      return 'Titular';
-    }
-
     if (!row.transaccion.es_propietario) {
       return this.getFirstName(row.transaccion.titular) || 'Titular';
+    }
+
+    if (row.quickPayIsOwnedByCurrentUser) {
+      return 'Titular';
     }
 
     return this.getFirstName(row.nombre_mostrado);
