@@ -5467,7 +5467,25 @@ export class ListadoTransaccionesPage implements OnInit {
       this.isDetalleDelUsuarioLogueado(detalle, !!transaccion?.es_propietario),
     );
 
-    return detallesAsociados.length > 0 ? detallesAsociados : detalles;
+    if (detallesAsociados.length > 0) {
+      return detallesAsociados;
+    }
+
+    // Sin match: solo mostrar como propio un gasto individual (un unico
+    // detalle) que no este explicitamente vinculado a otro usuario. Con
+    // varios participantes, mostrarlos todos filtraria pagos ajenos de un
+    // gasto compartido.
+    if (detalles.length === 1) {
+      const unico = detalles[0];
+      const vinculadoAOtroUsuario =
+        unico.id_usuario_relacionado !== null &&
+        unico.id_usuario_relacionado !== undefined &&
+        unico.id_usuario_relacionado !== this.currentUserIdValue;
+
+      return vinculadoAOtroUsuario ? [] : detalles;
+    }
+
+    return [];
   }
 
   private syncQuickPayBulkSelectionWithFilters(): void {
@@ -5624,12 +5642,27 @@ export class ListadoTransaccionesPage implements OnInit {
   ): boolean {
     const currentUserParticipanteId = this.currentUserParticipante?.id_participante ?? null;
 
-    return (
-      detalle.id_usuario_relacionado === this.currentUserIdValue ||
-      (currentUserParticipanteId !== null &&
-        detalle.id_participante === currentUserParticipanteId) ||
-      (transaccionEsPropietario && detalle.es_titular)
-    );
+    if (detalle.id_usuario_relacionado === this.currentUserIdValue) {
+      return true;
+    }
+
+    if (
+      currentUserParticipanteId !== null &&
+      detalle.id_participante === currentUserParticipanteId
+    ) {
+      return true;
+    }
+
+    const detalleVinculadoAOtroUsuario =
+      detalle.id_usuario_relacionado !== null &&
+      detalle.id_usuario_relacionado !== undefined &&
+      detalle.id_usuario_relacionado !== this.currentUserIdValue;
+
+    if (detalleVinculadoAOtroUsuario) {
+      return false;
+    }
+
+    return transaccionEsPropietario && detalle.es_titular;
   }
 
   private buildDetalleTransaccionRows(): DetalleTransaccionListadoRow[] {
