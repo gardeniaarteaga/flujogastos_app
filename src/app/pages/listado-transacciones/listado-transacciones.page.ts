@@ -375,6 +375,7 @@ export class ListadoTransaccionesPage implements OnInit {
     anioFiltro: [null as number | null],
     prioritarios: [this.getInitialQuickPayPriorityFilterValue()],
     vencidos: [this.viewMode === 'detalle'],
+    todosDetalle: [false],
     diasPrioridad: [
       this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -880,6 +881,7 @@ export class ListadoTransaccionesPage implements OnInit {
       (this.normalizeText(filtros.tipoTransaccion ?? '') as 'credito' | 'debito' | '') || null;
     const prioridadActiva = !!filtros.prioritarios;
     const vencidosActivos = !!filtros.vencidos;
+    const todosDetalleActivo = !!filtros.todosDetalle;
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
@@ -896,7 +898,15 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
-        if (prioridadActiva || vencidosActivos) {
+        if (todosDetalleActivo) {
+          if (row.transaccion.cuotas_sin_intereses) {
+            const scheduledDate = this.parseIsoDateOnly(row.detalle.fecha_programada);
+
+            if (scheduledDate && scheduledDate > this.getDateOnlyValue(new Date())) {
+              return false;
+            }
+          }
+        } else if (prioridadActiva || vencidosActivos) {
           const coincideConFiltroRapidoFecha =
             (prioridadActiva && this.isDetallePrioritario(row.detalle)) ||
             (vencidosActivos && this.isDetalleVencido(row.detalle));
@@ -1072,6 +1082,7 @@ export class ListadoTransaccionesPage implements OnInit {
     if (!this.isDetalleViewMode) return [];
     const f = this.filtrosForm.getRawValue();
     const chips: string[] = [];
+    if (f.todosDetalle) chips.push('Todos');
     if (f.prioritarios) chips.push('Proximos 15 dias');
     if (f.vencidos) chips.push('Vencidos');
     if (f.mesActual) chips.push('Mes actual');
@@ -1269,25 +1280,26 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getQuickPayMetodoGroupAccentColor(index: number): string {
-    return this.getPaymentGroupAccentColor(index);
+    const accentPalette = ['#2f6fed', '#ea580c', '#ca8a04', '#0f766e', '#c2410c', '#be185d'];
+    return accentPalette[index % accentPalette.length];
   }
 
   getQuickPayMetodoGroupSurfaceColor(index: number): string {
-    const surfacePalette = ['#eaf1ff', '#fff1e8', '#f3ecff', '#e8f7f4', '#fff1eb', '#fdebf4'];
+    const surfacePalette = ['#eaf1ff', '#fff1e8', '#fefce8', '#e8f7f4', '#fff1eb', '#fdebf4'];
     return surfacePalette[index % surfacePalette.length];
   }
 
   getQuickPayMetodoGroupTextColor(index: number): string {
-    const textPalette = ['#1e3a8a', '#9a3412', '#5b21b6', '#115e59', '#9a3412', '#9d174d'];
+    const textPalette = ['#1e3a8a', '#9a3412', '#854d0e', '#115e59', '#9a3412', '#9d174d'];
     return textPalette[index % textPalette.length];
   }
 
   private getQuickPayGroupAccentPalette(index: number): QuickPayAccentPalette {
-    const borderPalette = ['#bfd4ff', '#ffd8bf', '#ddd6fe', '#bfe7df', '#fed7c8', '#f7cad9'];
-    const surfacePalette = ['#eaf1ff', '#fff1e8', '#f3ecff', '#e8f7f4', '#fff1eb', '#fdebf4'];
-    const methodSurfacePalette = ['#dbeafe', '#ffedd5', '#f3e8ff', '#ccfbf1', '#ffedd5', '#fce7f3'];
-    const methodBorderPalette = ['#93c5fd', '#fdba74', '#d8b4fe', '#5eead4', '#fdba74', '#f9a8d4'];
-    const accent = this.getPaymentGroupAccentColor(index);
+    const borderPalette = ['#bfd4ff', '#ffd8bf', '#fde68a', '#bfe7df', '#fed7c8', '#f7cad9'];
+    const surfacePalette = ['#eaf1ff', '#fff1e8', '#fefce8', '#e8f7f4', '#fff1eb', '#fdebf4'];
+    const methodSurfacePalette = ['#dbeafe', '#ffedd5', '#fef9c3', '#ccfbf1', '#ffedd5', '#fce7f3'];
+    const methodBorderPalette = ['#93c5fd', '#fdba74', '#fde047', '#5eead4', '#fdba74', '#f9a8d4'];
+    const accent = this.getQuickPayMetodoGroupAccentColor(index);
     const text = this.getQuickPayMetodoGroupTextColor(index);
 
     return {
@@ -2431,6 +2443,25 @@ export class ListadoTransaccionesPage implements OnInit {
   onVencidosToggle(event: Event): void {
     const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
     this.setQuickPayScheduleFilterState('vencidos', checked);
+  }
+
+  onTodosDetalleToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
+
+    if (checked) {
+      this.filtrosForm.patchValue(
+        {
+          prioritarios: false,
+          vencidos: false,
+          mesActual: false,
+          fechaDesde: '',
+          fechaHasta: '',
+        },
+        { emitEvent: false },
+      );
+    }
+
+    this.filtrosForm.controls.todosDetalle.setValue(checked);
   }
 
   onTodosToggle(event: Event): void {
@@ -9748,6 +9779,7 @@ export class ListadoTransaccionesPage implements OnInit {
       anioFiltro: null,
       prioritarios: usePriorityDefaults,
       vencidos: useOverdueDefaults,
+      todosDetalle: false,
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
         : PRIORITY_WINDOW_DAYS,
@@ -9996,6 +10028,7 @@ export class ListadoTransaccionesPage implements OnInit {
         anioFiltro: null,
         prioritarios: false,
         vencidos: false,
+        todosDetalle: false,
         fechaDesde: this.formatDateDisplayFromApi(this.currentMonthStartValue),
         fechaHasta: this.formatDateDisplayFromApi(this.currentMonthEndValue),
       },
@@ -10224,7 +10257,7 @@ export class ListadoTransaccionesPage implements OnInit {
         {
           soloHoy: false,
           mesActual: false,
-          ...(this.isDetalleViewMode ? {} : { mesFiltro: null, anioFiltro: null }),
+          ...(this.isDetalleViewMode ? { todosDetalle: false } : { mesFiltro: null, anioFiltro: null }),
           fechaDesde: '',
           fechaHasta: '',
         },

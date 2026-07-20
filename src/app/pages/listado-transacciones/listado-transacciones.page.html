@@ -125,7 +125,7 @@
         >
           {{ calculatingIntereses ? 'Calculando...' : 'Calcular Intereses' }}
         </button>
-        <button type="button" class="secondary-button" (click)="clearFiltros()">
+        <button *ngIf="!isDetalleViewMode" type="button" class="secondary-button" (click)="clearFiltros()">
           Limpiar filtros
         </button>
         <button type="button" class="secondary-button" (click)="reloadAll()">
@@ -209,24 +209,44 @@
                   <ng-container *ngIf="quickPayFiltersCollapsed && activeQuickPayFilterChips.length > 0">
                     <span
                       *ngFor="let chip of activeQuickPayFilterChips"
-                      style="display:inline-flex;align-items:center;padding:0.2rem 0.55rem;border-radius:999px;background:#eef4ff;border:1px solid #cddcff;color:#2457b8;font-size:0.72rem;font-weight:800;white-space:nowrap;"
+                      style="display:inline-flex;align-items:center;padding:0.2rem 0.55rem;border-radius:999px;background:#f3e8ff;border:1px solid #d8b9ff;color:#7a2ec7;font-size:0.72rem;font-weight:800;white-space:nowrap;"
                     >{{ chip }}</span>
                   </ng-container>
                 </div>
-                <button
-                  type="button"
-                  class="compact-button"
-                  style="border:1px solid #c9d8ee;background:linear-gradient(180deg,#f8fbff 0%,#e8f0fb 100%);color:#335a8d;font-weight:800;"
-                  [attr.aria-expanded]="!quickPayFiltersCollapsed"
-                  (click)="toggleQuickPayFiltersCollapsed()"
-                >
-                  {{ quickPayFiltersCollapsed ? 'Mostrar panel' : 'Ocultar panel' }}
-                </button>
+                <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+                  <button
+                    type="button"
+                    class="compact-button"
+                    style="border:1px solid #f0c68c;background:linear-gradient(180deg,#fff8ec 0%,#fdecc8 100%);color:#8a5a15;font-weight:800;"
+                    (click)="clearFiltros()"
+                  >
+                    Limpiar filtros
+                  </button>
+                  <button
+                    type="button"
+                    class="compact-button"
+                    style="border:1px solid #c9d8ee;background:linear-gradient(180deg,#f8fbff 0%,#e8f0fb 100%);color:#335a8d;font-weight:800;"
+                    [attr.aria-expanded]="!quickPayFiltersCollapsed"
+                    (click)="toggleQuickPayFiltersCollapsed()"
+                  >
+                    {{ quickPayFiltersCollapsed ? 'Mostrar panel' : 'Ocultar panel' }}
+                  </button>
+                </div>
               </div>
 
               <div *ngIf="!quickPayFiltersCollapsed" style="display:grid;gap:.55rem;">
                 <!-- Fila 2: checkboxes + dropdowns en la misma línea -->
                 <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;">
+                  <label class="checkbox-row checkbox-row-compact" for="todosDetalle">
+                    <input
+                      id="todosDetalle"
+                      type="checkbox"
+                      formControlName="todosDetalle"
+                      (change)="onTodosDetalleToggle($event)"
+                    />
+                    <span>Todos</span>
+                  </label>
+
                   <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
                     <input
                       id="prioritariosDetalle"
@@ -1006,20 +1026,6 @@
                   <button
                     type="button"
                     class="qp-sort-header"
-                    [class.is-active]="!!getQuickPaySortIndicator('fecha_transaccion')"
-                    [attr.aria-label]="'Ordenar por fecha de transaccion'"
-                    (click)="toggleQuickPaySort('fecha_transaccion')"
-                  >
-                    <span>Fecha<br>Transaccion</span>
-                    <span class="qp-sort-arrow" aria-hidden="true">
-                      {{ getQuickPaySortIndicator('fecha_transaccion') === 'desc' ? '↓' : getQuickPaySortIndicator('fecha_transaccion') === 'asc' ? '↑' : '↕' }}
-                    </span>
-                  </button>
-                </th>
-                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
-                  <button
-                    type="button"
-                    class="qp-sort-header"
                     [class.is-active]="!!getQuickPaySortIndicator('fecha_programada')"
                     [attr.aria-label]="'Ordenar por fecha programada'"
                     (click)="toggleQuickPaySort('fecha_programada')"
@@ -1027,6 +1033,20 @@
                     <span>Fecha<br>Programada</span>
                     <span class="qp-sort-arrow" aria-hidden="true">
                       {{ getQuickPaySortIndicator('fecha_programada') === 'desc' ? '↓' : getQuickPaySortIndicator('fecha_programada') === 'asc' ? '↑' : '↕' }}
+                    </span>
+                  </button>
+                </th>
+                <th *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
+                  <button
+                    type="button"
+                    class="qp-sort-header"
+                    [class.is-active]="!!getQuickPaySortIndicator('fecha_transaccion')"
+                    [attr.aria-label]="'Ordenar por fecha de transaccion'"
+                    (click)="toggleQuickPaySort('fecha_transaccion')"
+                  >
+                    <span>Fecha<br>Transaccion</span>
+                    <span class="qp-sort-arrow" aria-hidden="true">
+                      {{ getQuickPaySortIndicator('fecha_transaccion') === 'desc' ? '↓' : getQuickPaySortIndicator('fecha_transaccion') === 'asc' ? '↑' : '↕' }}
                     </span>
                   </button>
                 </th>
@@ -1112,7 +1132,6 @@
                     </label>
                   </td>
                   <td>{{ row.transaccion.id_transaccion }}</td>
-                  <td *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.transaccion.fecha | date: 'dd/MM/yyyy' }}</td>
                   <td *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">
                     <div style="display:grid;gap:.3rem;">
                       <span>{{ row.quickPayFechaProgramadaLabel }}</span>
@@ -1124,6 +1143,7 @@
                       </span>
                     </div>
                   </td>
+                  <td *ngIf="!isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.transaccion.fecha | date: 'dd/MM/yyyy' }}</td>
                   <td *ngIf="isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.quickPayFechaPagoLabel }}</td>
                   <td class="qp-col-transaccion">
                     <div style="display:grid;gap:.35rem;">
