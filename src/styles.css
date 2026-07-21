@@ -345,7 +345,16 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
 .module-page .payment-detail-row.is-paid {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  padding: 0.6rem 0.9rem;
   background: #f8fbff;
+}
+
+.module-page .payment-paid-summary {
+  gap: 0.15rem;
+}
+
+.module-page .payment-paid-summary span {
+  font-size: 0.8rem;
 }
 
 .module-page .payment-detail-summary strong {

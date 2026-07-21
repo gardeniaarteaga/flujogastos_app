@@ -2583,6 +2583,7 @@
                         [id]="'fecha_pago_' + pagoGroup.controls.id_detalle.value"
                         class="fecha-pago-inline-input"
                         type="date"
+                        lang="es"
                         formControlName="fecha_pago"
                       />
                     </span>
@@ -2630,25 +2631,9 @@
                 </ng-container>
 
                 <ng-template #paidCuotaRow>
-                  <div style="width:100%;overflow-x:auto;border:1px solid #dbe5f1;border-radius:.65rem;background:#fff;">
-                    <table style="width:100%;min-width:560px;border-collapse:collapse;">
-                      <thead>
-                        <tr>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Cuota</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Monto</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Fecha programada</th>
-                          <th style="padding:.65rem .75rem;text-align:left;white-space:nowrap;color:#6b7a90;font-size:.74rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:#f8fbff;">Fecha de pago</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.numero_cuota.value }}/{{ pagoGroup.controls.total_cuotas.value }}</td>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</td>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</td>
-                          <td style="padding:.65rem .75rem;text-align:left;white-space:nowrap;border-top:1px solid #e6edf5;color:var(--color-heading);font-weight:700;">{{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div class="payment-detail-summary payment-paid-summary">
+                    <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }}/{{ pagoGroup.controls.total_cuotas.value }} &middot; ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</strong>
+                    <span>Programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }} &middot; Pagada: {{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</span>
                   </div>
                   <div class="payment-detail-actions">
                     <span class="status-pill status-pill-completado">Pagada</span>
