@@ -345,12 +345,19 @@
       <div *ngIf="recordatoriosCuotas.length > 0; else emptyRecordatoriosCuotas" class="scheduled-grid">
         <a
           *ngFor="let item of recordatoriosCuotas"
-          class="scheduled-card tone-info scheduled-card-link"
+          class="scheduled-card scheduled-card-link"
+          [ngClass]="'tone-' + item.tone"
           routerLink="/resumen/detalle-transacciones"
           [queryParams]="{ openPayment: 1, transactionId: item.id_transaccion }"
         >
+          <div class="scheduled-card-badges" *ngIf="item.cuotasVencidas > 0">
+            <span class="scheduled-status-pill" [ngClass]="'tone-' + item.tone">{{ item.cuotasVencidasLabel }}</span>
+          </div>
           <strong class="scheduled-card-title">{{ item.descripcion || 'Sin descripcion' }}</strong>
           <span class="scheduled-relative-label">Transaccion #{{ item.id_transaccion }}</span>
+          <div class="scheduled-card-meta">
+            <span>Fecha programada: {{ item.fechaProgramadaLabel }}</span>
+          </div>
         </a>
       </div>
 

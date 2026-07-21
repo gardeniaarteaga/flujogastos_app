@@ -97,11 +97,15 @@ interface FinalizarConfiguracionNotificacionPagoPayload {
 interface RecordatorioCuotaApiItem {
   id_transaccion?: number | string | null;
   descripcion?: string | null;
+  fecha_programada?: string | null;
+  cuotas_vencidas?: number | string | null;
 }
 
 export interface RecordatorioCuota {
   id_transaccion: number;
   descripcion: string | null;
+  fecha_programada: string | null;
+  cuotas_vencidas: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -484,9 +488,13 @@ export class NotificacionesService {
       return null;
     }
 
+    const cuotasVencidas = Number(item.cuotas_vencidas);
+
     return {
       id_transaccion: idTransaccion,
       descripcion: item.descripcion?.trim() || null,
+      fecha_programada: item.fecha_programada?.trim().slice(0, 10) || null,
+      cuotas_vencidas: Number.isFinite(cuotasVencidas) && cuotasVencidas > 0 ? cuotasVencidas : 0,
     };
   }
 }

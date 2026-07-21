@@ -30,6 +30,15 @@ interface DashboardPeriodRange {
   descriptionLabel: string;
 }
 
+interface RecordatorioCuotaView {
+  id_transaccion: number;
+  descripcion: string | null;
+  fechaProgramadaLabel: string;
+  cuotasVencidas: number;
+  cuotasVencidasLabel: string;
+  tone: DashboardTone;
+}
+
 interface ScheduledNotificationView {
   id_notificacion_programada: number;
   descripcion: string;
@@ -386,7 +395,7 @@ export class Dashboard implements OnInit {
   ];
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
-  recordatoriosCuotas: RecordatorioCuota[] = [];
+  recordatoriosCuotas: RecordatorioCuotaView[] = [];
   transactions: TransaccionListado[] = [];
   dashboardTransactionsModalOpen = false;
   dashboardTransactionsModalTitle = '';
@@ -475,7 +484,7 @@ export class Dashboard implements OnInit {
       this.availableYears = this.buildAvailableYears(this.transactions);
       this.refreshDashboardSummary();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
-      this.recordatoriosCuotas = recordatoriosCuotas;
+      this.recordatoriosCuotas = this.buildRecordatoriosCuotasView(recordatoriosCuotas);
     } catch {
       this.transactions = [];
       this.availableYears = this.buildAvailableYears([]);
@@ -1884,6 +1893,27 @@ export class Dashboard implements OnInit {
         : 'No se observan intereses pendientes relevantes.';
 
     return `${balanceText} ${debtText} ${trendText} ${interestText}`;
+  }
+
+  private buildRecordatoriosCuotasView(
+    recordatorios: RecordatorioCuota[],
+  ): RecordatorioCuotaView[] {
+    return recordatorios.map((item) => {
+      const fechaProgramada = this.parseDateOnly(item.fecha_programada);
+      const cuotasVencidas = Math.max(0, item.cuotas_vencidas || 0);
+
+      return {
+        id_transaccion: item.id_transaccion,
+        descripcion: item.descripcion,
+        fechaProgramadaLabel: fechaProgramada
+          ? this.fullDateFormatter.format(fechaProgramada)
+          : 'Sin fecha programada',
+        cuotasVencidas,
+        cuotasVencidasLabel:
+          cuotasVencidas === 1 ? '1 cuota vencida' : `${cuotasVencidas} cuotas vencidas`,
+        tone: cuotasVencidas > 1 ? 'danger' : 'info',
+      };
+    });
   }
 
   private buildScheduledNotifications(
