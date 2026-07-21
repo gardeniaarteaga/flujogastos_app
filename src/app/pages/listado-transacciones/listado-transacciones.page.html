@@ -2565,80 +2565,94 @@
             </div>
 
             <div class="payment-details-list">
+              <div *ngIf="getPagoPagadas(paymentGroup).length > 0" class="payment-paid-group">
+                <button
+                  type="button"
+                  class="payment-paid-toggle"
+                  (click)="togglePagoPagadasExpanded(paymentGroup)"
+                  [attr.aria-expanded]="isPagoPagadasExpanded(paymentGroup)"
+                >
+                  <span>{{ getPagoPagadas(paymentGroup).length }} cuota{{ getPagoPagadas(paymentGroup).length === 1 ? '' : 's' }} pagada{{ getPagoPagadas(paymentGroup).length === 1 ? '' : 's' }}</span>
+                  <span class="payment-paid-toggle-icon">{{ isPagoPagadasExpanded(paymentGroup) ? '▲' : '▼' }}</span>
+                </button>
+
+                <div *ngIf="isPagoPagadasExpanded(paymentGroup)" class="payment-paid-group-list">
+                  <div
+                    class="payment-detail-row is-paid"
+                    *ngFor="let pagoGroup of getPagoPagadas(paymentGroup)"
+                    [formGroup]="pagoGroup"
+                  >
+                    <div class="payment-detail-summary payment-paid-summary payment-paid-summary-oneline">
+                      <span><strong>Cuota {{ pagoGroup.controls.numero_cuota.value }}/{{ pagoGroup.controls.total_cuotas.value }}</strong> &middot; ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }} &middot; Programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }} &middot; Pagada: {{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</span>
+                    </div>
+                    <div class="payment-detail-actions">
+                      <span class="status-pill status-pill-completado">Pagada</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div
                 class="payment-detail-row"
-                [class.is-paid]="isPagoCuotaPagada(pagoGroup)"
-                *ngFor="let pagoGroup of paymentGroup.cuotas"
+                *ngFor="let pagoGroup of getPagoPendientes(paymentGroup)"
                 [formGroup]="pagoGroup"
               >
-                <ng-container *ngIf="!isPagoCuotaPagada(pagoGroup); else paidCuotaRow">
-                  <div class="payment-detail-summary payment-detail-summary-pay">
-                    <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }} de {{ pagoGroup.controls.total_cuotas.value }}</strong>
-                    <span>Monto ya pagado: ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</span>
-                    <span class="payment-saldo">Monto de esta cuota: ${{ pagoGroup.controls.saldo_pendiente.value | number: '1.2-2' }}</span>
-                    <span>Fecha programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</span>
-                    <span class="payment-fecha-pago-field">
-                      Fecha de Pago:
-                      <input
-                        [id]="'fecha_pago_' + pagoGroup.controls.id_detalle.value"
-                        class="fecha-pago-inline-input"
-                        type="date"
-                        lang="es"
-                        formControlName="fecha_pago"
-                      />
-                    </span>
-                  </div>
-
-                  <div class="field payment-detail-input">
-                    <label [for]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value">Monto a aplicar</label>
+                <div class="payment-detail-summary payment-detail-summary-pay">
+                  <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }} de {{ pagoGroup.controls.total_cuotas.value }}</strong>
+                  <span>Monto ya pagado: ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</span>
+                  <span class="payment-saldo">Monto de esta cuota: ${{ pagoGroup.controls.saldo_pendiente.value | number: '1.2-2' }}</span>
+                  <span>Fecha programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }}</span>
+                  <span class="payment-fecha-pago-field">
+                    Fecha de Pago:
                     <input
-                      [id]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value"
-                      type="text"
-                      inputmode="decimal"
-                      [ngModel]="getMontoAplicarDisplay(pagoGroup)"
-                      [ngModelOptions]="{ standalone: true }"
-                      autocomplete="off"
-                      (ngModelChange)="onMontoAplicarDraftChange($event, pagoGroup)"
-                      (paste)="onMontoPaste($event)"
-                      (blur)="normalizePagoAplicarInput(pagoGroup)"
+                      [id]="'fecha_pago_' + pagoGroup.controls.id_detalle.value"
+                      class="fecha-pago-inline-input"
+                      type="date"
+                      lang="es"
+                      formControlName="fecha_pago"
                     />
-                  </div>
+                  </span>
+                </div>
 
-                  <div class="payment-detail-actions">
-                    <button
-                      type="button"
-                      class="secondary-button compact-button"
-                      (click)="setFullPago(pagoGroup)"
-                    >
-                      Cuota total
-                    </button>
-                    <button
-                      type="button"
-                      class="secondary-button compact-button"
-                      (click)="clearPago(pagoGroup)"
-                    >
-                      Limpiar
-                    </button>
-                    <button
-                      type="button"
-                      class="table-button complete compact-button"
-                      [disabled]="!canApplyPago(pagoGroup)"
-                      (click)="applyPagoDetalle(pagoGroup)"
-                    >
-                      {{ isApplyingPago(pagoGroup) ? 'Aplicando...' : 'Aplicar cuota' }}
-                    </button>
-                  </div>
-                </ng-container>
+                <div class="field payment-detail-input">
+                  <label [for]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value">Monto a aplicar</label>
+                  <input
+                    [id]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value"
+                    type="text"
+                    inputmode="decimal"
+                    [ngModel]="getMontoAplicarDisplay(pagoGroup)"
+                    [ngModelOptions]="{ standalone: true }"
+                    autocomplete="off"
+                    (ngModelChange)="onMontoAplicarDraftChange($event, pagoGroup)"
+                    (paste)="onMontoPaste($event)"
+                    (blur)="normalizePagoAplicarInput(pagoGroup)"
+                  />
+                </div>
 
-                <ng-template #paidCuotaRow>
-                  <div class="payment-detail-summary payment-paid-summary">
-                    <strong>Cuota {{ pagoGroup.controls.numero_cuota.value }}/{{ pagoGroup.controls.total_cuotas.value }} &middot; ${{ pagoGroup.controls.monto_pagado.value | number: '1.2-2' }}</strong>
-                    <span>Programada: {{ pagoGroup.controls.fecha_programada.value ? (pagoGroup.controls.fecha_programada.value | date: 'dd/MM/yyyy') : '-' }} &middot; Pagada: {{ pagoGroup.controls.fecha_pago.value ? (pagoGroup.controls.fecha_pago.value | date: 'dd/MM/yyyy') : '-' }}</span>
-                  </div>
-                  <div class="payment-detail-actions">
-                    <span class="status-pill status-pill-completado">Pagada</span>
-                  </div>
-                </ng-template>
+                <div class="payment-detail-actions">
+                  <button
+                    type="button"
+                    class="secondary-button compact-button"
+                    (click)="setFullPago(pagoGroup)"
+                  >
+                    Cuota total
+                  </button>
+                  <button
+                    type="button"
+                    class="secondary-button compact-button"
+                    (click)="clearPago(pagoGroup)"
+                  >
+                    Limpiar
+                  </button>
+                  <button
+                    type="button"
+                    class="table-button complete compact-button"
+                    [disabled]="!canApplyPago(pagoGroup)"
+                    (click)="applyPagoDetalle(pagoGroup)"
+                  >
+                    {{ isApplyingPago(pagoGroup) ? 'Aplicando...' : 'Aplicar cuota' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

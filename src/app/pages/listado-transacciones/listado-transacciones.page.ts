@@ -436,6 +436,7 @@ export class ListadoTransaccionesPage implements OnInit {
   selectedTransaccion: TransaccionListado | null = null;
   paymentModalTransaccion: TransaccionListado | null = null;
   pagosDetalleGroupViews: PagoDetalleGroupView[] = [];
+  private expandedPaidCuotasGroups = new Set<number>();
   editorDetallesOriginales: ParticipanteDetalleListado[] = [];
   private hasManualEstadoSelectionInEdit = false;
   private isSyncingEstadoTransaccion = false;
@@ -2564,6 +2565,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.editModalOpen = false;
       this.paymentTransaccionId = transaccion.id_transaccion;
       this.paymentModalTransaccion = transaccionParaPago;
+      this.expandedPaidCuotasGroups.clear();
       this.loadTransaccionIntoEditor(transaccionParaPago, false);
       this.paymentModalOpenedAt = Date.now();
       setTimeout(() => {
@@ -2596,6 +2598,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.editModalOpen = false;
       this.paymentTransaccionId = row.transaccion.id_transaccion;
       this.paymentModalTransaccion = transaccionParaPago;
+      this.expandedPaidCuotasGroups.clear();
       this.loadTransaccionIntoEditor(transaccionParaPago, false);
       this.paymentModalOpenedAt = Date.now();
       setTimeout(() => {
@@ -3032,6 +3035,26 @@ export class ListadoTransaccionesPage implements OnInit {
       (this.toCents(group.controls.monto_pagado.value) > 0 ||
         this.toCents(group.controls.interes_pagado.value) > 0)
     );
+  }
+
+  getPagoPendientes(group: PagoDetalleGroupView): PagoDetalleForm[] {
+    return group.cuotas.filter((cuota) => !this.isPagoCuotaPagada(cuota));
+  }
+
+  getPagoPagadas(group: PagoDetalleGroupView): PagoDetalleForm[] {
+    return group.cuotas.filter((cuota) => this.isPagoCuotaPagada(cuota));
+  }
+
+  isPagoPagadasExpanded(group: PagoDetalleGroupView): boolean {
+    return this.expandedPaidCuotasGroups.has(group.id_participante);
+  }
+
+  togglePagoPagadasExpanded(group: PagoDetalleGroupView): void {
+    if (this.expandedPaidCuotasGroups.has(group.id_participante)) {
+      this.expandedPaidCuotasGroups.delete(group.id_participante);
+    } else {
+      this.expandedPaidCuotasGroups.add(group.id_participante);
+    }
   }
 
   isApplyingPagoGroup(group: PagoDetalleGroupView): boolean {

@@ -357,6 +357,52 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   font-size: 0.8rem;
 }
 
+.module-page .payment-paid-summary-oneline {
+  gap: 0;
+}
+
+.module-page .payment-paid-summary-oneline span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #5f6f82;
+}
+
+.module-page .payment-paid-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.9rem;
+  border: 1px dashed #dbe5f1;
+  border-radius: 0.55rem;
+  background: #f8fbff;
+  color: #5f6f82;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.module-page .payment-paid-toggle:hover {
+  background: #eef4fb;
+}
+
+.module-page .payment-paid-toggle-icon {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.module-page .payment-paid-group-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.module-page .payment-paid-summary-oneline strong {
+  color: var(--color-heading);
+}
+
 .module-page .payment-detail-summary strong {
   color: var(--color-heading);
 }
