@@ -900,8 +900,12 @@ export class Dashboard implements OnInit {
 
     if (titularDetails.length === 0) {
       const date = this.parseDateOnly(transaction.fecha);
+      const paidAmount = Math.max(
+        0,
+        this.normalizeAmount(transaction.monto) - this.normalizeAmount(transaction.saldo_pendiente),
+      );
       return date && this.isDateWithinPeriod(date, selectedPeriod)
-        ? this.roundMoney(Math.max(0, this.normalizeAmount(transaction.monto)))
+        ? this.roundMoney(paidAmount)
         : 0;
     }
 
@@ -915,7 +919,7 @@ export class Dashboard implements OnInit {
           return sum;
         }
 
-        return sum + Math.max(0, this.normalizeAmount(detail.monto));
+        return sum + Math.max(0, this.normalizeAmount(detail.monto_pagado));
       }, 0),
     );
   }
@@ -1071,13 +1075,21 @@ export class Dashboard implements OnInit {
 
       if (titularDetails.length === 0) {
         const transactionDate = this.parseDateOnly(transaction.fecha);
+        const paidAmount = Math.max(
+          0,
+          this.normalizeAmount(transaction.monto) - this.normalizeAmount(transaction.saldo_pendiente),
+        );
 
-        if (!transactionDate || !this.isDateWithinPeriod(transactionDate, selectedPeriod)) {
+        if (
+          !transactionDate ||
+          !this.isDateWithinPeriod(transactionDate, selectedPeriod) ||
+          paidAmount <= 0
+        ) {
           continue;
         }
 
         rows.push(
-          this.createDashboardTransactionModalRow(transaction, null, transactionDate, transaction.monto),
+          this.createDashboardTransactionModalRow(transaction, null, transactionDate, paidAmount),
         );
         continue;
       }
@@ -1086,18 +1098,14 @@ export class Dashboard implements OnInit {
         const detailDate =
           this.parseDateOnly(detail.fecha_programada) ??
           this.parseDateOnly(transaction.fecha);
+        const paidAmount = Math.max(0, this.normalizeAmount(detail.monto_pagado));
 
-        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod)) {
+        if (!detailDate || !this.isDateWithinPeriod(detailDate, selectedPeriod) || paidAmount <= 0) {
           continue;
         }
 
         rows.push(
-          this.createDashboardTransactionModalRow(
-            transaction,
-            detail,
-            detailDate,
-            Math.max(0, this.normalizeAmount(detail.monto)),
-          ),
+          this.createDashboardTransactionModalRow(transaction, detail, detailDate, paidAmount),
         );
       }
     }
