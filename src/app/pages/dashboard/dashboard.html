@@ -457,25 +457,123 @@
           </button>
         </div>
 
-        <div *ngIf="dashboardTransactionsModalRows.length > 0; else emptyDashboardTransactions" class="dashboard-modal-table-wrap">
+        <div *ngIf="dashboardTransactionsModalBaseRows.length > 0; else emptyDashboardTransactions" class="dashboard-modal-table-wrap">
           <table class="dashboard-modal-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Fecha</th>
+                <th
+                  class="sortable-column"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-sort]="dashboardTransactionsModalSortColumn === 'id' ? (dashboardTransactionsModalSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+                  (click)="toggleTransactionsModalSort('id')"
+                  (keydown.enter)="toggleTransactionsModalSort('id')"
+                  (keydown.space)="toggleTransactionsModalSort('id'); $event.preventDefault()"
+                >
+                  ID
+                  <span class="sort-indicator" [ngClass]="{ active: dashboardTransactionsModalSortColumn === 'id' }">
+                    {{ dashboardTransactionsModalSortColumn === 'id' ? (dashboardTransactionsModalSortDirection === 'asc' ? '↑' : '↓') : '⇅' }}
+                  </span>
+                </th>
+                <th
+                  class="date-column sortable-column"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-sort]="dashboardTransactionsModalSortColumn === 'date' ? (dashboardTransactionsModalSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+                  (click)="toggleTransactionsModalSort('date')"
+                  (keydown.enter)="toggleTransactionsModalSort('date')"
+                  (keydown.space)="toggleTransactionsModalSort('date'); $event.preventDefault()"
+                >
+                  Fecha
+                  <span class="sort-indicator" [ngClass]="{ active: dashboardTransactionsModalSortColumn === 'date' }">
+                    {{ dashboardTransactionsModalSortColumn === 'date' ? (dashboardTransactionsModalSortDirection === 'asc' ? '↑' : '↓') : '⇅' }}
+                  </span>
+                </th>
                 <th>Descripcion</th>
                 <th>Categoria</th>
                 <th>Subcategoria</th>
-                <th>Forma de pago</th>
-                <th>Estado</th>
+                <th class="payment-method-column">
+                  <span
+                    class="sortable-column"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-sort]="dashboardTransactionsModalSortColumn === 'paymentMethod' ? (dashboardTransactionsModalSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+                    (click)="toggleTransactionsModalSort('paymentMethod')"
+                    (keydown.enter)="toggleTransactionsModalSort('paymentMethod')"
+                    (keydown.space)="toggleTransactionsModalSort('paymentMethod'); $event.preventDefault()"
+                  >
+                    Forma de pago
+                    <span class="sort-indicator" [ngClass]="{ active: dashboardTransactionsModalSortColumn === 'paymentMethod' }">
+                      {{ dashboardTransactionsModalSortColumn === 'paymentMethod' ? (dashboardTransactionsModalSortDirection === 'asc' ? '↑' : '↓') : '⇅' }}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    class="column-filter-trigger"
+                    [ngClass]="{ active: dashboardTransactionsModalPaymentMethodSelected.size < dashboardTransactionsModalPaymentMethodOptions.length }"
+                    aria-label="Filtrar forma de pago"
+                    (click)="toggleTransactionsModalPaymentMethodFilter(); $event.stopPropagation()"
+                  >
+                    ▾
+                  </button>
+                  <div
+                    *ngIf="dashboardTransactionsModalPaymentMethodFilterOpen"
+                    class="column-filter-backdrop"
+                    (click)="closeTransactionsModalPaymentMethodFilter()"
+                  ></div>
+                  <div
+                    *ngIf="dashboardTransactionsModalPaymentMethodFilterOpen"
+                    class="column-filter-panel"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <div class="column-filter-actions">
+                      <button type="button" (click)="selectAllTransactionsModalPaymentMethodOptions()">Seleccionar todo</button>
+                      <button type="button" (click)="clearAllTransactionsModalPaymentMethodOptions()">Limpiar</button>
+                    </div>
+                    <ul class="column-filter-options">
+                      <li *ngFor="let option of dashboardTransactionsModalPaymentMethodOptions">
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="dashboardTransactionsModalPaymentMethodSelected.has(option)"
+                            (change)="toggleTransactionsModalPaymentMethodOption(option)"
+                          />
+                          {{ option }}
+                        </label>
+                      </li>
+                    </ul>
+                    <div class="column-filter-footer">
+                      <button type="button" class="column-filter-apply" (click)="closeTransactionsModalPaymentMethodFilter()">Aceptar</button>
+                    </div>
+                  </div>
+                </th>
+                <th
+                  class="status-column sortable-column"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-sort]="dashboardTransactionsModalSortColumn === 'status' ? (dashboardTransactionsModalSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+                  (click)="toggleTransactionsModalSort('status')"
+                  (keydown.enter)="toggleTransactionsModalSort('status')"
+                  (keydown.space)="toggleTransactionsModalSort('status'); $event.preventDefault()"
+                >
+                  Estado
+                  <span class="sort-indicator" [ngClass]="{ active: dashboardTransactionsModalSortColumn === 'status' }">
+                    {{ dashboardTransactionsModalSortColumn === 'status' ? (dashboardTransactionsModalSortDirection === 'asc' ? '↑' : '↓') : '⇅' }}
+                  </span>
+                </th>
                 <th *ngIf="dashboardTransactionsModalShowSender">Enviado por</th>
                 <th class="amount-column">Monto</th>
               </tr>
             </thead>
             <tbody>
+              <tr *ngIf="dashboardTransactionsModalRows.length === 0">
+                <td [attr.colspan]="dashboardTransactionsModalShowSender ? 9 : 8" class="column-filter-no-results">
+                  Ningun movimiento coincide con el filtro seleccionado.
+                </td>
+              </tr>
               <tr *ngFor="let row of dashboardTransactionsModalRows">
                 <td>{{ row.transactionId }}</td>
-                <td>
+                <td class="date-column">
                   <div class="dashboard-date-cell">
                     <span>{{ row.dateLabel }}</span>
                     <span *ngIf="$any(row).isOverdue" class="dashboard-overdue-pill">Vencido</span>

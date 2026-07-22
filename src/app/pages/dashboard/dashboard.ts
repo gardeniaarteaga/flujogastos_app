@@ -87,10 +87,7 @@ interface TransaccionListado {
   id_subcategoria: number | null;
   nombre_subcategoria: string | null;
   descripcion: string | null;
-  titular?: string | null;
-  remitente?: string | null;
-  nombre_titular?: string | null;
-  nombre_remitente?: string | null;
+  enviado_por?: string | null;
   participantes_detalle: ParticipanteDetalleListado[];
 }
 
@@ -334,6 +331,11 @@ export class Dashboard implements OnInit {
     month: 'short',
     year: 'numeric',
   });
+  private readonly numericDateFormatter = new Intl.DateTimeFormat('es-SV', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
   private readonly relativeDayFormatter = new Intl.RelativeTimeFormat('es', {
     numeric: 'auto',
   });
@@ -402,6 +404,12 @@ export class Dashboard implements OnInit {
   dashboardTransactionsModalSubtitle = '';
   dashboardTransactionsModalRows: DashboardTransactionModalRow[] = [];
   dashboardTransactionsModalShowSender = false;
+  dashboardTransactionsModalSortColumn: 'id' | 'date' | 'status' | 'paymentMethod' | null = null;
+  dashboardTransactionsModalSortDirection: 'asc' | 'desc' | null = null;
+  dashboardTransactionsModalPaymentMethodOptions: string[] = [];
+  dashboardTransactionsModalPaymentMethodSelected: Set<string> = new Set();
+  dashboardTransactionsModalPaymentMethodFilterOpen = false;
+  dashboardTransactionsModalBaseRows: DashboardTransactionModalRow[] = [];
   dashboardTransactionsModalData: Record<'income' | 'expense' | 'shared', DashboardTransactionModalData> = {
     income: { title: '', subtitle: '', rows: [], showSender: false },
     expense: { title: '', subtitle: '', rows: [], showSender: false },
@@ -604,17 +612,123 @@ export class Dashboard implements OnInit {
 
   openTransactionsSummaryModal(kpi: DashboardKpi): void {
     const modalData = this.dashboardTransactionsModalData[kpi.key];
+    const paymentMethodOptions = Array.from(
+      new Set(modalData.rows.map((row) => row.paymentMethodName)),
+    ).sort((left, right) => left.localeCompare(right, 'es'));
 
     this.dashboardTransactionsModalTitle = modalData.title;
     this.dashboardTransactionsModalSubtitle = modalData.subtitle;
-    this.dashboardTransactionsModalRows = modalData.rows;
+    this.dashboardTransactionsModalBaseRows = modalData.rows;
     this.dashboardTransactionsModalShowSender = modalData.showSender;
+    this.dashboardTransactionsModalSortColumn = null;
+    this.dashboardTransactionsModalSortDirection = null;
+    this.dashboardTransactionsModalPaymentMethodOptions = paymentMethodOptions;
+    this.dashboardTransactionsModalPaymentMethodSelected = new Set(paymentMethodOptions);
+    this.dashboardTransactionsModalPaymentMethodFilterOpen = false;
+    this.dashboardTransactionsModalRows = modalData.rows;
 
     this.dashboardTransactionsModalOpen = true;
   }
 
   closeTransactionsSummaryModal(): void {
     this.dashboardTransactionsModalOpen = false;
+    this.dashboardTransactionsModalPaymentMethodFilterOpen = false;
+  }
+
+  toggleTransactionsModalSort(column: 'id' | 'date' | 'status' | 'paymentMethod'): void {
+    if (this.dashboardTransactionsModalSortColumn !== column) {
+      this.dashboardTransactionsModalSortColumn = column;
+      this.dashboardTransactionsModalSortDirection = 'asc';
+    } else {
+      this.dashboardTransactionsModalSortDirection =
+        this.dashboardTransactionsModalSortDirection === 'asc'
+          ? 'desc'
+          : this.dashboardTransactionsModalSortDirection === 'desc'
+            ? null
+            : 'asc';
+
+      if (!this.dashboardTransactionsModalSortDirection) {
+        this.dashboardTransactionsModalSortColumn = null;
+      }
+    }
+
+    this.applyTransactionsModalFilterAndSort();
+  }
+
+  toggleTransactionsModalPaymentMethodFilter(): void {
+    this.dashboardTransactionsModalPaymentMethodFilterOpen =
+      !this.dashboardTransactionsModalPaymentMethodFilterOpen;
+  }
+
+  closeTransactionsModalPaymentMethodFilter(): void {
+    this.dashboardTransactionsModalPaymentMethodFilterOpen = false;
+  }
+
+  toggleTransactionsModalPaymentMethodOption(option: string): void {
+    if (this.dashboardTransactionsModalPaymentMethodSelected.has(option)) {
+      this.dashboardTransactionsModalPaymentMethodSelected.delete(option);
+    } else {
+      this.dashboardTransactionsModalPaymentMethodSelected.add(option);
+    }
+
+    this.applyTransactionsModalFilterAndSort();
+  }
+
+  selectAllTransactionsModalPaymentMethodOptions(): void {
+    this.dashboardTransactionsModalPaymentMethodSelected = new Set(
+      this.dashboardTransactionsModalPaymentMethodOptions,
+    );
+
+    this.applyTransactionsModalFilterAndSort();
+  }
+
+  clearAllTransactionsModalPaymentMethodOptions(): void {
+    this.dashboardTransactionsModalPaymentMethodSelected = new Set();
+
+    this.applyTransactionsModalFilterAndSort();
+  }
+
+  private applyTransactionsModalFilterAndSort(): void {
+    let rows = this.dashboardTransactionsModalBaseRows;
+
+    if (
+      this.dashboardTransactionsModalPaymentMethodSelected.size <
+      this.dashboardTransactionsModalPaymentMethodOptions.length
+    ) {
+      rows = rows.filter((row) =>
+        this.dashboardTransactionsModalPaymentMethodSelected.has(row.paymentMethodName),
+      );
+    }
+
+    const column = this.dashboardTransactionsModalSortColumn;
+    const direction = this.dashboardTransactionsModalSortDirection;
+
+    if (column && direction) {
+      const factor = direction === 'asc' ? 1 : -1;
+
+      rows = [...rows].sort((left, right) => {
+        if (column === 'id') {
+          return factor * (left.transactionId - right.transactionId);
+        }
+
+        if (column === 'date') {
+          const leftTime = left.date?.getTime() ?? 0;
+          const rightTime = right.date?.getTime() ?? 0;
+
+          return factor * (leftTime - rightTime);
+        }
+
+        if (column === 'status') {
+          return factor * left.statusLabel.localeCompare(right.statusLabel, 'es');
+        }
+
+        return factor * left.paymentMethodName.localeCompare(right.paymentMethodName, 'es');
+      });
+    } else {
+      rows = [...rows];
+    }
+
+    this.dashboardTransactionsModalRows = rows;
   }
 
   @HostListener('document:keydown.escape')
@@ -1136,7 +1250,7 @@ export class Dashboard implements OnInit {
             detail,
             detailDate,
             this.getExpenseDetailAmountForPeriod(detail, detailDate, selectedPeriod),
-            transaction.es_propietario ? null : this.getTransactionSenderName(transaction),
+            transaction.es_propietario ? 'Titular' : this.getTransactionSenderName(transaction),
             this.isOverduePendingDetail(detail, detailDate),
           ),
         );
@@ -1194,8 +1308,8 @@ export class Dashboard implements OnInit {
     return {
       transactionId: transaction.id_transaccion,
       date: detailDate,
-      dateLabel: detailDate ? this.fullDateFormatter.format(detailDate) : 'Sin fecha definida',
-      isOverdue,
+      dateLabel: detailDate ? this.numericDateFormatter.format(detailDate) : 'Sin fecha definida',
+      isOverdue: isOverdue && this.normalizeTransactionStatus(statusLabel) === 'pendiente',
       description: transaction.descripcion?.trim() || 'Sin detalle',
       categoryName: transaction.nombre_categoria?.trim() || 'Sin categoria',
       subcategoryName: transaction.nombre_subcategoria?.trim() || 'Sin subcategoria',
@@ -1208,29 +1322,13 @@ export class Dashboard implements OnInit {
   }
 
   private getTransactionSenderName(transaction: TransaccionListado): string {
-    const directSender =
-      transaction.titular?.trim() ||
-      transaction.remitente?.trim() ||
-      transaction.nombre_titular?.trim() ||
-      transaction.nombre_remitente?.trim();
+    const registeredBy = transaction.enviado_por?.trim();
 
-    if (directSender) {
-      return directSender;
-    }
+    return registeredBy ? this.getFirstName(registeredBy) : 'Sin remitente';
+  }
 
-    const titularDetail = (Array.isArray(transaction.participantes_detalle) ? transaction.participantes_detalle : []).find(
-      (detail) => detail.es_titular && detail.nombre_participante?.trim(),
-    );
-
-    if (titularDetail?.nombre_participante?.trim()) {
-      return titularDetail.nombre_participante.trim();
-    }
-
-    const namedDetail = (Array.isArray(transaction.participantes_detalle) ? transaction.participantes_detalle : []).find(
-      (detail) => detail.nombre_participante?.trim(),
-    );
-
-    return namedDetail?.nombre_participante?.trim() || 'Sin remitente';
+  private getFirstName(fullName: string): string {
+    return fullName.split(/\s+/)[0] || fullName;
   }
 
   private sortDashboardTransactionModalRows(
