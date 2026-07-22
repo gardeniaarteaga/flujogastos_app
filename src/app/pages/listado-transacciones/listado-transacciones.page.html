@@ -2343,7 +2343,6 @@
                 <th>Monto</th>
                 <th>Inter&eacute;s</th>
                 <th>Pagado</th>
-                <th>Saldo</th>
                 <th>Estado</th>
               </tr>
             </thead>
@@ -2368,7 +2367,6 @@
                 <td>${{ detalle.monto | number: '1.2-2' }}</td>
                 <td>${{ (detalle.interes_pagado + detalle.interes_pendiente) | number: '1.2-2' }}</td>
                 <td>${{ detalle.monto_pagado | number: '1.2-2' }}</td>
-                <td>${{ detalle.saldo_pendiente | number: '1.2-2' }}</td>
                 <td>
                     <span
                       class="status-pill"
@@ -2399,7 +2397,6 @@
                   <td>${{ detalle.monto | number: '1.2-2' }}</td>
                   <td>${{ (detalle.interes_pagado + detalle.interes_pendiente) | number: '1.2-2' }}</td>
                   <td>${{ detalle.monto_pagado | number: '1.2-2' }}</td>
-                  <td>${{ detalle.saldo_pendiente | number: '1.2-2' }}</td>
                   <td>
                     <span
                       class="status-pill"
