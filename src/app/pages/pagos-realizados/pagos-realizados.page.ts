@@ -232,6 +232,7 @@ export class PagosRealizadosPage implements OnInit {
   participanteOptions: SelectOption[] = [];
   readonly activeMethodFilters = new Map<string, number | null>();
   readonly fechaSortOrders = new Map<string, 'asc' | 'desc'>();
+  readonly sortColumnByGroup = new Map<string, 'fecha' | 'fechaProgramada'>();
   readonly groupCurrentPages = new Map<string, number>();
   readonly expandedGroups = new Set<string>();
   readonly columnFilters = new Map<string, Set<string>>();
@@ -272,13 +273,6 @@ export class PagosRealizadosPage implements OnInit {
       '/reportes/analisis-financiero',
       '/reportes/gastos-por-categoria',
     ]);
-  }
-
-  get fechaColumnSuffix(): string {
-    const { incluirPagados, incluirPendientes } = this.filtrosForm.getRawValue();
-    if (incluirPagados && !incluirPendientes) return 'Pago';
-    if (!incluirPagados && incluirPendientes) return 'Programada';
-    return '';
   }
 
   get displayedRows(): PagoRealizadoRow[] {
@@ -847,14 +841,32 @@ export class PagosRealizadosPage implements OnInit {
     return this.fechaSortOrders.get(groupKey) ?? 'asc';
   }
 
+  getActiveSortColumn(groupKey: string): 'fecha' | 'fechaProgramada' {
+    return this.sortColumnByGroup.get(groupKey) ?? 'fecha';
+  }
+
   toggleFechaSort(groupKey: string): void {
-    const current = this.getFechaSortOrder(groupKey);
-    this.fechaSortOrders.set(groupKey, current === 'asc' ? 'desc' : 'asc');
+    this.toggleColumnSort(groupKey, 'fecha');
+  }
+
+  toggleFechaProgramadaSort(groupKey: string): void {
+    this.toggleColumnSort(groupKey, 'fechaProgramada');
+  }
+
+  private toggleColumnSort(groupKey: string, column: 'fecha' | 'fechaProgramada'): void {
+    if (this.getActiveSortColumn(groupKey) === column) {
+      const current = this.getFechaSortOrder(groupKey);
+      this.fechaSortOrders.set(groupKey, current === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortColumnByGroup.set(groupKey, column);
+      this.fechaSortOrders.set(groupKey, 'asc');
+    }
   }
 
   getGroupFilteredRows(group: ParticipanteGroup): PagoRealizadoRow[] {
     const activeMethod = this.activeMethodFilters.get(group.participanteKey) ?? null;
     const sortOrder = this.getFechaSortOrder(group.participanteKey);
+    const sortColumn = this.getActiveSortColumn(group.participanteKey);
     const filtered = group.rows.filter((row) => {
       if (activeMethod !== null && row.metodoPagoId !== activeMethod) return false;
       if (!this.rowMatchesColumnFilters(group.participanteKey, row)) return false;
@@ -862,7 +874,9 @@ export class PagosRealizadosPage implements OnInit {
     });
 
     const getSortDate = (row: PagoRealizadoRow) =>
-      this.isOnlyPagadoFilter ? row.fechaPago : row.fechaTransaccion;
+      sortColumn === 'fechaProgramada'
+        ? row.fechaProgramada
+        : this.isOnlyPagadoFilter ? row.fechaPago : row.fechaTransaccion;
 
     return [...filtered].sort((a, b) => {
       const cmp = getSortDate(a).localeCompare(getSortDate(b));
@@ -911,6 +925,12 @@ export class PagosRealizadosPage implements OnInit {
   get isOnlyPagadoFilter(): boolean {
     const { incluirPagados, incluirPendientes } = this.filtrosForm.getRawValue();
     return Boolean(incluirPagados) && !incluirPendientes;
+  }
+
+  get fechaFiltroSuffix(): string {
+    if (this.isOnlyPagadoFilter) return ' (Fecha de pago)';
+    if (this.isOnlyPendienteFilter) return ' (Fecha programada)';
+    return '';
   }
 
   getGroupDisplayStats(group: ParticipanteGroup): { cuotasPagadas: number; cuotasPendientes: number; totalPagado: number; totalPendiente: number } {

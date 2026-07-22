@@ -1291,7 +1291,13 @@ export class Dashboard implements OnInit {
       'Sin entidad financiera';
     const personalAmount =
       type === 'income'
-        ? this.roundMoney(this.normalizeAmount(transaction.monto))
+        ? this.roundMoney(
+            Math.max(
+              0,
+              this.normalizeAmount(transaction.monto) -
+                this.normalizeAmount(transaction.saldo_pendiente),
+            ),
+          )
         : details.length > 0
           ? this.roundMoney(details.reduce((sum, item) => sum + item.amount, 0))
           : this.roundMoney(this.normalizeAmount(transaction.monto));

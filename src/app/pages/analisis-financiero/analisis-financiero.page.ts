@@ -612,7 +612,7 @@ export class AnalisisFinancieroPage implements OnInit {
               paymentMethod?.calcula_interes === true);
           const amount =
             transactionType === 'income'
-              ? normalized.baseAmount
+              ? normalized.amountPaid
               : normalized.totalAmount;
           const carryForwardAmount =
             transactionType === 'income'

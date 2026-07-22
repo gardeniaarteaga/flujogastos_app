@@ -758,8 +758,19 @@ export class ListadoTransaccionesPage implements OnInit {
         return false;
       }
 
-      if (!this.matchesDateRange(fechaTransaccion, fechaDesde, fechaHasta)) {
-        return false;
+      if (fechaDesde || fechaHasta) {
+        const coincideFechaProgramada = this.getParticipantesDetalleSafe(transaccion).some(
+          (detalle) =>
+            this.matchesDateRange(
+              this.normalizeDateOnly(detalle.fecha_programada),
+              fechaDesde,
+              fechaHasta,
+            ),
+        );
+
+        if (!coincideFechaProgramada) {
+          return false;
+        }
       }
 
       if (estadoFiltro && estadoTransaccion !== estadoFiltro) {

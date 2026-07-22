@@ -148,7 +148,7 @@
 
       <form class="payments-filter-grid" [formGroup]="filtrosForm">
         <label class="filter-card">
-          <span>Desde</span>
+          <span>Desde{{ fechaFiltroSuffix }}</span>
           <div class="date-input-wrap">
             <input
               type="text"
@@ -173,7 +173,7 @@
         </label>
 
         <label class="filter-card">
-          <span>Hasta</span>
+          <span>Hasta{{ fechaFiltroSuffix }}</span>
           <div class="date-input-wrap">
             <input
               type="text"
@@ -423,21 +423,30 @@
                   <th
                     class="th-sortable"
                     (click)="toggleFechaSort(group.participanteKey)"
-                    [attr.aria-sort]="getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending'"
+                    [attr.aria-sort]="getActiveSortColumn(group.participanteKey) === 'fecha' ? (getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending') : 'none'"
                     title="Ordenar por fecha"
                   >
                     <div class="th-content">
                       <span>
                         <ng-container *ngIf="isOnlyPagadoFilter">Fecha Pago</ng-container>
                         <ng-container *ngIf="!isOnlyPagadoFilter">Fecha<br>Transaccion</ng-container>
-                        <span class="sort-icon" aria-hidden="true">{{ getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓' }}</span>
+                        <span class="sort-icon" aria-hidden="true">{{ getActiveSortColumn(group.participanteKey) !== 'fecha' ? '↕' : (getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓') }}</span>
                       </span>
                       <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'fecha' }"></ng-container>
                     </div>
                   </th>
-                  <th *ngIf="!isOnlyPagadoFilter">
+                  <th
+                    *ngIf="!isOnlyPagadoFilter"
+                    class="th-sortable"
+                    (click)="toggleFechaProgramadaSort(group.participanteKey)"
+                    [attr.aria-sort]="getActiveSortColumn(group.participanteKey) === 'fechaProgramada' ? (getFechaSortOrder(group.participanteKey) === 'asc' ? 'ascending' : 'descending') : 'none'"
+                    title="Ordenar por fecha programada"
+                  >
                     <div class="th-content">
-                      <span>Fecha<br>Programada</span>
+                      <span>
+                        Fecha<br>Programada
+                        <span class="sort-icon" aria-hidden="true">{{ getActiveSortColumn(group.participanteKey) !== 'fechaProgramada' ? '↕' : (getFechaSortOrder(group.participanteKey) === 'asc' ? '↑' : '↓') }}</span>
+                      </span>
                       <ng-container *ngTemplateOutlet="colFilter; context: { group: group, column: 'fechaProgramada' }"></ng-container>
                     </div>
                   </th>
