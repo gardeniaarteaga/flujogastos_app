@@ -56,6 +56,7 @@ const QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS = 15;
 const QUICK_PAY_PRIORITY_FILTER_STORAGE_KEY =
   'flujo-gastos.quick-pay.prioritarios';
 const QUICK_PAY_FILTERS_COLLAPSED_KEY = 'flujo-gastos.quick-pay.filters-collapsed';
+const QUICK_PAY_OTROS_PARTICIPANTE_NOMBRE = 'otros';
 const ESTADOS_LISTADO_PERMITIDOS = new Set(['pagado', 'pendiente', 'anulado']);
 const ESTADOS_FILTRO_DISPONIBLES = new Set([...ESTADOS_LISTADO_PERMITIDOS]);
 
@@ -2255,10 +2256,38 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
-  private buildQuickPayParticipantesFiltro(): CatalogoParticipante[] {
-    return [...this.participantes].sort((left, right) =>
-      this.getParticipanteDisplayName(left).localeCompare(this.getParticipanteDisplayName(right)),
+  private get otrosParticipante(): CatalogoParticipante | null {
+    return (
+      this.participantes.find(
+        (participante) =>
+          this.normalizeText(participante.nombre_participante ?? '') ===
+          QUICK_PAY_OTROS_PARTICIPANTE_NOMBRE,
+      ) ?? null
     );
+  }
+
+  private isOtrosParticipanteDetalle(detalle: ParticipanteDetalleListado): boolean {
+    return (
+      this.normalizeText(detalle.nombre_participante ?? '') ===
+      QUICK_PAY_OTROS_PARTICIPANTE_NOMBRE
+    );
+  }
+
+  private buildQuickPayParticipantesFiltro(): CatalogoParticipante[] {
+    const titular = this.currentUserParticipante;
+    const otros = this.otrosParticipante;
+
+    const result: CatalogoParticipante[] = [];
+
+    if (titular) {
+      result.push({ ...titular, nombre_participante: 'Titular' });
+    }
+
+    if (otros) {
+      result.push(otros);
+    }
+
+    return result;
   }
 
   get filteredSubcategorias(): CatalogoSubcategoria[] {
@@ -2688,10 +2717,6 @@ export class ListadoTransaccionesPage implements OnInit {
       return 'La cuota no tiene un metodo de pago valido para usar pago masivo.';
     }
 
-    if (!this.isDetalleDelUsuarioLogueado(row.detalle, row.transaccion.es_propietario)) {
-      return 'Solo puedes incluir pagos que pertenezcan al usuario logueado.';
-    }
-
     if (!this.isQuickPayMetodoPagoCompatible(row)) {
       return `Solo puedes combinar cuotas del mismo metodo de pago (${selectedMetodoPagoNombre}).`;
     }
@@ -2738,7 +2763,7 @@ export class ListadoTransaccionesPage implements OnInit {
       this.clearQuickPayBulkSelection();
       await this.alerts.warning(
         'Sin pagos seleccionados',
-        'Selecciona al menos una cuota valida del usuario logueado para aplicar el pago masivo.',
+        'Selecciona al menos una cuota valida para aplicar el pago masivo.',
       );
       return;
     }
@@ -5488,8 +5513,10 @@ export class ListadoTransaccionesPage implements OnInit {
       (detalle) => detalle.id_estado !== ESTADO_TRANSACCION_ANULADA_ID,
     );
 
-    const detallesAsociados = detalles.filter((detalle) =>
-      this.isDetalleDelUsuarioLogueado(detalle, !!transaccion?.es_propietario),
+    const detallesAsociados = detalles.filter(
+      (detalle) =>
+        this.isDetalleDelUsuarioLogueado(detalle, !!transaccion?.es_propietario) ||
+        this.isOtrosParticipanteDetalle(detalle),
     );
 
     if (detallesAsociados.length > 0) {
@@ -5722,8 +5749,7 @@ export class ListadoTransaccionesPage implements OnInit {
           quickPayMetodoPagoId,
           quickPayMetodoPagoNombre,
           quickPayCanPagar,
-          quickPayCanSelectBase:
-            quickPayCanPagar && quickPayMetodoPagoId !== null && quickPayIsOwnedByCurrentUser,
+          quickPayCanSelectBase: quickPayCanPagar && quickPayMetodoPagoId !== null,
           quickPayIsOwnedByCurrentUser,
           quickPaySelected: false,
           quickPaySelectionDisabled: true,
@@ -5763,11 +5789,9 @@ export class ListadoTransaccionesPage implements OnInit {
       return this.getFirstName(row.transaccion.enviado_por) || 'Titular';
     }
 
-    if (row.quickPayIsOwnedByCurrentUser) {
-      return 'Titular';
-    }
-
-    return this.getFirstName(row.nombre_mostrado);
+    // El creador de la transaccion es siempre el usuario logueado cuando
+    // es_propietario es true, sin importar de que participante sea la cuota.
+    return 'Titular';
   }
 
   private getFirstName(fullName: string | null | undefined): string {
