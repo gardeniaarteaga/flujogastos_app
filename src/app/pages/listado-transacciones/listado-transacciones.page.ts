@@ -5089,6 +5089,17 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
+  getPaymentModalMetodoPago(): string {
+    const detalles = this.getParticipantesDetalleSafe(this.paymentModalTransaccion);
+    const participantesUnicos = new Set(detalles.map((detalle) => detalle.id_participante));
+    const detalleParticipante = participantesUnicos.size === 1 ? detalles[0] : null;
+    return (
+      detalleParticipante?.nombre_forma_pago ||
+      this.paymentModalTransaccion?.nombre_forma_pago ||
+      '-'
+    );
+  }
+
   getDetailModalCurrentUserCuotas(): ParticipanteDetalleListado[] {
     const esPropietario = this.detailModalTransaccion?.es_propietario ?? false;
     return this.getDetailModalCuotas().filter((d) =>
