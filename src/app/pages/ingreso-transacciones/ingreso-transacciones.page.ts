@@ -660,19 +660,27 @@ export class IngresoTransaccionesPage implements OnInit {
     return this.openCuotasGroups.has(group);
   }
 
-  onCuotasAccordionToggle(group: ParticipanteDetalleForm, event: Event): void {
-    const detailsElement = event.target as HTMLDetailsElement | null;
+  onCuotasSummaryClick(event: Event, group: ParticipanteDetalleForm): void {
+    // We own open/closed entirely via openCuotasGroups, but syncCuotasCount's auto-expand
+    // (on the blur this same click causes, e.g. right after typing a cuotas count) can mark
+    // the group open *before* this handler even runs — with nothing painted yet, since
+    // change detection hasn't ticked between the blur and this click. Toggling off
+    // openCuotasGroups' pre-click membership would then silently undo that auto-expand and
+    // the click would look like a no-op. Reading the actually-rendered <details>.open — what
+    // the user is looking at right now — sidesteps that: whatever it currently shows is what
+    // this click flips, regardless of what happened moments earlier. preventDefault() stops
+    // the browser's own native toggle so we're the only thing mutating it.
+    event.preventDefault();
 
     if (this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
-      if (detailsElement && !detailsElement.open) {
-        detailsElement.open = true;
-      }
-
       this.openCuotasGroups.add(group);
       return;
     }
 
-    if (!detailsElement?.open) {
+    const detailsElement = (event.currentTarget as HTMLElement | null)?.closest('details');
+    const isCurrentlyOpenOnScreen = detailsElement?.open ?? this.openCuotasGroups.has(group);
+
+    if (isCurrentlyOpenOnScreen) {
       this.openCuotasGroups.delete(group);
       return;
     }

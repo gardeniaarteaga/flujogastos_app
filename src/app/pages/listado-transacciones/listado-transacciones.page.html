@@ -672,10 +672,10 @@
         </div>
 
         <div *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0" class="table-wrap">
-          <table>
+          <table class="listado-table">
             <thead>
               <tr>
-                <th>
+                <th class="col-id">
                   <button
                     type="button"
                     class="qp-sort-header"
@@ -688,7 +688,7 @@
                   </button>
                 </th>
                 <th class="col-tipo" style="text-align: center;">Tipo</th>
-                <th>
+                <th class="col-fecha">
                   <button
                     type="button"
                     class="qp-sort-header"
@@ -712,7 +712,7 @@
                     <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('descripcion') === 'desc' ? '↓' : getListadoSortIndicator('descripcion') === 'asc' ? '↑' : '↕' }}</span>
                   </button>
                 </th>
-                <th>
+                <th class="col-monto">
                   <button
                     type="button"
                     class="qp-sort-header"
@@ -724,7 +724,7 @@
                     <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('monto') === 'desc' ? '↓' : getListadoSortIndicator('monto') === 'asc' ? '↑' : '↕' }}</span>
                   </button>
                 </th>
-                <th>
+                <th class="col-intereses">
                   <button
                     type="button"
                     class="qp-sort-header"
@@ -775,7 +775,7 @@
                 (keydown.enter)="openDetailModal(transaccion)"
                 (keydown.space)="$event.preventDefault(); openDetailModal(transaccion)"
               >
-                <td>{{ transaccion.id_transaccion }}</td>
+                <td class="col-id">{{ transaccion.id_transaccion }}</td>
                 <td class="col-tipo" style="text-align: center;">
                   <span
                     style="display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 999px; font-size: 1.15rem; font-weight: 900; line-height: 1; border: 1px solid currentColor; box-shadow: 0 0.2rem 0.45rem rgba(15, 23, 42, 0.12);"
@@ -787,8 +787,8 @@
                     {{ getTipoTransaccionSign(transaccion) }}
                   </span>
                 </td>
-                <td>
-                  <div style="display:grid;gap:.3rem;">
+                <td class="col-fecha">
+                  <div style="display:grid;gap:.3rem;justify-items:center;">
                     <span>{{ transaccion.fecha | date: 'dd/MM/yyyy' }}</span>
                     <span
                       *ngIf="isTransaccionVencida(transaccion)"
@@ -845,8 +845,8 @@
                     </div>
                   </div>
                 </td>
-                <td>${{ transaccion.monto | number: '1.2-2' }}</td>
-                <td>${{ transaccion.intereses | number: '1.2-2' }}</td>
+                <td class="col-monto">${{ transaccion.monto | number: '1.2-2' }}</td>
+                <td class="col-intereses">${{ transaccion.intereses | number: '1.2-2' }}</td>
                 <td class="col-saldo">${{ transaccion.saldo_pendiente | number: '1.2-2' }}</td>
                 <td class="col-metodo">{{ transaccion.nombre_forma_pago || '-' }}</td>
                 <td class="col-pago">
@@ -1983,10 +1983,10 @@
                   <details
                     class="cuotas-accordion"
                     *ngIf="participanteGroup.controls.cantidad_cuotas.value && participanteGroup.controls.cantidad_cuotas.value > 1"
-                    [attr.open]="shouldStartCuotasExpanded(participanteGroup) ? '' : null"
+                    [attr.open]="isCuotasAccordionOpen(participanteGroup) ? '' : null"
                     style="padding:.8rem;border:1px solid #e3e8ee;border-radius:.75rem;"
                   >
-                    <summary>
+                    <summary (click)="onCuotasSummaryClick($event, participanteGroup)">
                       <span>Cuotas</span>
                       <span class="cuotas-summary-meta">
                         <span>Total: ${{ getCuotasTotal(participanteGroup) | number: '1.2-2' }}</span>

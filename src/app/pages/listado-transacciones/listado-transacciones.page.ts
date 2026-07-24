@@ -1724,6 +1724,32 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.hasZeroBalanceCuotasInEditor || !this.isCuotasTotalValid(group);
   }
 
+  private cuotasAccordionOpenState = new WeakMap<ParticipanteDetalleForm, boolean>();
+
+  isCuotasAccordionOpen(group: ParticipanteDetalleForm): boolean {
+    if (this.shouldStartCuotasExpanded(group)) {
+      return true;
+    }
+    return this.cuotasAccordionOpenState.get(group) ?? false;
+  }
+
+  onCuotasSummaryClick(event: Event, group: ParticipanteDetalleForm): void {
+    // We own open/closed entirely via cuotasAccordionOpenState. Letting the browser's
+    // native <details> toggle also run races with shouldStartCuotasExpanded: if that
+    // forced the panel open (or a blur just before this click changed it), the native
+    // toggle then immediately flips it back, so the first click looks like a no-op.
+    // Preventing the default action makes this click the only thing that flips it.
+    event.preventDefault();
+
+    if (this.shouldStartCuotasExpanded(group)) {
+      this.cuotasAccordionOpenState.set(group, true);
+      return;
+    }
+
+    const currentlyOpen = this.cuotasAccordionOpenState.get(group) ?? false;
+    this.cuotasAccordionOpenState.set(group, !currentlyOpen);
+  }
+
   get zeroBalanceConfigGroup(): ParticipanteDetalleForm | null {
     return this.titularDetalleGroup ?? this.getZeroBalanceParticipantGroups()[0] ?? null;
   }

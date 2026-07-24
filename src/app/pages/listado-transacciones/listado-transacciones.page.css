@@ -378,17 +378,35 @@
   overflow: auto;
 }
 
+.listado-table {
+  table-layout: fixed;
+  min-width: 79.5rem;
+}
+
+.col-id {
+  width: 3rem;
+}
+
+.col-fecha {
+  width: 6rem;
+  text-align: center;
+}
+
 .col-saldo {
-  width: 6.5rem;
+  width: 6rem;
+}
+
+.col-monto,
+.col-intereses {
+  width: 5.5rem;
 }
 
 .col-metodo {
-  width: 12rem;
+  width: 10rem;
 }
 
 .col-descripcion {
-  width: 15rem;
-  max-width: 15rem;
+  width: 18rem;
   overflow-wrap: anywhere;
 }
 
@@ -436,7 +454,8 @@
 }
 
 .col-acciones {
-  padding-left: 2rem !important;
+  width: 11.5rem;
+  padding-left: 0.5rem !important;
   text-align: center;
 }
 

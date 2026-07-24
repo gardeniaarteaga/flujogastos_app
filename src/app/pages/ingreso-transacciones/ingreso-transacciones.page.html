@@ -413,9 +413,8 @@
                 class="cuotas-accordion"
                 *ngIf="titularGroup.controls.cantidad_cuotas.value && titularGroup.controls.cantidad_cuotas.value > 1"
                 [open]="isCuotasAccordionOpen(titularGroup)"
-                (toggle)="onCuotasAccordionToggle(titularGroup, $event)"
               >
-                <summary>
+                <summary (click)="onCuotasSummaryClick($event, titularGroup)">
                   <span>Cuotas</span>
                   <span class="cuotas-summary-meta">
                     <span>Total: ${{ getCuotasTotal(titularGroup) | number: '1.2-2' }}</span>
@@ -839,9 +838,8 @@
                       isCuotasAccordionOpen(participanteGroup)
                     "
                     [class.cuotas-accordion--locked]="isSharedExpenseCuotasDesdeFechaProgramadaMode"
-                    (toggle)="onCuotasAccordionToggle(participanteGroup, $event)"
                   >
-                    <summary>
+                    <summary (click)="onCuotasSummaryClick($event, participanteGroup)">
                       <span>Cuotas</span>
                       <span class="cuotas-summary-meta">
                         <span>Total: ${{ getCuotasTotal(participanteGroup) | number: '1.2-2' }}</span>
