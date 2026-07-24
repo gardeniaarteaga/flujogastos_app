@@ -3834,7 +3834,7 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     if (this.usesIndependentSharedExpenseAmounts) {
-      return false;
+      return this.getAdditionalParticipants().length === 1;
     }
 
     if (!this.titularManualOverride) {
@@ -4006,10 +4006,13 @@ export class IngresoTransaccionesPage implements OnInit {
   }
 
   private syncSharedExpenseCounterpart(group: ParticipanteDetalleForm): void {
+    if (!this.isSharedExpenseMode || this.isSharedExpenseCuotasDesdeFechaProgramadaMode) {
+      return;
+    }
+
     if (
-      !this.isSharedExpenseMode ||
-      this.usesIndependentSharedExpenseAmounts ||
-      this.isSharedExpenseCuotasDesdeFechaProgramadaMode
+      this.usesIndependentSharedExpenseAmounts &&
+      this.getAdditionalParticipants().length !== 1
     ) {
       return;
     }
