@@ -392,6 +392,31 @@
   overflow-wrap: anywhere;
 }
 
+.nota-indicator-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #8a5a15;
+  cursor: default;
+  line-height: 0;
+}
+
+.nota-indicator-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.nota-indicator-button:hover,
+.nota-indicator-button:focus-visible {
+  color: #6b4310;
+}
+
 .col-pago {
   width: 6.6rem;
 }

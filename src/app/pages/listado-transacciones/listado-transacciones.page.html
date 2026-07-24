@@ -800,11 +800,35 @@
                 </td>
                 <td class="col-descripcion">
                   <div style="display:grid;gap:.3rem;">
-                    <span
-                      (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
-                      (mousemove)="moveNotaTooltip($event)"
-                      (mouseleave)="hideNotaTooltip()"
-                    >{{ getTransaccionTitle(transaccion) }}</span>
+                    <div style="display:flex;align-items:center;gap:.3rem;min-width:0;">
+                      <span
+                        style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
+                        (mousemove)="moveNotaTooltip($event)"
+                        (mouseleave)="hideNotaTooltip()"
+                      >{{ getTransaccionTitle(transaccion) }}</span>
+                      <span
+                        *ngIf="transaccion.comentario"
+                        class="nota-indicator-button"
+                        aria-hidden="true"
+                        (mouseenter)="showNotaTooltip(transaccion.comentario, $event)"
+                        (mousemove)="moveNotaTooltip($event)"
+                        (mouseleave)="hideNotaTooltip()"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path
+                            d="M4 4.5A1.5 1.5 0 0 1 5.5 3h13A1.5 1.5 0 0 1 20 4.5v10A1.5 1.5 0 0 1 18.5 16H9l-4 4v-4H5.5A1.5 1.5 0 0 1 4 14.5v-10Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            stroke-linejoin="round"
+                          />
+                          <circle cx="8" cy="9.5" r=".9" fill="currentColor" />
+                          <circle cx="12" cy="9.5" r=".9" fill="currentColor" />
+                          <circle cx="16" cy="9.5" r=".9" fill="currentColor" />
+                        </svg>
+                      </span>
+                    </div>
                     <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
                       <span
                         *ngIf="!transaccion.es_propietario"
