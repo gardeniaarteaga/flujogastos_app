@@ -1273,8 +1273,8 @@ export class PagosRealizadosPage implements OnInit {
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
-      esParticipanteAsignado: !detalle.es_titular,
-      esTitular: detalle.es_titular,
+      esParticipanteAsignado: !this.isDetalleDelParticipantePropio(detalle),
+      esTitular: this.isDetalleDelParticipantePropio(detalle),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
@@ -1363,10 +1363,19 @@ export class PagosRealizadosPage implements OnInit {
     return String(detalle.id_participante);
   }
 
+  private isDetalleDelParticipantePropio(
+    detalle: Pick<ParticipanteDetalleListado, 'id_participante'>,
+  ): boolean {
+    return (
+      this.currentUserParticipante !== null &&
+      detalle.id_participante === this.currentUserParticipante.id_participante
+    );
+  }
+
   private getParticipanteNombre(
-    detalle: Pick<ParticipanteDetalleListado, 'es_titular' | 'nombre_participante' | 'id_participante'>,
+    detalle: Pick<ParticipanteDetalleListado, 'nombre_participante' | 'id_participante'>,
   ): string {
-    if (detalle.es_titular) {
+    if (this.isDetalleDelParticipantePropio(detalle)) {
       return (
         this.currentUserParticipante?.nombre_participante ||
         this.userProfile.fullName ||
