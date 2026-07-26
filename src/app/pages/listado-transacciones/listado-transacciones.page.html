@@ -1475,9 +1475,21 @@
               </select>
             </div>
 
-            <div class="field">
-              <label for="edit_tipo_entidad">Tipo de entidad</label>
-              <input id="edit_tipo_entidad" type="text" formControlName="tipo_entidad" readonly />
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="edit_descripcion">Descripcion</label>
+              <textarea id="edit_descripcion" rows="2" maxlength="250" formControlName="descripcion" style="min-height:2.65rem;"></textarea>
+            </div>
+
+            <div class="field" style="grid-column: 1 / -1;">
+              <label for="edit_comentario" style="font-size:.8rem;color:#6b7c93;">Nota <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
+              <input
+                id="edit_comentario"
+                type="text"
+                maxlength="75"
+                formControlName="comentario"
+                placeholder="Nota corta sobre este gasto..."
+                style="font-size:.85rem;"
+              />
             </div>
 
             <label *ngIf="showCuotasSinInteresesOption && !showZeroBalancePeriodGrouping" class="checkbox-row" style="align-self:end;min-height:2.05rem;margin:0;">
@@ -2246,23 +2258,6 @@
               </div>
             </div>
           </section>
-
-          <div class="field">
-            <label for="edit_descripcion">Descripcion</label>
-            <textarea id="edit_descripcion" rows="3" maxlength="250" formControlName="descripcion" style="min-height:4.5rem;"></textarea>
-          </div>
-
-          <div class="field" *ngIf="selectedTransaccion.pagocompartido">
-            <label for="edit_comentario" style="font-size:.8rem;color:#6b7c93;">Comentario <span style="font-weight:400;color:#9aa8b5;">(opcional)</span></label>
-            <input
-              id="edit_comentario"
-              type="text"
-              maxlength="75"
-              formControlName="comentario"
-              placeholder="Nota corta sobre este gasto..."
-              style="font-size:.85rem;"
-            />
-          </div>
 
           <div class="form-actions">
             <button type="submit" [disabled]="saving || loadingCatalogos">

@@ -4361,7 +4361,7 @@ export class ListadoTransaccionesPage implements OnInit {
       id_subcategoria: formValue.id_subcategoria ?? null,
       id_estado: formValue.id_estado as number,
       descripcion: formValue.descripcion ?? '',
-      comentario: this.isEditingSharedExpenseMode ? (formValue.comentario?.trim() || null) : null,
+      comentario: formValue.comentario?.trim() || null,
       pagocompartido: Boolean(this.usarParticipantesControl.value && hasAdditionalParticipants),
       cantidad_cuotas_titular: this.titularDetalleGroup?.controls.cantidad_cuotas.value ?? 1,
       cuotas_titular: this.titularDetalleGroup
