@@ -127,25 +127,46 @@
           <span class="panel-kicker">Filtros</span>
         </div>
 
-        <div class="payments-filter-presets">
-          <button type="button" class="filter-preset-button" [class.is-active]="isAllRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setAllFilters()">
-            Todo
-          </button>
-          <button type="button" class="filter-preset-button" [class.is-active]="isTodayRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setTodayFilters()">
-            Hoy
-          </button>
-          <button type="button" class="filter-preset-button" [class.is-active]="isUpToTodayRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setUpToTodayFilters()">
-            Hasta la Fecha
-          </button>
-          <button type="button" class="filter-preset-button" [class.is-active]="isLastDaysRange(7)" [attr.title]="fechaFiltroTooltip || null" (click)="setLastDaysRange(7)">
-            7 dias
-          </button>
-          <button type="button" class="filter-preset-button" [class.is-active]="isCurrentMonthRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setCurrentMonthFilters()">
-            Mes Act.
-          </button>
-          <button type="button" class="filter-preset-button" [class.is-active]="isLastMonthRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setLastMonthFilters()">
-            Mes Ant.
-          </button>
+        <div class="payments-filter-presets-wrap">
+          <div class="filter-check-group payments-fecha-tipo-group" *ngIf="isOnlyPendienteFilter">
+            <label class="filter-check-option">
+              <input
+                type="checkbox"
+                [checked]="pendienteFechaTipo === 'programada'"
+                (change)="setPendienteFechaTipo('programada')"
+              />
+              <strong>Fecha Programada</strong>
+            </label>
+            <label class="filter-check-option">
+              <input
+                type="checkbox"
+                [checked]="pendienteFechaTipo === 'transaccion'"
+                (change)="setPendienteFechaTipo('transaccion')"
+              />
+              <strong>Fecha de Transaccion</strong>
+            </label>
+          </div>
+
+          <div class="payments-filter-presets">
+            <button type="button" class="filter-preset-button" [class.is-active]="isAllRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setAllFilters()">
+              Todo
+            </button>
+            <button type="button" class="filter-preset-button" [class.is-active]="isTodayRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setTodayFilters()">
+              Hoy
+            </button>
+            <button type="button" class="filter-preset-button" [class.is-active]="isUpToTodayRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setUpToTodayFilters()">
+              Hasta la Fecha
+            </button>
+            <button type="button" class="filter-preset-button" [class.is-active]="isLastDaysRange(7)" [attr.title]="fechaFiltroTooltip || null" (click)="setLastDaysRange(7)">
+              7 dias
+            </button>
+            <button type="button" class="filter-preset-button" [class.is-active]="isCurrentMonthRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setCurrentMonthFilters()">
+              Mes Act.
+            </button>
+            <button type="button" class="filter-preset-button" [class.is-active]="isLastMonthRange()" [attr.title]="fechaFiltroTooltip || null" (click)="setLastMonthFilters()">
+              Mes Ant.
+            </button>
+          </div>
         </div>
       </div>
 

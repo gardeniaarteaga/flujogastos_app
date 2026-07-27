@@ -214,6 +214,7 @@ export class PagosRealizadosPage implements OnInit {
     participanteKey: [''],
     incluirPagados: [false],
     incluirPendientes: [true],
+    pendienteFechaTipo: ['programada' as 'programada' | 'transaccion'],
   });
 
   sidebarCollapsed = false;
@@ -532,7 +533,12 @@ export class PagosRealizadosPage implements OnInit {
       participanteKey: this.getDefaultParticipanteKey(),
       incluirPagados: false,
       incluirPendientes: true,
+      pendienteFechaTipo: 'programada',
     });
+  }
+
+  setPendienteFechaTipo(tipo: 'programada' | 'transaccion'): void {
+    this.filtrosForm.patchValue({ pendienteFechaTipo: tipo });
   }
 
   onEstadoFilterToggle(estado: EstadoReportePago, checked: boolean): void {
@@ -939,6 +945,10 @@ export class PagosRealizadosPage implements OnInit {
     return Boolean(incluirPagados) && !incluirPendientes;
   }
 
+  get pendienteFechaTipo(): 'programada' | 'transaccion' {
+    return this.filtrosForm.getRawValue().pendienteFechaTipo ?? 'programada';
+  }
+
   get fechaFiltroSuffix(): string {
     if (this.isOnlyPagadoFilter) return ' (Fecha de pago)';
     if (this.isOnlyPendienteFilter) return ' (Fecha programada)';
@@ -1164,18 +1174,25 @@ export class PagosRealizadosPage implements OnInit {
       participanteKey,
       incluirPagados,
       incluirPendientes,
+      pendienteFechaTipo,
     } =
       this.filtrosForm.getRawValue();
 
     const fechaDesdeISO = this.toISODate(fechaDesde);
     const fechaHastaISO = this.toISODate(fechaHasta);
+    const isOnlyPendiente = !incluirPagados && Boolean(incluirPendientes);
 
     this.filteredPagos = this.pagos.filter((row) => {
-      if (fechaDesdeISO && row.fechaReferencia < fechaDesdeISO) {
+      const fechaFiltro =
+        isOnlyPendiente && pendienteFechaTipo === 'transaccion'
+          ? row.fechaTransaccion
+          : row.fechaReferencia;
+
+      if (fechaDesdeISO && fechaFiltro < fechaDesdeISO) {
         return false;
       }
 
-      if (fechaHastaISO && row.fechaReferencia > fechaHastaISO) {
+      if (fechaHastaISO && fechaFiltro > fechaHastaISO) {
         return false;
       }
 
