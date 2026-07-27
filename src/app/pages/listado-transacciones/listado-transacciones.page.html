@@ -2546,7 +2546,7 @@
                   <span class="payment-saldo">Monto total: ${{ paymentGroup.saldo_pendiente_total | number: '1.2-2' }}</span>
                 </div>
 
-              <div class="payment-group-actions">
+              <div class="payment-group-actions" *ngIf="getPagoPendientes(paymentGroup).length > 0">
                 <button
                   type="button"
                   class="secondary-button compact-button"
