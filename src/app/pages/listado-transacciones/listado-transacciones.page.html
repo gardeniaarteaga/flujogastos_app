@@ -2579,10 +2579,6 @@
                   <span class="payment-paid-toggle-icon">{{ isPagoPagadasExpanded(paymentGroup) ? '▲' : '▼' }}</span>
                 </button>
 
-                <div class="payment-paid-toggle payment-paid-toggle-static" *ngIf="getPagoPagadas(paymentGroup).length === 1">
-                  <span>1 cuota pagada</span>
-                </div>
-
                 <div *ngIf="getPagoPagadas(paymentGroup).length === 1 || isPagoPagadasExpanded(paymentGroup)" class="payment-paid-group-list">
                   <div
                     class="payment-detail-row is-paid"
