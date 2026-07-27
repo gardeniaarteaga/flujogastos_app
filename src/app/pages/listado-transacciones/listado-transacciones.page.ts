@@ -690,7 +690,7 @@ export class ListadoTransaccionesPage implements OnInit {
     const filtros = this.filtrosForm.getRawValue();
     const fechaDesde = this.normalizeDateInputValue(filtros.fechaDesde ?? '');
     const fechaHasta = this.normalizeDateInputValue(filtros.fechaHasta ?? '');
-    const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
+    const estadoFiltro = this.getNormalizedEstadoFiltro(filtros.estado ?? '');
     const descripcionFiltro = this.normalizeText(filtros.busquedaDescripcion ?? '');
     const idFiltro = (filtros.busquedaId ?? '').trim();
     const mostrarTodas = !!filtros.todos;
@@ -702,7 +702,8 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
       const estadoTransaccion = this.getNormalizedEstadoListado(transaccion.nombre_estado ?? '');
-      const estadoCoincideFiltro = !!estadoFiltro && estadoTransaccion === estadoFiltro;
+      const estadoTransaccionFiltro = this.getNormalizedEstadoFiltro(transaccion.nombre_estado ?? '');
+      const estadoCoincideFiltro = !!estadoFiltro && estadoTransaccionFiltro === estadoFiltro;
       const descripcionTransaccion = this.normalizeText(transaccion.descripcion ?? '');
 
       if (
@@ -764,7 +765,7 @@ export class ListadoTransaccionesPage implements OnInit {
         }
       }
 
-      if (estadoFiltro && estadoTransaccion !== estadoFiltro) {
+      if (estadoFiltro && estadoTransaccionFiltro !== estadoFiltro) {
         return false;
       }
 
@@ -882,7 +883,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   private computeFilteredDetalleTransacciones(): DetalleTransaccionListadoRow[] {
     const filtros = this.filtrosForm.getRawValue();
-    const estadoFiltro = this.getNormalizedEstadoListado(filtros.estado ?? '');
+    const estadoFiltro = this.getNormalizedEstadoFiltro(filtros.estado ?? '');
     const tipoTransaccionFiltro =
       (this.normalizeText(filtros.tipoTransaccion ?? '') as 'credito' | 'debito' | '') || null;
     const prioridadActiva = !!filtros.prioritarios;
@@ -896,7 +897,8 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.detalleTransaccionRowsCache
       .filter((row) => {
         const estadoDetalle = this.getNormalizedEstadoListado(row.detalle.nombre_estado ?? '');
-        const estadoCoincideFiltro = !!estadoFiltro && estadoDetalle === estadoFiltro;
+        const estadoDetalleFiltro = this.getNormalizedEstadoFiltro(row.detalle.nombre_estado ?? '');
+        const estadoCoincideFiltro = !!estadoFiltro && estadoDetalleFiltro === estadoFiltro;
         const fechaProgramada = this.normalizeDateOnly(row.detalle.fecha_programada);
         const descripcionTransaccion = this.normalizeText(row.descripcion ?? '');
 
@@ -934,7 +936,7 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
-        if (estadoFiltro && estadoDetalle !== estadoFiltro) {
+        if (estadoFiltro && estadoDetalleFiltro !== estadoFiltro) {
           return false;
         }
 
@@ -3788,7 +3790,9 @@ export class ListadoTransaccionesPage implements OnInit {
               this.maxTwoDecimalsValidator(),
             ]),
           fecha_pago: this.fb.control<string | null>(
-            this.normalizeDateOnly(detalle.fecha_pago) || this.getCentroamericaTodayIso(),
+            this.formatDateDisplayFromApi(
+              this.normalizeDateOnly(detalle.fecha_pago) || this.getCentroamericaTodayIso(),
+            ),
           ),
           fecha_programada: this.fb.control<string | null>(detalle.fecha_programada),
           nombre_estado: this.fb.control(detalle.nombre_estado ?? 'Sin estado', {
@@ -6583,9 +6587,33 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   private getPagoFechaPagoValue(group: PagoDetalleForm): string | undefined {
-    const normalizedValue = this.normalizeDateOnly(group.controls.fecha_pago.value);
+    const normalizedValue = this.normalizeDateInputValue(group.controls.fecha_pago.value ?? '');
 
-    return normalizedValue || undefined;
+    return normalizedValue ?? undefined;
+  }
+
+  formatFechaPagoDisplay(value: string | null | undefined): string {
+    return this.formatDateDisplayFromApi(value ?? '');
+  }
+
+  onPagoFechaPagoInput(event: Event, group: PagoDetalleForm): void {
+    this.handleDateInput(group.controls.fecha_pago, event);
+  }
+
+  onPagoFechaPagoPaste(event: ClipboardEvent, group: PagoDetalleForm): void {
+    this.handleDatePaste(group.controls.fecha_pago, event);
+  }
+
+  onPagoFechaPagoBlur(group: PagoDetalleForm): void {
+    this.normalizeAndValidateDateControl(group.controls.fecha_pago);
+  }
+
+  onPagoFechaPagoCalendarChange(event: Event, group: PagoDetalleForm): void {
+    this.handleDateCalendarChange(group.controls.fecha_pago, event);
+  }
+
+  getPagoFechaPagoCalendarioValue(group: PagoDetalleForm): string {
+    return this.normalizeDateInputValue(group.controls.fecha_pago.value ?? '') ?? '';
   }
 
   private getMontoAplicarNumericValue(group: PagoDetalleForm): number {
@@ -7303,6 +7331,25 @@ export class ListadoTransaccionesPage implements OnInit {
       case 'pendiente':
       case 'pago parcial':
         return 'pendiente';
+      default:
+        return estado;
+    }
+  }
+
+  // A diferencia de getNormalizedEstadoListado, no agrupa "pago parcial" dentro de
+  // "pendiente": el filtro por Estado debe poder aislar cada valor por separado.
+  private getNormalizedEstadoFiltro(nombreEstado: string | null | undefined): string {
+    const estado = this.normalizeText(nombreEstado ?? '');
+
+    switch (estado) {
+      case 'anulada':
+      case 'cancelada':
+      case 'cancelado':
+        return 'anulado';
+      case 'pagada':
+      case 'completado':
+      case 'completada':
+        return 'pagado';
       default:
         return estado;
     }

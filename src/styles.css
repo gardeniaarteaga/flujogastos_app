@@ -388,6 +388,14 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   background: #eef4fb;
 }
 
+.module-page .payment-paid-toggle-static {
+  cursor: default;
+}
+
+.module-page .payment-paid-toggle-static:hover {
+  background: #f8fbff;
+}
+
 .module-page .payment-paid-toggle-icon {
   font-size: 0.65rem;
   color: #94a3b8;
@@ -523,6 +531,11 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   gap: 0.35rem;
 }
 
+.module-page .fecha-pago-inline-entry {
+  display: inline-flex;
+  width: 8.6rem;
+}
+
 .module-page .fecha-pago-inline-input {
   border: 1px solid #dbe5f1;
   border-radius: 0.4rem;
@@ -533,6 +546,18 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   background: #fff;
   line-height: 1.4;
   height: 1.5rem;
+  width: 100%;
+}
+
+.module-page .fecha-pago-inline-entry .date-picker-button {
+  width: 1.4rem;
+  height: 1.4rem;
+  right: 0.1rem;
+}
+
+.module-page .fecha-pago-inline-entry .date-picker-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .module-page .payment-modal-pay .payment-detail-actions {
