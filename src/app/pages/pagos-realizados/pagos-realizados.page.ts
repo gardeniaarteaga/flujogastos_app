@@ -570,6 +570,13 @@ export class PagosRealizadosPage implements OnInit {
     });
   }
 
+  setUpToTodayFilters(): void {
+    this.filtrosForm.patchValue({
+      fechaDesde: '',
+      fechaHasta: this.todayFilterValue,
+    });
+  }
+
   setLastDaysRange(days: number): void {
     const end = new Date(this.today);
     const start = new Date(this.today);
@@ -612,6 +619,11 @@ export class PagosRealizadosPage implements OnInit {
   isAllRange(): boolean {
     const filtros = this.filtrosForm.getRawValue();
     return !filtros.fechaDesde && !filtros.fechaHasta;
+  }
+
+  isUpToTodayRange(): boolean {
+    const filtros = this.filtrosForm.getRawValue();
+    return !filtros.fechaDesde && (filtros.fechaHasta ?? '') === this.todayFilterValue;
   }
 
   clearGroupFilters(group: ParticipanteGroup): void {
@@ -930,6 +942,12 @@ export class PagosRealizadosPage implements OnInit {
   get fechaFiltroSuffix(): string {
     if (this.isOnlyPagadoFilter) return ' (Fecha de pago)';
     if (this.isOnlyPendienteFilter) return ' (Fecha programada)';
+    return '';
+  }
+
+  get fechaFiltroTooltip(): string {
+    if (this.isOnlyPagadoFilter) return 'Fecha Pago';
+    if (this.isOnlyPendienteFilter) return 'Fecha Programada';
     return '';
   }
 

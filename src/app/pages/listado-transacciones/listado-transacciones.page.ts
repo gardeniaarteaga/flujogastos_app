@@ -2543,6 +2543,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (isValid) {
       this.syncQuickFilterFlagsWithRange();
+      this.syncQuickPayBulkSelectionWithFilters();
     }
   }
 
@@ -2556,6 +2557,7 @@ export class ListadoTransaccionesPage implements OnInit {
   ): void {
     this.handleDateCalendarChange(this.getFiltroDateControl(controlName), event);
     this.syncQuickFilterFlagsWithRange();
+    this.syncQuickPayBulkSelectionWithFilters();
   }
 
   onFechaTransaccionInput(event: Event): void {
