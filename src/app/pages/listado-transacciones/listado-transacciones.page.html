@@ -497,6 +497,11 @@
               >
                 {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
               </button>
+
+              <label class="checkbox-row checkbox-row-compact" for="excluirPagados" style="margin-left:auto;">
+                <input id="excluirPagados" type="checkbox" formControlName="excluirPagados" />
+                <span>Excluir pagados</span>
+              </label>
             </div>
 
             <div class="filters-search-row">
@@ -652,6 +657,15 @@
                   </option>
                 </select>
               </div>
+
+              <div class="field">
+                <label for="tipoParticipacion">Participacion</label>
+                <select id="tipoParticipacion" formControlName="tipoParticipacion">
+                  <option [ngValue]="null">Todos</option>
+                  <option [ngValue]="'individual'">Individual</option>
+                  <option [ngValue]="'compartido'">Compartido</option>
+                </select>
+              </div>
             </div>
           </ng-template>
         </form>
@@ -671,7 +685,11 @@
           No hay detalles que coincidan con los filtros actuales.
         </div>
 
-        <div *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0" class="table-wrap">
+        <div
+          *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0"
+          class="table-wrap"
+          (scroll)="particFilterMenuOpen = false"
+        >
           <table class="listado-table">
             <thead>
               <tr>
@@ -761,7 +779,22 @@
                     <span class="qp-sort-arrow" aria-hidden="true">{{ getListadoSortIndicator('pago') === 'desc' ? '↓' : getListadoSortIndicator('pago') === 'asc' ? '↑' : '↕' }}</span>
                   </button>
                 </th>
-                <th class="col-partic" style="text-align: center;" title="Participantes">Partic.</th>
+                <th class="col-partic" title="Participantes">
+                  <div class="col-filter-header">
+                    <span>Partic.</span>
+                    <button
+                      type="button"
+                      class="col-filter-trigger"
+                      [class.is-active]="!!filtrosForm.controls.tipoParticipacion.value"
+                      (click)="toggleParticFilterMenu($event)"
+                      aria-label="Filtrar por participacion"
+                    >
+                      <svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">
+                        <path d="M3 4h18l-7 9v6l-4 2v-8z" fill="currentColor" />
+                      </svg>
+                    </button>
+                  </div>
+                </th>
                 <th class="col-acciones">Acciones</th>
               </tr>
             </thead>
@@ -1005,6 +1038,40 @@
             </tbody>
           </table>
         </div>
+
+        <div
+          *ngIf="particFilterMenuOpen"
+          class="col-filter-menu"
+          [style.top.px]="particFilterMenuPosition.top"
+          [style.right.px]="particFilterMenuPosition.right"
+          (click)="$event.stopPropagation()"
+        >
+          <button
+            type="button"
+            class="col-filter-option"
+            [class.is-selected]="!filtrosForm.controls.tipoParticipacion.value"
+            (click)="selectTipoParticipacionFilter(null)"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            class="col-filter-option"
+            [class.is-selected]="filtrosForm.controls.tipoParticipacion.value === 'individual'"
+            (click)="selectTipoParticipacionFilter('individual')"
+          >
+            Individual
+          </button>
+          <button
+            type="button"
+            class="col-filter-option"
+            [class.is-selected]="filtrosForm.controls.tipoParticipacion.value === 'compartido'"
+            (click)="selectTipoParticipacionFilter('compartido')"
+          >
+            Compartido
+          </button>
+        </div>
+
         <div
           *ngIf="!loading && !isDetalleViewMode && filteredTransacciones.length > 0 && getListadoTotalPages() > 1"
           class="table-pagination"

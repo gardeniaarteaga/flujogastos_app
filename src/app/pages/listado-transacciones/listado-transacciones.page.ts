@@ -385,6 +385,7 @@ export class ListadoTransaccionesPage implements OnInit {
         : PRIORITY_WINDOW_DAYS,
     ],
     pendientePago: [false],
+    excluirPagados: [this.viewMode !== 'detalle'],
     enviadas: [false],
     compartidos: [false],
     pendienteRegistro: [false],
@@ -392,6 +393,7 @@ export class ListadoTransaccionesPage implements OnInit {
     fechaHasta: ['', [this.dateDisplayValidator()]],
     estado: [this.viewMode === 'detalle' ? 'PENDIENTE' : null as string | null],
     tipoTransaccion: [null as 'credito' | 'debito' | null],
+    tipoParticipacion: [null as 'individual' | 'compartido' | null],
     idMetodoPago: [null as number | null],
     idParticipante: [null as number | null],
     idCategoria: [null as number | null],
@@ -623,6 +625,12 @@ export class ListadoTransaccionesPage implements OnInit {
 
   @HostListener('document:keydown.escape', ['$event'])
   handleEscapeKey(event: Event): void {
+    if (this.particFilterMenuOpen) {
+      event.preventDefault();
+      this.particFilterMenuOpen = false;
+      return;
+    }
+
     if (this.paymentModalOpen) {
       event.preventDefault();
       this.dismissPaymentModal();
@@ -639,6 +647,36 @@ export class ListadoTransaccionesPage implements OnInit {
       event.preventDefault();
       this.closeEditModal();
     }
+  }
+
+  @HostListener('document:click')
+  closeParticFilterMenu(): void {
+    this.particFilterMenuOpen = false;
+  }
+
+  particFilterMenuOpen = false;
+  particFilterMenuPosition: { top: number; right: number } = { top: 0, right: 0 };
+
+  toggleParticFilterMenu(event: MouseEvent): void {
+    event.stopPropagation();
+
+    if (this.particFilterMenuOpen) {
+      this.particFilterMenuOpen = false;
+      return;
+    }
+
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    this.particFilterMenuPosition = {
+      top: rect.bottom + 6,
+      right: Math.max(8, window.innerWidth - rect.right),
+    };
+    this.particFilterMenuOpen = true;
+  }
+
+  selectTipoParticipacionFilter(value: 'individual' | 'compartido' | null): void {
+    this.filtrosForm.controls.tipoParticipacion.setValue(value);
+    this.particFilterMenuOpen = false;
   }
 
   toggleMaintenanceMenu(): void {
@@ -696,6 +734,8 @@ export class ListadoTransaccionesPage implements OnInit {
     const mostrarTodas = !!filtros.todos;
     const prioridadActiva = !!filtros.prioritarios;
     const vencidosActivos = !!filtros.vencidos;
+    const excluirPagadosActivo = !!filtros.excluirPagados && estadoFiltro !== 'pagado';
+    const tipoParticipacionFiltro = filtros.tipoParticipacion;
     const mesFiltro = filtros.mesFiltro;
     const anioFiltro = filtros.anioFiltro;
 
@@ -705,6 +745,22 @@ export class ListadoTransaccionesPage implements OnInit {
       const estadoTransaccionFiltro = this.getNormalizedEstadoFiltro(transaccion.nombre_estado ?? '');
       const estadoCoincideFiltro = !!estadoFiltro && estadoTransaccionFiltro === estadoFiltro;
       const descripcionTransaccion = this.normalizeText(transaccion.descripcion ?? '');
+
+      if (excluirPagadosActivo && estadoTransaccion === 'pagado') {
+        return false;
+      }
+
+      if (
+        tipoParticipacionFiltro === 'individual' && transaccion.pagocompartido
+      ) {
+        return false;
+      }
+
+      if (
+        tipoParticipacionFiltro === 'compartido' && !transaccion.pagocompartido
+      ) {
+        return false;
+      }
 
       if (
         !mostrarTodas &&
@@ -9954,6 +10010,7 @@ export class ListadoTransaccionesPage implements OnInit {
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
         : PRIORITY_WINDOW_DAYS,
       pendientePago: false,
+      excluirPagados: this.viewMode !== 'detalle',
       enviadas: false,
       compartidos: false,
       pendienteRegistro: false,
@@ -9965,6 +10022,7 @@ export class ListadoTransaccionesPage implements OnInit {
       idParticipante: this.getDefaultQuickPayParticipanteFilterId(),
       idCategoria: null,
       idSubcategoria: null,
+      tipoParticipacion: null,
       busquedaDescripcion: '',
       busquedaId: '',
     });
@@ -10254,6 +10312,7 @@ export class ListadoTransaccionesPage implements OnInit {
         prioritarios: false,
         vencidos: false,
         pendientePago: false,
+        excluirPagados: true,
         enviadas: false,
         compartidos: false,
         pendienteRegistro: false,
@@ -10264,6 +10323,7 @@ export class ListadoTransaccionesPage implements OnInit {
         idParticipante: null,
         idCategoria: null,
         idSubcategoria: null,
+        tipoParticipacion: null,
         busquedaDescripcion: '',
         busquedaId: '',
       },
@@ -10298,7 +10358,8 @@ export class ListadoTransaccionesPage implements OnInit {
       filtros.idMetodoPago === null &&
       filtros.idParticipante === null &&
       filtros.idCategoria === null &&
-      filtros.idSubcategoria === null;
+      filtros.idSubcategoria === null &&
+      filtros.tipoParticipacion === null;
 
     if (isShowingAll) {
       return;
