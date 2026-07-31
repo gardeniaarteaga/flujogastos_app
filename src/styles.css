@@ -533,7 +533,7 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
 
 .module-page .fecha-pago-inline-entry {
   display: inline-flex;
-  width: 8.6rem;
+  width: 9.4rem;
 }
 
 .module-page .fecha-pago-inline-input {
@@ -547,6 +547,11 @@ input.percentage-spinner-input::-webkit-inner-spin-button {
   line-height: 1.4;
   height: 1.5rem;
   width: 100%;
+  box-sizing: border-box;
+}
+
+.module-page .fecha-pago-inline-entry input.fecha-pago-inline-input {
+  padding-right: 1.6rem;
 }
 
 .module-page .fecha-pago-inline-entry .date-picker-button {
