@@ -2023,7 +2023,7 @@ export class Dashboard implements OnInit {
         cuotasVencidas,
         cuotasVencidasLabel:
           cuotasVencidas === 1 ? '1 cuota vencida' : `${cuotasVencidas} cuotas vencidas`,
-        tone: cuotasVencidas > 1 ? 'danger' : 'info',
+        tone: cuotasVencidas > 0 ? 'danger' : 'info',
       };
     });
   }
