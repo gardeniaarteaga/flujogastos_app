@@ -174,23 +174,39 @@
             </div>
           </div>
 
-          <div class="quick-pay-bulk-actions">
-            <button
-              type="button"
-              class="secondary-button compact-button"
-              [disabled]="applyingBulkQuickPayments"
-              (click)="clearQuickPayBulkSelection()"
-            >
-              Limpiar seleccion
-            </button>
-            <button
-              type="button"
-              class="table-button complete compact-button"
-              [disabled]="!canApplyQuickPayBulk"
-              (click)="applyQuickPayBulkSelection()"
-            >
-              {{ applyingBulkQuickPayments ? 'Procesando...' : 'Pagar lo seleccionado' }}
-            </button>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;">
+            <div class="quick-pay-bulk-actions">
+              <button
+                type="button"
+                class="secondary-button compact-button"
+                [disabled]="applyingBulkQuickPayments"
+                (click)="clearQuickPayBulkSelection()"
+              >
+                Limpiar seleccion
+              </button>
+              <button
+                type="button"
+                class="table-button complete compact-button"
+                [disabled]="!canApplyQuickPayBulk"
+                (click)="applyQuickPayBulkSelection()"
+              >
+                {{ applyingBulkQuickPayments ? 'Procesando...' : 'Pagar lo seleccionado' }}
+              </button>
+            </div>
+
+            <div class="field referencia-banco-field referencia-banco-field-row">
+              <label for="quickPayBulkReferenciaBanco">Referencia bancaria (opcional)</label>
+              <input
+                id="quickPayBulkReferenciaBanco"
+                type="text"
+                inputmode="numeric"
+                maxlength="20"
+                autocomplete="off"
+                [disabled]="applyingBulkQuickPayments"
+                [value]="quickPayBulkReferenciaBanco"
+                (input)="onReferenciaBancoInput($event)"
+              />
+            </div>
           </div>
         </div>
 
@@ -2430,6 +2446,7 @@
                 <th>Inter&eacute;s</th>
                 <th>Pagado</th>
                 <th>Estado</th>
+                <th>Referencia</th>
               </tr>
             </thead>
             <tbody>
@@ -2461,6 +2478,7 @@
                       {{ getEstadoDisplayLabel(detalle.nombre_estado) }}
                     </span>
                 </td>
+                <td>{{ detalle.id_referencia_banco || '-' }}</td>
               </tr>
 
               <!-- Otros participantes: todas las cuotas visibles, sin acordeon -->
@@ -2491,6 +2509,7 @@
                       {{ getEstadoDisplayLabel(detalle.nombre_estado) }}
                     </span>
                   </td>
+                  <td>{{ detalle.id_referencia_banco || '-' }}</td>
                 </tr>
               </ng-container>
             </tbody>
@@ -2712,19 +2731,35 @@
                   </span>
                 </div>
 
-                <div class="field payment-detail-input">
-                  <label [for]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value">Monto a aplicar</label>
-                  <input
-                    [id]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value"
-                    type="text"
-                    inputmode="decimal"
-                    [ngModel]="getMontoAplicarDisplay(pagoGroup)"
-                    [ngModelOptions]="{ standalone: true }"
-                    autocomplete="off"
-                    (ngModelChange)="onMontoAplicarDraftChange($event, pagoGroup)"
-                    (paste)="onMontoPaste($event)"
-                    (blur)="normalizePagoAplicarInput(pagoGroup)"
-                  />
+                <div class="payment-detail-input">
+                  <div class="field">
+                    <label [for]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value">Monto a aplicar</label>
+                    <input
+                      [id]="'monto_aplicar_' + pagoGroup.controls.id_detalle.value"
+                      type="text"
+                      inputmode="decimal"
+                      [ngModel]="getMontoAplicarDisplay(pagoGroup)"
+                      [ngModelOptions]="{ standalone: true }"
+                      autocomplete="off"
+                      (ngModelChange)="onMontoAplicarDraftChange($event, pagoGroup)"
+                      (paste)="onMontoPaste($event)"
+                      (blur)="normalizePagoAplicarInput(pagoGroup)"
+                    />
+                  </div>
+
+                  <div class="field referencia-banco-field referencia-banco-field-inline">
+                    <label [for]="'referencia_banco_' + pagoGroup.controls.id_detalle.value">Referencia bancaria (opcional)</label>
+                    <input
+                      [id]="'referencia_banco_' + pagoGroup.controls.id_detalle.value"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="20"
+                      autocomplete="off"
+                      [ngModel]="getReferenciaBancoDisplay(pagoGroup)"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="onPagoReferenciaBancoDraftChange($event, pagoGroup)"
+                    />
+                  </div>
                 </div>
 
                 <div class="payment-detail-actions">
@@ -2748,7 +2783,7 @@
                     [disabled]="!canApplyPago(pagoGroup)"
                     (click)="applyPagoDetalle(pagoGroup)"
                   >
-                    {{ isApplyingPago(pagoGroup) ? 'Aplicando...' : 'Aplicar cuota' }}
+                    {{ isApplyingPago(pagoGroup) ? 'Aplicando...' : 'Aplicar' }}
                   </button>
                 </div>
               </div>

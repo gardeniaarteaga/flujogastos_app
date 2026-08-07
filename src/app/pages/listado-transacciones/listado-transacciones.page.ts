@@ -126,6 +126,7 @@ interface ParticipanteDetalleListado {
   nombre_forma_pago: string | null;
   id_estado: number;
   nombre_estado: string | null;
+  id_referencia_banco: string | null;
   fecha_creacion: string;
   es_titular: boolean;
 }
@@ -225,6 +226,7 @@ interface ApplyPagosPayload {
     id_detalle: number;
     monto: number;
     fecha_pago?: string;
+    id_referencia_banco?: string;
   }>;
   cuotas_actualizadas?: Array<{
     id_detalle: number;
@@ -428,6 +430,7 @@ export class ListadoTransaccionesPage implements OnInit {
   applyingBulkQuickPayments = false;
   selectedQuickPayDetalleIds = new Set<number>();
   montoAplicarDrafts: Record<number, string> = {};
+  referenciaBancoDrafts: Record<number, string> = {};
   showAdvancedFilters = false;
   quickPayFiltersCollapsed = false;
   listadoCurrentPage = 1;
@@ -438,6 +441,7 @@ export class ListadoTransaccionesPage implements OnInit {
   paymentTransaccionId: number | null = null;
   selectedTransaccion: TransaccionListado | null = null;
   paymentModalTransaccion: TransaccionListado | null = null;
+  quickPayBulkReferenciaBanco = '';
   pagosDetalleGroupViews: PagoDetalleGroupView[] = [];
   private expandedPaidCuotasGroups = new Set<number>();
   editorDetallesOriginales: ParticipanteDetalleListado[] = [];
@@ -2835,6 +2839,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
   clearQuickPayBulkSelection(): void {
     this.selectedQuickPayDetalleIds.clear();
+    this.quickPayBulkReferenciaBanco = '';
     this.refreshQuickPaySelectionState();
   }
 
@@ -2887,12 +2892,15 @@ export class ListadoTransaccionesPage implements OnInit {
     this.successMessage = '';
 
     try {
+      const referenciaBancoMasivo = this.quickPayBulkReferenciaBanco.trim();
+
       await firstValueFrom(
         this.http
           .patch(
             `${this.apiUrl}/aplicar-pagos-masivos`,
             {
               ids_detalle: selectedRows.map((row) => row.detalle.id),
+              ...(referenciaBancoMasivo ? { id_referencia_banco: referenciaBancoMasivo } : {}),
             },
             {
               params: { id_usuario: this.currentUserIdValue },
@@ -3082,6 +3090,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.applyingPaymentDetailId = null;
     this.applyingPaymentGroupId = null;
     this.montoAplicarDrafts = {};
+    this.referenciaBancoDrafts = {};
     this.cameFromDashboardReminder = false;
     this.refreshPagosDetalleGroups();
   }
@@ -3232,6 +3241,16 @@ export class ListadoTransaccionesPage implements OnInit {
     this.setMontoAplicarValue(group, sanitizedValue === '' ? null : sanitizedValue);
   }
 
+  getReferenciaBancoDisplay(group: PagoDetalleForm): string {
+    return this.referenciaBancoDrafts[group.controls.id_detalle.value] ?? '';
+  }
+
+  onPagoReferenciaBancoDraftChange(value: string, group: PagoDetalleForm): void {
+    this.referenciaBancoDrafts[group.controls.id_detalle.value] = (value ?? '')
+      .replace(/\D/g, '')
+      .slice(0, 20);
+  }
+
   normalizeMontoCuotaInput(
     paymentGroup: PagoDetalleGroupView,
     cuotaGroup: PagoDetalleForm,
@@ -3366,6 +3385,7 @@ export class ListadoTransaccionesPage implements OnInit {
           id_detalle: group.controls.id_detalle.value,
           monto: montoAplicar,
           fecha_pago: this.getPagoFechaPagoValue(group),
+          id_referencia_banco: this.getReferenciaBancoDisplay(group).trim() || undefined,
         },
       ],
     };
@@ -3417,6 +3437,7 @@ export class ListadoTransaccionesPage implements OnInit {
           id_detalle: cuota.controls.id_detalle.value,
           monto: montoAplicar,
           fecha_pago: this.getPagoFechaPagoValue(cuota),
+          id_referencia_banco: this.getReferenciaBancoDisplay(cuota).trim() || undefined,
           nombre: cuota.controls.nombre_mostrado.value,
           saldoPendiente: cuota.controls.saldo_pendiente.value,
         };
@@ -3428,6 +3449,7 @@ export class ListadoTransaccionesPage implements OnInit {
           id_detalle: number;
           monto: number;
           fecha_pago: string | undefined;
+          id_referencia_banco: string | undefined;
           nombre: string;
           saldoPendiente: number;
         } => pago !== null,
@@ -3453,10 +3475,11 @@ export class ListadoTransaccionesPage implements OnInit {
       return;
     }
 
-    const pagos = pagosConContexto.map(({ id_detalle, monto, fecha_pago }) => ({
+    const pagos = pagosConContexto.map(({ id_detalle, monto, fecha_pago, id_referencia_banco }) => ({
       id_detalle,
       monto,
       fecha_pago,
+      id_referencia_banco,
     }));
 
     this.applyingPaymentGroupId = group.id_participante;
@@ -3495,6 +3518,7 @@ export class ListadoTransaccionesPage implements OnInit {
         id_detalle: cuota.controls.id_detalle.value,
         monto: cuota.controls.saldo_pendiente.value,
         fecha_pago: this.getPagoFechaPagoValue(cuota),
+        id_referencia_banco: this.getReferenciaBancoDisplay(cuota).trim() || undefined,
       }));
 
     if (pagos.length === 0) {
@@ -3561,6 +3585,7 @@ export class ListadoTransaccionesPage implements OnInit {
         id_detalle: cuota.controls.id_detalle.value,
         monto: cuota.controls.saldo_pendiente.value,
         fecha_pago: this.getPagoFechaPagoValue(cuota),
+        id_referencia_banco: this.getReferenciaBancoDisplay(cuota).trim() || undefined,
       }));
 
     if (pagos.length === 0) {
@@ -3627,6 +3652,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.paymentModalOpen = false;
     this.selectedFormaPago = null;
     this.montoAplicarDrafts = {};
+    this.referenciaBancoDrafts = {};
     this.hasManualEstadoSelectionInEdit = false;
     this.isSyncingEstadoTransaccion = false;
     this.titularManualOverride = false;
@@ -3857,6 +3883,7 @@ export class ListadoTransaccionesPage implements OnInit {
         }),
       );
       this.montoAplicarDrafts[detalle.id] = '';
+      this.referenciaBancoDrafts[detalle.id] = '';
     });
 
     this.refreshPagosDetalleGroups();
@@ -4982,6 +5009,17 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     this.syncLastCuotaWithMonto(group);
+  }
+
+  onReferenciaBancoInput(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const sanitized = (input?.value ?? '').replace(/\D/g, '').slice(0, 20);
+
+    this.quickPayBulkReferenciaBanco = sanitized;
+
+    if (input) {
+      input.value = sanitized;
+    }
   }
 
   onMontoPaste(event: ClipboardEvent): void {

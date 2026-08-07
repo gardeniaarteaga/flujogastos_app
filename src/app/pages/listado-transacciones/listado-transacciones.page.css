@@ -353,6 +353,68 @@
   box-shadow:0 0 0 .2rem rgba(209,120,32,.18), inset 0 1px 0 rgba(255,255,255,.78);
 }
 
+.referencia-banco-field label {
+  color:#2a5f8f;
+  font-weight:700;
+  font-size:.72rem;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+
+.referencia-banco-field input {
+  min-height:2.1rem;
+  padding:.4rem .6rem;
+  font-size:.85rem;
+  font-weight:700;
+  color:#1f4d75;
+  border:1px solid #a9cdea;
+  background:linear-gradient(180deg,#f2f9ff 0%,#e2f1ff 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+.referencia-banco-field input::placeholder {
+  color:#8fb3d1;
+  font-weight:500;
+}
+
+.referencia-banco-field input:focus {
+  border-color:#3d7fb5;
+  box-shadow:0 0 0 .2rem rgba(61,127,181,.18), inset 0 1px 0 rgba(255,255,255,.78);
+}
+
+.payment-detail-input {
+  display:flex;
+  flex-direction:column;
+  gap:.4rem;
+}
+
+.referencia-banco-field-inline label {
+  font-size:.62rem;
+}
+
+.referencia-banco-field-inline input {
+  min-height:1.75rem !important;
+  padding:.25rem .5rem !important;
+  font-size:.76rem !important;
+}
+
+.referencia-banco-field-row {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:.5rem;
+  max-width:none;
+}
+
+.referencia-banco-field-row label {
+  white-space:nowrap;
+}
+
+.referencia-banco-field-row input {
+  min-height:2.1rem;
+  width:150px;
+}
+
 .participant-single-cuota-field label {
   color:#8a3d00;
   font-weight:800;
