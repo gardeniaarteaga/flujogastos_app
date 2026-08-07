@@ -150,8 +150,14 @@
           </div>
 
           <p class="field-example periodo-preview">
-            {{ resolvedPeriodoLabel }}
-            <span *ngIf="fechaLimitePagoLabel"> &middot; Fecha limite de pago: {{ fechaLimitePagoLabel }}</span>
+            <ng-container *ngIf="periodoInicioLabel && periodoFinLabel; else periodoPlaceholder">
+              Del <strong class="periodo-date">{{ periodoInicioLabel }}</strong> al
+              <strong class="periodo-date">{{ periodoFinLabel }}</strong>
+            </ng-container>
+            <ng-template #periodoPlaceholder>Selecciona forma de pago, mes y año para ver el periodo.</ng-template>
+            <span *ngIf="fechaLimitePagoLabel">
+              &middot; Fecha limite de pago: <strong class="periodo-date">{{ fechaLimitePagoLabel }}</strong>
+            </span>
           </p>
 
           <section class="linked-fields-panel">
@@ -185,7 +191,7 @@
               <p class="linked-fields-eyebrow">Movimientos del periodo</p>
             </div>
 
-            <div class="field">
+            <div class="field field-highlight">
               <label for="pagos_acreditaciones">Pagos / Acreditaciones</label>
               <input id="pagos_acreditaciones" type="number" step="0.01" formControlName="pagos_acreditaciones" />
             </div>
@@ -205,7 +211,7 @@
               <input id="cuota_infrafinanciamiento" type="number" step="0.01" formControlName="cuota_infrafinanciamiento" />
             </div>
 
-            <div class="field">
+            <div class="field field-highlight">
               <label for="compras_retiros">Compras y retiros</label>
               <input id="compras_retiros" type="number" step="0.01" formControlName="compras_retiros" />
             </div>
@@ -215,7 +221,7 @@
               <input id="interes_corriente_bonificable" type="number" step="0.01" formControlName="interes_corriente_bonificable" />
             </div>
 
-            <div class="field">
+            <div class="field field-highlight">
               <label for="interes_corriente">Interes corriente</label>
               <input id="interes_corriente" type="number" step="0.01" formControlName="interes_corriente" />
             </div>
@@ -232,17 +238,17 @@
           </section>
 
           <div class="field-row">
-            <div class="field">
+            <div class="field field-highlight">
               <label for="saldo_contado">Saldo de Contado <span class="required-mark">*</span></label>
               <input id="saldo_contado" type="number" step="0.01" formControlName="saldo_contado" />
             </div>
 
-            <div class="field">
+            <div class="field field-highlight">
               <label for="saldo_a_plazos">Saldo a Plazos <span class="required-mark">*</span></label>
               <input id="saldo_a_plazos" type="number" step="0.01" formControlName="saldo_a_plazos" />
             </div>
 
-            <div class="field">
+            <div class="field field-highlight">
               <label for="pago_minimo">Pago minimo <span class="required-mark">*</span></label>
               <input id="pago_minimo" type="number" step="0.01" formControlName="pago_minimo" />
             </div>

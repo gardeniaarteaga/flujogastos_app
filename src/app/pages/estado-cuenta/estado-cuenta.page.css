@@ -79,22 +79,46 @@
   color: var(--color-danger);
 }
 
-.periodo-preview {
+.field-highlight label {
   display: inline-flex;
+  align-self: start;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.4rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+
+.field-highlight input {
+  border-color: var(--color-primary, #2457b8);
+}
+
+.periodo-preview {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
   margin: -0.2rem 0 0.6rem 0;
   padding: 0.45rem 0.75rem;
   border-radius: 0.5rem;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d;
   font-weight: 600;
   font-size: 0.85rem;
 }
 
 .periodo-preview span {
-  color: var(--color-primary-strong);
+  margin-left: 0.5rem;
+  color: #d97706;
+  font-weight: 700;
+}
+
+.periodo-date {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.65);
+  font-weight: 800;
 }
 
 .comparacion-panel {

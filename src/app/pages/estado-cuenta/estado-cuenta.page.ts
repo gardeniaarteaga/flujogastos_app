@@ -215,13 +215,13 @@ export class EstadoCuentaPage implements OnInit {
     this.goToPage(this.currentPage + 1);
   }
 
-  get resolvedPeriodoLabel(): string {
+  private getPeriodoFechas(): { inicio: Date; fin: Date } | null {
     const idMetodoPago = this.estadoCuentaForm.controls.id_metodo_pago.value;
     const anio = this.estadoCuentaForm.controls.anio.value;
     const mes = this.estadoCuentaForm.controls.mes.value;
 
     if (!idMetodoPago || !anio || !mes) {
-      return 'Selecciona forma de pago, mes y año para ver el periodo.';
+      return null;
     }
 
     const forma = this.formasPago.find((item) => item.id_forma === idMetodoPago);
@@ -236,7 +236,27 @@ export class EstadoCuentaPage implements OnInit {
     const inicio = new Date(inicioAnclado);
     inicio.setDate(inicio.getDate() + 1);
 
-    return `Del ${this.formatDateLabel(inicio)} al ${this.formatDateLabel(fin)}`;
+    return { inicio, fin };
+  }
+
+  get periodoInicioLabel(): string {
+    const fechas = this.getPeriodoFechas();
+    return fechas ? this.formatDateLabel(fechas.inicio) : '';
+  }
+
+  get periodoFinLabel(): string {
+    const fechas = this.getPeriodoFechas();
+    return fechas ? this.formatDateLabel(fechas.fin) : '';
+  }
+
+  get resolvedPeriodoLabel(): string {
+    const fechas = this.getPeriodoFechas();
+
+    if (!fechas) {
+      return 'Selecciona forma de pago, mes y año para ver el periodo.';
+    }
+
+    return `Del ${this.formatDateLabel(fechas.inicio)} al ${this.formatDateLabel(fechas.fin)}`;
   }
 
   get fechaLimitePagoLabel(): string {
