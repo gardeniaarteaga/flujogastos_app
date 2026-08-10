@@ -15,7 +15,13 @@
       "Bash(npx jest *)",
       "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\")",
       "PowerShell(Stop-Process -Id 26644 -Force)",
-      "PowerShell(Get-Process -Id 26644 -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Process -Id 26644 -ErrorAction SilentlyContinue)",
+      "Bash(psql --version)",
+      "Bash(node \"C:/Users/ASTRI_802xkkt/AppData/Local/Temp/claude/c--PROYECTO-FLUJO-DE-GASTOS-flujo-gastos/e48b765a-c7f2-4682-aaaa-dba9fad36d63/scratchpad/diagnostico-intereses.js\")",
+      "Bash(node \"C:/Users/ASTRI_802xkkt/AppData/Local/Temp/claude/c--PROYECTO-FLUJO-DE-GASTOS-flujo-gastos/e48b765a-c7f2-4682-aaaa-dba9fad36d63/scratchpad/explain-intereses.js\")"
+    ],
+    "additionalDirectories": [
+      "c:\\PROYECTO FLUJO DE GASTOS\\flujo-gastos-api\\src\\intereses"
     ]
   }
 }

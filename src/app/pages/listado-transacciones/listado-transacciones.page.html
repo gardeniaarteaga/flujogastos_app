@@ -2841,6 +2841,75 @@
         </div>
       </section>
     </div>
+
+    <div
+      *ngIf="interesesModalOpen"
+      class="payment-modal-backdrop"
+      (click)="closeInteresesModal()"
+    >
+      <section
+        class="payment-modal"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="payment-modal-header">
+          <div>
+            <p class="panel-title">Calculo de intereses</p>
+            <h3>Intereses calculados</h3>
+          </div>
+          <div class="header-actions">
+            <button
+              type="button"
+              class="secondary-button compact-button"
+              (click)="closeInteresesModal()"
+            >
+              Cerrar
+            </button>
+          </div>
+        </header>
+
+        <section class="payment-modal-summary">
+          <article class="payment-modal-chip">
+            <span>Fecha de calculo</span>
+            <strong>{{ interesesModalFecha ? (interesesModalFecha | date: 'dd/MM/yyyy') : '-' }}</strong>
+          </article>
+          <article class="payment-modal-chip">
+            <span>Transacciones afectadas</span>
+            <strong>{{ interesesModalRegistros }}</strong>
+          </article>
+          <article class="payment-modal-chip intereses-chip-total">
+            <span>Total intereses generados</span>
+            <strong>${{ interesesModalTotal | number: '1.2-2' }}</strong>
+          </article>
+        </section>
+
+        <div *ngIf="interesesModalDetalle.length === 0" class="empty-box compact-empty-box">
+          No hubo transacciones con intereses generados en este calculo.
+        </div>
+
+        <div *ngIf="interesesModalDetalle.length > 0" class="table-wrap intereses-detail-table-wrap">
+          <table class="intereses-detail-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Descripcion</th>
+                <th>Saldo pendiente</th>
+                <th class="intereses-detail-col-interes">Intereses a la fecha</th>
+                <th class="intereses-detail-col-generado">Interes generado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of interesesModalDetalle">
+                <td>{{ item.id_transaccion }}</td>
+                <td>{{ item.descripcion || '-' }}</td>
+                <td>${{ item.saldo_pendiente | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-interes">${{ item.intereses_a_la_fecha | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-generado">${{ item.interes_generado | number: '1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </main>
 
   <div

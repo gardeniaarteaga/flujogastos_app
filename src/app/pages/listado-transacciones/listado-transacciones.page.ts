@@ -234,11 +234,20 @@ interface ApplyPagosPayload {
   }>;
 }
 
+interface CalculoInteresesDetalleItem {
+  id_transaccion: number;
+  descripcion: string | null;
+  interes_generado: number;
+  saldo_pendiente: number;
+  intereses_a_la_fecha: number;
+}
+
 interface CalculoInteresesResponse {
   fecha_calculo: string;
   origen: 'manual' | 'scheduler';
   registros_procesados: number;
   total_intereses_generados: number;
+  detalle: CalculoInteresesDetalleItem[];
 }
 
 interface PagoDetalleGroupView {
@@ -412,6 +421,11 @@ export class ListadoTransaccionesPage implements OnInit {
   loading = false;
   loadingCatalogos = false;
   calculatingIntereses = false;
+  interesesModalOpen = false;
+  interesesModalFecha = '';
+  interesesModalRegistros = 0;
+  interesesModalTotal = 0;
+  interesesModalDetalle: CalculoInteresesDetalleItem[] = [];
   saving = false;
   private pageEnterLoadPromise: Promise<void> | null = null;
   editModalOpen = false;
@@ -2602,7 +2616,12 @@ export class ListadoTransaccionesPage implements OnInit {
 
       const successText = this.buildCalculoInteresesSuccessMessage(result);
       this.successMessage = successText;
-      await this.alerts.success('Intereses calculados', successText);
+
+      this.interesesModalFecha = result.fecha_calculo;
+      this.interesesModalRegistros = result.registros_procesados;
+      this.interesesModalTotal = result.total_intereses_generados;
+      this.interesesModalDetalle = result.detalle ?? [];
+      this.interesesModalOpen = true;
 
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
       await this.loadTransacciones(resolvedUserId);
@@ -2616,6 +2635,10 @@ export class ListadoTransaccionesPage implements OnInit {
       this.calculatingIntereses = false;
       this.cdr.detectChanges();
     }
+  }
+
+  closeInteresesModal(): void {
+    this.interesesModalOpen = false;
   }
 
   clearFiltros(): void {
