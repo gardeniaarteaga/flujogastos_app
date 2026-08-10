@@ -12,7 +12,10 @@
       "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT id_notificacion_programada, id_usuario, descripcion, estado FROM notificaciones_programadas ORDER BY id_notificacion_programada;\" 2>&1)",
       "PowerShell($env:PGPASSWORD = \"ragu77\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -d control_gastos -h localhost -c \"SELECT column_default FROM information_schema.columns WHERE table_name='notificaciones_programadas' AND column_name='id_notificacion_programada';\" 2>&1)",
       "Bash(curl -s -X PATCH http://localhost:3001/api/transacciones/198?id_usuario=3 -H 'Content-Type: application/json' -d '{ *)",
-      "Bash(npx jest *)"
+      "Bash(npx jest *)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\")",
+      "PowerShell(Stop-Process -Id 26644 -Force)",
+      "PowerShell(Get-Process -Id 26644 -ErrorAction SilentlyContinue)"
     ]
   }
 }

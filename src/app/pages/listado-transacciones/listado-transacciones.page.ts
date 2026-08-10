@@ -1914,6 +1914,51 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.canEditParticipanteMonto(group) && !this.isCuotaBloqueadaEnEditor(group, periodIndex);
   }
 
+  getZeroBalancePeriodParticipantStatus(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): 'pagada' | 'parcial' | 'pendiente' {
+    if (!this.isCuotaBloqueadaEnEditor(group, periodIndex)) {
+      return 'pendiente';
+    }
+
+    const detalle = this.getCuotaDetalleEditor(group, periodIndex);
+
+    if (detalle && this.toCents(Number(detalle.saldo_pendiente ?? 0)) > 0) {
+      return 'parcial';
+    }
+
+    return 'pagada';
+  }
+
+  getZeroBalancePeriodParticipantStatusLabel(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): string {
+    switch (this.getZeroBalancePeriodParticipantStatus(group, periodIndex)) {
+      case 'pagada':
+        return 'Pagada';
+      case 'parcial':
+        return 'Pago parcial';
+      default:
+        return 'Pendiente';
+    }
+  }
+
+  getZeroBalancePeriodParticipantStatusClass(
+    group: ParticipanteDetalleForm,
+    periodIndex: number,
+  ): string {
+    switch (this.getZeroBalancePeriodParticipantStatus(group, periodIndex)) {
+      case 'pagada':
+        return 'status-pill-completado';
+      case 'parcial':
+        return 'status-pill-parcial';
+      default:
+        return 'status-pill-pendiente';
+    }
+  }
+
   onZeroBalanceGeneralCuotasInput(event: Event): void {
     const input = event.target as HTMLInputElement | null;
     const rawValue = input?.value ?? '';
@@ -4408,7 +4453,9 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     const montoTotal =
-      this.hasAppliedPagosInEditor && this.selectedTransaccion
+      this.hasAppliedPagosInEditor &&
+      this.selectedTransaccion &&
+      !this.isVariablePaymentTransactionInEditor
         ? Number(this.selectedTransaccion.monto)
         : this.getResolvedSubmitMontoTotal(Number(formValue.monto ?? 0));
     const montoTitular = this.titularDetalleGroup
@@ -4435,6 +4482,14 @@ export class ListadoTransaccionesPage implements OnInit {
         montoTotalCents: this.toCents(montoTotal),
         montoTitularCents: this.toCents(montoTitular),
         sumaCents: this.toCents(montoTitular + montoParticipantes),
+        hasAppliedPagosInEditor: this.hasAppliedPagosInEditor,
+        isVariablePaymentTransactionInEditor: this.isVariablePaymentTransactionInEditor,
+        hasZeroBalanceCuotasInEditor: this.hasZeroBalanceCuotasInEditor,
+        showZeroBalancePeriodGrouping: this.showZeroBalancePeriodGrouping,
+        selectedTransaccionMonto: this.selectedTransaccion?.monto,
+        selectedTransaccionIdTipoCuota: this.selectedTransaccion?.id_tipo_cuota,
+        formValueMonto: formValue.monto,
+        transaccionFormMonto: this.transaccionForm.controls.monto.value,
       });
       await this.alerts.warning(
         'Monto inconsistente',
@@ -5168,10 +5223,30 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getDetailModalMontoCuota(): number {
+    const vigente = this.getDetailModalCuotaVigente();
+    const numeroCuotaVigente = vigente?.numero_cuota ?? 1;
+
     return this.roundMoneyValue(
       this.getDetailModalCuotas()
-        .filter((d) => d.numero_cuota === 1)
+        .filter((d) => d.numero_cuota === numeroCuotaVigente)
         .reduce((sum, d) => sum + Number(d.monto ?? 0), 0),
+    );
+  }
+
+  private getDetailModalCuotaVigente(): ParticipanteDetalleListado | null {
+    const userCuotas = this.getDetailModalCurrentUserCuotas()
+      .slice()
+      .sort((a, b) => a.numero_cuota - b.numero_cuota);
+
+    if (userCuotas.length === 0) {
+      return null;
+    }
+
+    return (
+      userCuotas.find((d) => {
+        const estado = (d.nombre_estado ?? '').toLowerCase();
+        return !estado.includes('pagado') && !estado.includes('anulado');
+      }) ?? userCuotas[userCuotas.length - 1]
     );
   }
 
@@ -5194,16 +5269,8 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getDetailModalCuotaActual(): string {
-    const userCuotas = this.getDetailModalCurrentUserCuotas()
-      .slice()
-      .sort((a, b) => a.numero_cuota - b.numero_cuota);
-    if (userCuotas.length === 0) return '';
-    const vigente =
-      userCuotas.find((d) => {
-        const estado = (d.nombre_estado ?? '').toLowerCase();
-        return !estado.includes('pagado') && !estado.includes('anulado');
-      }) ?? userCuotas[userCuotas.length - 1];
-    return `${vigente.numero_cuota}/${vigente.total_cuotas}`;
+    const vigente = this.getDetailModalCuotaVigente();
+    return vigente ? `${vigente.numero_cuota}/${vigente.total_cuotas}` : '';
   }
 
   getDetailModalMetodoPago(): string {
@@ -8506,13 +8573,30 @@ export class ListadoTransaccionesPage implements OnInit {
       cuotasBloqueadas.length + (montoEditableCentavos > 0 ? 1 : 0);
     const totalCuotas = Math.max(cuotasCount, minCuotasPermitidas);
     const cuotasEditablesDeseadas = Math.max(0, totalCuotas - cuotasBloqueadas.length);
-    const montosEditables =
-      cuotasEditablesDeseadas > 0
-        ? this.distributeMontoEnCuotas(
-            this.centsToAmount(montoEditableCentavos),
-            cuotasEditablesDeseadas,
-          )
-        : [];
+    // En pago variable cada cuota mantiene el monto que ya tenia asignado (o 0.00
+    // si aun no se le asigno ninguno): no tiene sentido repartir el total entre
+    // todos los periodos, porque cada mes se define y se paga por separado.
+    let montosEditables: number[];
+
+    if (this.isVariablePaymentTransactionInEditor) {
+      const cuotasEditablesActuales = cuotasActuales.filter(
+        (_cuota, index) => !this.isCuotaBloqueadaEnEditor(group, index),
+      );
+
+      montosEditables = Array.from({ length: cuotasEditablesDeseadas }, (_valor, index) =>
+        index < cuotasEditablesActuales.length
+          ? this.normalizeDecimalValue(Number(cuotasEditablesActuales[index]?.monto ?? 0))
+          : 0,
+      );
+    } else {
+      montosEditables =
+        cuotasEditablesDeseadas > 0
+          ? this.distributeMontoEnCuotas(
+              this.centsToAmount(montoEditableCentavos),
+              cuotasEditablesDeseadas,
+            )
+          : [];
+    }
 
     const cuotasReconstruidas: CuotaPayload[] = [];
     let editableIndex = 0;

@@ -91,6 +91,8 @@ interface AnalysisRecord {
   analysisDate: Date | null;
   monthKey: string | null;
   amount: number;
+  amountPaid: number;
+  amountPending: number;
   baseAmount: number;
   interestPaid: number;
   interestPending: number;
@@ -626,6 +628,8 @@ export class AnalisisFinancieroPage implements OnInit {
             analysisDate,
             monthKey: this.getMonthKey(analysisDate),
             amount,
+            amountPaid: normalized.amountPaid,
+            amountPending: transactionType === 'income' ? 0 : normalized.pendingDebt,
             baseAmount: normalized.baseAmount,
             interestPaid: transactionType === 'income' ? 0 : normalized.interestPaid,
             interestPending: transactionType === 'income' ? 0 : normalized.interestPending,

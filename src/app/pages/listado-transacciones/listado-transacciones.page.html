@@ -1780,8 +1780,14 @@
                         style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;align-items:center;padding:.65rem .75rem;border:1px solid #dde8f3;border-radius:.75rem;background:#f8fbff;"
                       >
                         <div style="display:grid;gap:.15rem;">
-                          <strong [style.color]="participanteGroup.controls.es_titular.value ? '#2457b8' : '#c2410c'">
+                          <strong style="display:inline-flex;align-items:center;gap:.4rem;" [style.color]="participanteGroup.controls.es_titular.value ? '#2457b8' : '#c2410c'">
                             {{ getZeroBalanceParticipantLabel(participanteGroup) }}
+                            <span
+                              class="status-pill"
+                              [ngClass]="getZeroBalancePeriodParticipantStatusClass(participanteGroup, periodIndex)"
+                            >
+                              {{ getZeroBalancePeriodParticipantStatusLabel(participanteGroup, periodIndex) }}
+                            </span>
                           </strong>
                           <span style="color:#64748b;font-size:.78rem;font-weight:700;">Configuracion del periodo</span>
                         </div>
