@@ -1486,7 +1486,7 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   get isVariablePaymentTransactionInEditor(): boolean {
-    if (!this.isEditingSharedExpenseMode) {
+    if (this.isEditingIncomeMode) {
       return false;
     }
 
@@ -1865,6 +1865,12 @@ export class ListadoTransaccionesPage implements OnInit {
     );
   }
 
+  canEditZeroBalancePeriodTotal(periodIndex: number): boolean {
+    return this.getZeroBalanceGroupsForPeriod(periodIndex).some(
+      (group) => !this.isCuotaBloqueadaEnEditor(group, periodIndex),
+    );
+  }
+
   getZeroBalancePeriodTitle(periodIndex: number): string {
     const isoDate = this.getZeroBalancePeriodDateIso(periodIndex);
 
@@ -1965,6 +1971,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   onZeroBalancePeriodMontoInput(periodIndex: number, event?: Event): void {
+    if (!this.canEditZeroBalancePeriodTotal(periodIndex)) {
+      return;
+    }
+
     const input = event?.target as HTMLInputElement | null;
     const rawValue = input?.value ?? '';
 
@@ -4436,11 +4446,10 @@ export class ListadoTransaccionesPage implements OnInit {
     const payload: UpdateTransaccionPayload = {
       fecha: this.normalizeDateInputValue(formValue.fecha_transaccion ?? '') ?? '',
       monto: montoTotal,
-      id_tipo_cuota:
-        this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor
-          ? TIPO_CUOTA_VARIABLE_ID
-          : TIPO_CUOTA_FIJA_ID,
-      pago_variable: this.isEditingSharedExpenseMode && this.hasZeroBalanceCuotasInEditor,
+      id_tipo_cuota: this.isVariablePaymentTransactionInEditor
+        ? TIPO_CUOTA_VARIABLE_ID
+        : TIPO_CUOTA_FIJA_ID,
+      pago_variable: this.isVariablePaymentTransactionInEditor,
       cuotas_sin_intereses:
         this.showCuotasSinInteresesOption && Boolean(formValue.cuotas_sin_intereses),
       recordatorio_pago: Boolean(formValue.recordatorio_pago),

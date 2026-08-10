@@ -1765,6 +1765,7 @@
                           step="0.01"
                           inputmode="decimal"
                           [value]="getZeroBalancePeriodTotal(periodIndex)"
+                          [disabled]="!canEditZeroBalancePeriodTotal(periodIndex)"
                           style="font-weight:800;text-align:right;"
                           (input)="onZeroBalancePeriodMontoInput(periodIndex, $event)"
                           (change)="onZeroBalancePeriodMontoInput(periodIndex, $event)"
