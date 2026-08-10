@@ -8444,7 +8444,7 @@ export class ListadoTransaccionesPage implements OnInit {
       return [];
     }
 
-    if (this.isIncomeTitularGroup(group)) {
+    if (this.isIncomeTitularGroup(group) && !this.hasAppliedPagosInEditor) {
       const montoBase = this.normalizeDecimalValue(
         Number(this.transaccionForm.controls.monto.value ?? 0),
       );
