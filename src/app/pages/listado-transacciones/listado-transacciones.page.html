@@ -1742,15 +1742,57 @@
                 </div>
 
                 <div class="zero-balance-periods" style="display:grid;gap:.65rem;">
-                  <div
-                    *ngFor="let periodIndex of getZeroBalancePeriodIndexes(); let periodNumber = index"
-                    class="payment-group-card"
-                    style="gap:.55rem;"
-                  >
+                  <div *ngIf="getZeroBalancePaidPeriods().length > 0" class="zero-balance-paid-periods">
+                    <button
+                      type="button"
+                      class="secondary-button table-button"
+                      style="justify-self:start;"
+                      (click)="toggleZeroBalancePaidPeriods()"
+                    >
+                      {{ zeroBalancePaidPeriodsExpanded ? 'Ocultar' : 'Mostrar' }} cuotas pagadas ({{ getZeroBalancePaidPeriods().length }})
+                    </button>
+
+                    <div *ngIf="zeroBalancePaidPeriodsExpanded" style="display:grid;gap:.65rem;margin-top:.65rem;">
+                      <ng-container
+                        *ngFor="let periodIndex of getZeroBalancePaidPeriods()"
+                        [ngTemplateOutlet]="zeroBalancePeriodCard"
+                        [ngTemplateOutletContext]="{ periodIndex: periodIndex }"
+                      ></ng-container>
+                    </div>
+                  </div>
+
+                  <ng-container
+                    *ngFor="let periodIndex of getZeroBalancePeriodsWithValue()"
+                    [ngTemplateOutlet]="zeroBalancePeriodCard"
+                    [ngTemplateOutletContext]="{ periodIndex: periodIndex }"
+                  ></ng-container>
+
+                  <div *ngIf="getZeroBalanceFuturePeriods().length > 0" class="zero-balance-future-periods">
+                    <button
+                      type="button"
+                      class="secondary-button table-button"
+                      style="justify-self:start;"
+                      (click)="toggleZeroBalanceFuturePeriods()"
+                    >
+                      {{ zeroBalanceFuturePeriodsExpanded ? 'Ocultar' : 'Mostrar' }} cuotas futuras ({{ getZeroBalanceFuturePeriods().length }})
+                    </button>
+
+                    <div *ngIf="zeroBalanceFuturePeriodsExpanded" style="display:grid;gap:.65rem;margin-top:.65rem;">
+                      <ng-container
+                        *ngFor="let periodIndex of getZeroBalanceFuturePeriods()"
+                        [ngTemplateOutlet]="zeroBalancePeriodCard"
+                        [ngTemplateOutletContext]="{ periodIndex: periodIndex }"
+                      ></ng-container>
+                    </div>
+                  </div>
+                </div>
+
+                <ng-template #zeroBalancePeriodCard let-periodIndex="periodIndex">
+                  <div class="payment-group-card" style="gap:.55rem;">
                     <div class="payment-group-header" style="align-items:end;gap:.8rem;">
                       <div class="payment-group-summary">
                         <strong>{{ getZeroBalancePeriodTitle(periodIndex) }}</strong>
-                        <span>Cuota {{ periodNumber + 1 }}/{{ getZeroBalanceGeneralCuotasCount() }}</span>
+                        <span>Cuota {{ periodIndex + 1 }}/{{ getZeroBalanceGeneralCuotasCount() }}</span>
                         <span *ngIf="getZeroBalancePeriodDateLabel(periodIndex)">
                           Fecha: {{ getZeroBalancePeriodDateLabel(periodIndex) }}
                         </span>
@@ -1838,7 +1880,7 @@
                       </div>
                     </div>
                   </div>
-                </div>
+                </ng-template>
               </ng-container>
 
               <ng-template #participantCardsEditor>

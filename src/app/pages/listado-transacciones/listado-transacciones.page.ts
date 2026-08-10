@@ -448,6 +448,8 @@ export class ListadoTransaccionesPage implements OnInit {
   private hasManualEstadoSelectionInEdit = false;
   private isSyncingEstadoTransaccion = false;
   titularSectionDismissed = false;
+  zeroBalanceFuturePeriodsExpanded = false;
+  zeroBalancePaidPeriodsExpanded = false;
   private titularManualOverride = false;
   private syncingSharedExpenseCalculatedMonto = false;
   private sharedParticipantFilterAutoReset = false;
@@ -1835,6 +1837,52 @@ export class ListadoTransaccionesPage implements OnInit {
 
   getZeroBalanceGeneralCuotasCount(): number {
     return this.getZeroBalancePeriodIndexes().length;
+  }
+
+  private zeroBalancePeriodHasValue(periodIndex: number): boolean {
+    return (
+      this.toCents(this.getZeroBalancePeriodTotal(periodIndex)) > 0 ||
+      this.getZeroBalanceGroupsForPeriod(periodIndex).some((group) =>
+        this.isCuotaBloqueadaEnEditor(group, periodIndex),
+      )
+    );
+  }
+
+  private zeroBalancePeriodIsFullyPaid(periodIndex: number): boolean {
+    const groups = this.getZeroBalanceGroupsForPeriod(periodIndex);
+
+    return (
+      groups.length > 0 &&
+      groups.every((group) => this.isCuotaBloqueadaEnEditor(group, periodIndex))
+    );
+  }
+
+  getZeroBalancePeriodsWithValue(): number[] {
+    return this.getZeroBalancePeriodIndexes().filter(
+      (periodIndex) =>
+        this.zeroBalancePeriodHasValue(periodIndex) &&
+        !this.zeroBalancePeriodIsFullyPaid(periodIndex),
+    );
+  }
+
+  getZeroBalanceFuturePeriods(): number[] {
+    return this.getZeroBalancePeriodIndexes().filter(
+      (periodIndex) => !this.zeroBalancePeriodHasValue(periodIndex),
+    );
+  }
+
+  getZeroBalancePaidPeriods(): number[] {
+    return this.getZeroBalancePeriodIndexes().filter((periodIndex) =>
+      this.zeroBalancePeriodIsFullyPaid(periodIndex),
+    );
+  }
+
+  toggleZeroBalanceFuturePeriods(): void {
+    this.zeroBalanceFuturePeriodsExpanded = !this.zeroBalanceFuturePeriodsExpanded;
+  }
+
+  toggleZeroBalancePaidPeriods(): void {
+    this.zeroBalancePaidPeriodsExpanded = !this.zeroBalancePaidPeriodsExpanded;
   }
 
   getZeroBalanceGeneralTipoProgramacion(): ProgramacionCuotaTipo {
@@ -3711,6 +3759,8 @@ export class ListadoTransaccionesPage implements OnInit {
     this.hasManualEstadoSelectionInEdit = false;
     this.isSyncingEstadoTransaccion = false;
     this.titularManualOverride = false;
+    this.zeroBalanceFuturePeriodsExpanded = false;
+    this.zeroBalancePaidPeriodsExpanded = false;
     this.participantesDetalleArray.clear();
     this.pagosDetalleArray.clear();
     this.refreshPagosDetalleGroups();
