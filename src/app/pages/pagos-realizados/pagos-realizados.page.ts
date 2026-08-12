@@ -998,7 +998,7 @@ export class PagosRealizadosPage implements OnInit {
   }
 
   getDetailModalTitle(t: TransaccionListado): string {
-    return this.getTransaccionTitle(t);
+    return `${this.getTransaccionTitle(t)} #${t?.id_transaccion ?? '-'}`;
   }
 
   getModalCompartidoCon(t: TransaccionListado): string | null {

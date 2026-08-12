@@ -237,6 +237,7 @@ interface ApplyPagosPayload {
 interface CalculoInteresesDetalleItem {
   id_transaccion: number;
   descripcion: string | null;
+  participante: string;
   interes_generado: number;
   saldo_pendiente: number;
   intereses_a_la_fecha: number;

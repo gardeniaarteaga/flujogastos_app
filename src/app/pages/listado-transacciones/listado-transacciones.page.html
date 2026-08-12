@@ -2892,6 +2892,7 @@
               <tr>
                 <th>ID</th>
                 <th>Descripcion</th>
+                <th>Participante</th>
                 <th>Saldo pendiente</th>
                 <th class="intereses-detail-col-interes">Intereses a la fecha</th>
                 <th class="intereses-detail-col-generado">Interes generado</th>
@@ -2901,6 +2902,7 @@
               <tr *ngFor="let item of interesesModalDetalle">
                 <td>{{ item.id_transaccion }}</td>
                 <td>{{ item.descripcion || '-' }}</td>
+                <td>{{ item.participante || '-' }}</td>
                 <td>${{ item.saldo_pendiente | number: '1.2-2' }}</td>
                 <td class="intereses-detail-col-interes">${{ item.intereses_a_la_fecha | number: '1.2-2' }}</td>
                 <td class="intereses-detail-col-generado">${{ item.interes_generado | number: '1.2-2' }}</td>
