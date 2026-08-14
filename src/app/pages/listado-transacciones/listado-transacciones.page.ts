@@ -5316,10 +5316,19 @@ export class ListadoTransaccionesPage implements OnInit {
       return null;
     }
 
+    const today = this.getDateOnlyValue(new Date());
+
     return (
       userCuotas.find((d) => {
         const estado = (d.nombre_estado ?? '').toLowerCase();
-        return !estado.includes('pagado') && !estado.includes('anulado');
+        const estaPagada = estado.includes('pagado') || estado.includes('anulado');
+        if (!estaPagada) {
+          return true;
+        }
+
+        // Una cuota pagada por adelantado sigue siendo la vigente hasta que llegue su fecha programada.
+        const scheduledDate = this.parseIsoDateOnly(d.fecha_programada);
+        return scheduledDate ? scheduledDate >= today : false;
       }) ?? userCuotas[userCuotas.length - 1]
     );
   }
