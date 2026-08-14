@@ -5308,15 +5308,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   getDetailModalMontoPagado(): number {
-    if (!this.detailModalTransaccion) {
-      return 0;
-    }
-
     return this.roundMoneyValue(
-      Math.max(
+      this.getDetailModalCuotas().reduce(
+        (sum, d) => sum + this.getDetalleMontoPagadoTotal(d),
         0,
-        Number(this.detailModalTransaccion.monto ?? 0) -
-          Number(this.detailModalTransaccion.saldo_pendiente ?? 0),
       ),
     );
   }
