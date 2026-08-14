@@ -2413,9 +2413,12 @@
         (click)="$event.stopPropagation()"
       >
         <header class="payment-modal-header">
-          <div>
+          <div style="flex:1;min-width:0;">
             <p class="panel-title">Detalle de transaccion</p>
-            <h3>{{ getTransaccionModalTitle(detailModalTransaccion) }}</h3>
+            <div class="detail-modal-title-row">
+              <h3>{{ getTransaccionModalTitle(detailModalTransaccion) }}</h3>
+              <span class="detail-modal-method-tag">{{ getDetailModalMetodoPago() }}</span>
+            </div>
             <p *ngIf="detailModalTransaccion.comentario" style="margin:.25rem 0 0;font-size:.8rem;color:#6b7c93;font-style:italic;">{{ detailModalTransaccion.comentario }}</p>
           </div>
           <button
@@ -2453,8 +2456,8 @@
             <strong>${{ detailModalTransaccion.saldo_pendiente | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
-            <span>Metodo</span>
-            <strong>{{ getDetailModalMetodoPago() }}</strong>
+            <span>Monto pagado</span>
+            <strong>${{ getDetailModalMontoPagado() | number: '1.2-2' }}</strong>
           </article>
           <article class="payment-modal-chip">
             <span>Monto total</span>
