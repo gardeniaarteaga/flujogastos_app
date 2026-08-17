@@ -9337,8 +9337,8 @@ export class ListadoTransaccionesPage implements OnInit {
     methodId: number | null,
   ): string {
     const methodName =
-      transaccion.nombre_forma_pago ||
-      detalle.nombre_forma_pago;
+      detalle.nombre_forma_pago ||
+      transaccion.nombre_forma_pago;
 
     if (methodName) {
       return methodName;
