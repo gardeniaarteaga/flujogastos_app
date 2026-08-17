@@ -9480,10 +9480,6 @@ export class ListadoTransaccionesPage implements OnInit {
       participantes_detalle: detalles,
     });
 
-    if (!detallesOverride) {
-      return transaccionParaPago;
-    }
-
     const detallesAjustados = this.getParticipantesDetalleSafe(transaccionParaPago);
     const monto = this.roundMoneyValue(
       detallesAjustados.reduce((sum, detalle) => sum + Number(detalle.monto ?? 0), 0),
@@ -9500,7 +9496,12 @@ export class ListadoTransaccionesPage implements OnInit {
     const saldoPendiente = this.roundMoneyValue(
       detallesAjustados.reduce((sum, detalle) => sum + Number(detalle.saldo_pendiente ?? 0), 0),
     );
-    const detalleEstado = detallesAjustados[0]?.nombre_estado ?? transaccionParaPago.nombre_estado;
+    const detallePendiente = detallesAjustados.find(
+      (detalle) => this.toCents(Number(detalle.saldo_pendiente ?? 0)) > 0,
+    );
+    const detalleEstado =
+      (detallePendiente ?? detallesAjustados[detallesAjustados.length - 1])?.nombre_estado ??
+      transaccionParaPago.nombre_estado;
     const fechaUltimoPago =
       detallesAjustados
         .map((detalle) => detalle.fecha_pago)
