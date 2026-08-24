@@ -248,11 +248,7 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   }
 
   private resolveNotificationRoute(notification: NotificacionItem): string[] {
-    if (
-      (this.isReceivedPaymentNotification(notification) ||
-        this.isAssignedPaymentNotification(notification)) &&
-      notification.id_transaccion
-    ) {
+    if (this.isAssignedPaymentNotification(notification) && notification.id_transaccion) {
       return ['/resumen/detalle-transacciones'];
     }
 
@@ -266,6 +262,15 @@ export class SessionStripComponent implements OnInit, OnDestroy {
       return {
         queryParams: {
           openPayment: 1,
+          transactionId: notification.id_transaccion,
+        },
+      };
+    }
+
+    if (this.isReceivedPaymentNotification(notification) && notification.id_transaccion) {
+      return {
+        queryParams: {
+          openDetail: 1,
           transactionId: notification.id_transaccion,
         },
       };

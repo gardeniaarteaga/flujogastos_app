@@ -476,6 +476,7 @@ export class ListadoTransaccionesPage implements OnInit {
     number[]
   >();
   private autoOpenPaymentHandledKey: string | null = null;
+  private autoOpenDetailHandledKey: string | null = null;
   private cameFromDashboardReminder = false;
   private readonly quickPayMetodoGroupExpansionState: Record<string, boolean> = {};
   readonly listadoPageSize = 10;
@@ -10225,6 +10226,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.resetDefaultFilters();
     await this.loadInitialData();
     await this.processAutoOpenPaymentRequest();
+    await this.processAutoOpenDetailRequest();
   }
 
   private resetDefaultFilters(): void {
@@ -10847,6 +10849,54 @@ export class ListadoTransaccionesPage implements OnInit {
       relativeTo: this.route,
       queryParams: {
         openPayment: null,
+        transactionId: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private async processAutoOpenDetailRequest(): Promise<void> {
+    const openDetailFlag = this.route.snapshot.queryParamMap.get('openDetail');
+    const transactionIdParam = this.route.snapshot.queryParamMap.get('transactionId');
+
+    if (openDetailFlag !== '1' || !transactionIdParam) {
+      this.autoOpenDetailHandledKey = null;
+      return;
+    }
+
+    const transactionId = Number(transactionIdParam);
+    const requestKey = `${openDetailFlag}:${transactionIdParam}`;
+
+    if (!Number.isInteger(transactionId) || transactionId < 1) {
+      await this.clearAutoOpenDetailRequestFromUrl();
+      this.autoOpenDetailHandledKey = null;
+      return;
+    }
+
+    if (this.autoOpenDetailHandledKey === requestKey) {
+      return;
+    }
+
+    this.autoOpenDetailHandledKey = requestKey;
+
+    try {
+      const transaccion = await firstValueFrom(
+        this.http.get<TransaccionListado>(`${this.apiUrl}/${transactionId}`).pipe(timeout(10000)),
+      );
+      this.openDetailModal(transaccion);
+    } catch (error) {
+      console.error('Error abriendo el detalle de la transaccion desde la notificacion', error);
+    }
+
+    await this.clearAutoOpenDetailRequestFromUrl();
+  }
+
+  private async clearAutoOpenDetailRequestFromUrl(): Promise<void> {
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        openDetail: null,
         transactionId: null,
       },
       queryParamsHandling: 'merge',
