@@ -21,7 +21,11 @@
       "Bash(node \"C:/Users/ASTRI_802xkkt/AppData/Local/Temp/claude/c--PROYECTO-FLUJO-DE-GASTOS-flujo-gastos/e48b765a-c7f2-4682-aaaa-dba9fad36d63/scratchpad/explain-intereses.js\")",
       "Bash(PGPASSWORD=ragu77 psql -h localhost -U postgres -d control_gastos -c \"SELECT id, id_transaccion, id_participante, id_tipo_transaccion FROM detalle_transacciones WHERE id_transaccion = 199;\")",
       "Bash(grep -i \"^pg$\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4200/reportes/pagos-realizados)",
+      "Bash(curl -s http://localhost:4200/)",
+      "Bash(curl -s http://localhost:4200/main.js -o /tmp/main.js)"
     ],
     "additionalDirectories": [
       "c:\\PROYECTO FLUJO DE GASTOS\\flujo-gastos-api\\src\\intereses"

@@ -1282,8 +1282,19 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   toggleQuickPayMetodoGroup(group: QuickPayMetodoGroup, index: number): void {
-    group.expanded = !group.expanded;
-    this.quickPayMetodoGroupExpansionState[group.key] = group.expanded;
+    const nextExpanded = !group.expanded;
+
+    for (const otherGroup of this.quickPayDetalleMetodoGroupsCache) {
+      if (otherGroup === group) {
+        continue;
+      }
+
+      otherGroup.expanded = false;
+      this.quickPayMetodoGroupExpansionState[otherGroup.key] = false;
+    }
+
+    group.expanded = nextExpanded;
+    this.quickPayMetodoGroupExpansionState[group.key] = nextExpanded;
   }
 
   readonly quickPayGroupPageSize = 10;

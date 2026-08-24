@@ -2251,7 +2251,7 @@ export class IngresoTransaccionesPage implements OnInit {
       return {
         defaultTipoTransaccionId: 1,
         sectionLabel: 'Cuotas/Compartidos',
-        pageTitle: 'Ingreso de Gastos Compartidos',
+        pageTitle: 'Ingreso de Gastos - Compartidos -Cuotas',
         formTitle: 'Registrar gasto compartido',
         submitLabel: 'Guardar',
         successMessage: 'Gasto compartido guardado correctamente.',

@@ -262,11 +262,7 @@ export class SessionStripComponent implements OnInit, OnDestroy {
   private resolveNotificationNavigationExtras(notification: NotificacionItem): {
     queryParams?: Record<string, string | number>;
   } {
-    if (
-      (this.isReceivedPaymentNotification(notification) ||
-        this.isAssignedPaymentNotification(notification)) &&
-      notification.id_transaccion
-    ) {
+    if (this.isAssignedPaymentNotification(notification) && notification.id_transaccion) {
       return {
         queryParams: {
           openPayment: 1,

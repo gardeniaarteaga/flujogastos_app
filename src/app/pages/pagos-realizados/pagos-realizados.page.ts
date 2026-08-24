@@ -212,6 +212,7 @@ export class PagosRealizadosPage implements OnInit {
     fechaHasta: [this.currentMonthEnd],
     metodoPagoId: [''],
     participanteKey: [''],
+    origenParticipante: ['' as '' | 'propios' | 'recibidos'],
     incluirPagados: [false],
     incluirPendientes: [true],
     pendienteFechaTipo: ['programada' as 'programada' | 'transaccion'],
@@ -381,6 +382,14 @@ export class PagosRealizadosPage implements OnInit {
       }
     }
 
+    if (filtros.origenParticipante === 'propios') {
+      chips.push('Propios');
+    }
+
+    if (filtros.origenParticipante === 'recibidos') {
+      chips.push('Recibidos');
+    }
+
     if (!filtros.incluirPagados && filtros.incluirPendientes) {
       chips.push('Pendiente');
     }
@@ -531,6 +540,7 @@ export class PagosRealizadosPage implements OnInit {
       fechaHasta: this.currentMonthEnd,
       metodoPagoId: '',
       participanteKey: this.getDefaultParticipanteKey(),
+      origenParticipante: '',
       incluirPagados: false,
       incluirPendientes: true,
       pendienteFechaTipo: 'programada',
@@ -1172,6 +1182,7 @@ export class PagosRealizadosPage implements OnInit {
       fechaHasta,
       metodoPagoId,
       participanteKey,
+      origenParticipante,
       incluirPagados,
       incluirPendientes,
       pendienteFechaTipo,
@@ -1201,6 +1212,14 @@ export class PagosRealizadosPage implements OnInit {
       }
 
       if (participanteKey && row.participanteKey !== participanteKey) {
+        return false;
+      }
+
+      if (origenParticipante === 'propios' && !row.esTitular) {
+        return false;
+      }
+
+      if (origenParticipante === 'recibidos' && !row.esParticipanteAsignado) {
         return false;
       }
 
