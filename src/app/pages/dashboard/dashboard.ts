@@ -18,7 +18,7 @@ import {
 import { apiUrl } from '../../shared/config/api.config';
 import { getCurrentUserId, isAdminUser, loadUserProfile } from '../../shared/user-profile';
 
-type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral';
+type DashboardTone = 'good' | 'warning' | 'danger' | 'info' | 'neutral' | 'membresia';
 type DashboardPeriodType = 'month' | 'quincena';
 type DashboardQuincena = 'first' | 'second';
 
@@ -30,13 +30,23 @@ interface DashboardPeriodRange {
   descriptionLabel: string;
 }
 
-interface RecordatorioCuotaView {
-  id_transaccion: number;
-  descripcion: string | null;
-  fechaProgramadaLabel: string;
-  cuotasVencidas: number;
-  cuotasVencidasLabel: string;
+interface RecordatorioListItem {
+  kind: 'cuota' | 'membresia';
+  descripcion: string;
+  subLabel: string;
+  metaLabel: string;
+  badgeLabel: string | null;
   tone: DashboardTone;
+  routerLink: string;
+  queryParams: Record<string, string | number> | null;
+}
+
+interface FormaPagoMembresia {
+  id_forma: number;
+  nombre_forma: string;
+  aplica_membresia: boolean | null;
+  mes_pago_membresia: number | null;
+  estado: boolean;
 }
 
 interface ScheduledNotificationView {
@@ -304,6 +314,7 @@ export class Dashboard implements OnInit {
   private readonly catalogosService = inject(CatalogosTransaccionService);
   private readonly notificacionesService = inject(NotificacionesService);
   private readonly apiUrl = apiUrl('transacciones');
+  private readonly formasPagoUrl = apiUrl('formas-pago');
   private readonly timeoutMs = 10000;
   private readonly currencyFormatter = new Intl.NumberFormat('es-SV', {
     style: 'currency',
@@ -397,7 +408,7 @@ export class Dashboard implements OnInit {
   ];
   analytics = this.createEmptyAnalytics();
   scheduledNotifications: ScheduledNotificationView[] = [];
-  recordatoriosCuotas: RecordatorioCuotaView[] = [];
+  recordatoriosCuotas: RecordatorioListItem[] = [];
   transactions: TransaccionListado[] = [];
   dashboardTransactionsModalOpen = false;
   dashboardTransactionsModalTitle = '';
@@ -468,7 +479,7 @@ export class Dashboard implements OnInit {
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
       this.currentUserId = resolvedUserId > 0 ? resolvedUserId : this.currentUserId;
 
-      const [transacciones, programadas, recordatoriosCuotas] = await Promise.all([
+      const [transacciones, programadas, recordatoriosCuotas, formasPago] = await Promise.all([
         firstValueFrom(
           this.http
             .get<TransaccionListado[]>(this.apiUrl, {
@@ -486,13 +497,23 @@ export class Dashboard implements OnInit {
             'No se pudieron cargar los recordatorios de pago de las transacciones.';
           return [];
         }),
+        firstValueFrom(
+          this.http
+            .get<FormaPagoMembresia[]>(this.formasPagoUrl, {
+              params: { id_usuario: this.currentUserId },
+            })
+            .pipe(timeout(this.timeoutMs)),
+        ).catch(() => [] as FormaPagoMembresia[]),
       ]);
 
       this.transactions = this.filterVisibleTransactions(Array.isArray(transacciones) ? transacciones : []);
       this.availableYears = this.buildAvailableYears(this.transactions);
       this.refreshDashboardSummary();
       this.scheduledNotifications = this.buildScheduledNotifications(programadas);
-      this.recordatoriosCuotas = this.buildRecordatoriosCuotasView(recordatoriosCuotas);
+      this.recordatoriosCuotas = [
+        ...this.buildRecordatoriosMembresiaView(Array.isArray(formasPago) ? formasPago : []),
+        ...this.buildRecordatoriosCuotasView(recordatoriosCuotas),
+      ];
     } catch {
       this.transactions = [];
       this.availableYears = this.buildAvailableYears([]);
@@ -2009,23 +2030,64 @@ export class Dashboard implements OnInit {
 
   private buildRecordatoriosCuotasView(
     recordatorios: RecordatorioCuota[],
-  ): RecordatorioCuotaView[] {
+  ): RecordatorioListItem[] {
     return recordatorios.map((item) => {
       const fechaProgramada = this.parseDateOnly(item.fecha_programada);
       const cuotasVencidas = Math.max(0, item.cuotas_vencidas || 0);
 
       return {
-        id_transaccion: item.id_transaccion,
-        descripcion: item.descripcion,
-        fechaProgramadaLabel: fechaProgramada
-          ? this.fullDateFormatter.format(fechaProgramada)
-          : 'Sin fecha programada',
-        cuotasVencidas,
-        cuotasVencidasLabel:
-          cuotasVencidas === 1 ? '1 cuota vencida' : `${cuotasVencidas} cuotas vencidas`,
+        kind: 'cuota',
+        descripcion: item.descripcion || 'Sin descripcion',
+        subLabel: `Transaccion #${item.id_transaccion}`,
+        metaLabel: `Fecha programada: ${
+          fechaProgramada ? this.fullDateFormatter.format(fechaProgramada) : 'Sin fecha programada'
+        }`,
+        badgeLabel:
+          cuotasVencidas > 0
+            ? cuotasVencidas === 1
+              ? '1 cuota vencida'
+              : `${cuotasVencidas} cuotas vencidas`
+            : null,
         tone: cuotasVencidas > 0 ? 'danger' : 'info',
+        routerLink: '/resumen/detalle-transacciones',
+        queryParams: { openPayment: 1, transactionId: item.id_transaccion },
       };
     });
+  }
+
+  private buildRecordatoriosMembresiaView(
+    formasPago: FormaPagoMembresia[],
+  ): RecordatorioListItem[] {
+    const today = this.getToday();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    return formasPago
+      .filter(
+        (forma) =>
+          forma.estado &&
+          forma.aplica_membresia === true &&
+          forma.mes_pago_membresia !== null &&
+          forma.mes_pago_membresia >= 1 &&
+          forma.mes_pago_membresia <= 12 &&
+          forma.mes_pago_membresia === currentMonth,
+      )
+      .map((forma) => {
+        const mesLabel = this.monthFormatter.format(
+          new Date(currentYear, (forma.mes_pago_membresia as number) - 1, 1),
+        );
+
+        return {
+          kind: 'membresia',
+          descripcion: `Pago de membresia: ${forma.nombre_forma}`,
+          subLabel: 'Forma de pago',
+          metaLabel: `Vigente todo ${mesLabel}`,
+          badgeLabel: 'Mes de pago',
+          tone: 'membresia',
+          routerLink: '/formas-pago',
+          queryParams: null,
+        };
+      });
   }
 
   private buildScheduledNotifications(
@@ -2079,7 +2141,7 @@ export class Dashboard implements OnInit {
         }];
       })
       .sort((a, b) => {
-        const toneRank = { danger: 0, warning: 1, info: 2, good: 3, neutral: 4 };
+        const toneRank = { danger: 0, warning: 1, info: 2, good: 3, neutral: 4, membresia: 5 };
         return (
           (toneRank[a.tone] ?? 5) - (toneRank[b.tone] ?? 5) ||
           a.nextDateLabel.localeCompare(b.nextDateLabel)

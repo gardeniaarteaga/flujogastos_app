@@ -199,6 +199,12 @@
   border-color: #bfdbfe;
 }
 
+.scheduled-card.tone-membresia {
+  --scard-accent: #7c3aed;
+  --scard-bg: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
 .scheduled-card-link {
   text-decoration: none;
   color: inherit;
@@ -255,6 +261,12 @@
   background: #eff6ff;
   color: #1d4ed8;
   border-color: #bfdbfe;
+}
+
+.scheduled-status-pill.tone-membresia {
+  background: #ede9fe;
+  color: #6d28d9;
+  border-color: #ddd6fe;
 }
 
 .scheduled-priority-pill {
