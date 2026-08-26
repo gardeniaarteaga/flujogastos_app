@@ -262,6 +262,16 @@
                     <span>Todos</span>
                   </label>
 
+                  <label class="checkbox-row checkbox-row-compact" for="hastaHoyDetalle">
+                    <input
+                      id="hastaHoyDetalle"
+                      type="checkbox"
+                      formControlName="hastaHoy"
+                      (change)="onHastaHoyToggle($event)"
+                    />
+                    <span>Hasta la Fecha</span>
+                  </label>
+
                   <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
                     <input
                       id="prioritariosDetalle"

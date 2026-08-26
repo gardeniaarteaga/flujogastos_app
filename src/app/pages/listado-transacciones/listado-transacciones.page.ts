@@ -391,6 +391,7 @@ export class ListadoTransaccionesPage implements OnInit {
     prioritarios: [this.getInitialQuickPayPriorityFilterValue()],
     vencidos: [this.viewMode === 'detalle'],
     todosDetalle: [false],
+    hastaHoy: [false],
     diasPrioridad: [
       this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -1171,6 +1172,7 @@ export class ListadoTransaccionesPage implements OnInit {
     if (f.todosDetalle) chips.push('Todos');
     if (f.prioritarios) chips.push('Proximos 15 dias');
     if (f.vencidos) chips.push('Vencidos');
+    if (f.hastaHoy) chips.push('Hasta la Fecha');
     if (f.mesActual) chips.push('Mes actual');
     if (f.enviadas) chips.push('Recibidos');
     if (f.compartidos) chips.push('Compartidos');
@@ -2706,6 +2708,28 @@ export class ListadoTransaccionesPage implements OnInit {
     this.setQuickPayScheduleFilterState('vencidos', checked);
   }
 
+  onHastaHoyToggle(event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
+
+    if (checked) {
+      this.filtrosForm.patchValue(
+        {
+          todosDetalle: false,
+          prioritarios: false,
+          vencidos: false,
+          mesActual: false,
+          fechaDesde: '',
+          fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
+        },
+        { emitEvent: false },
+      );
+    } else {
+      this.filtrosForm.patchValue({ fechaHasta: '' }, { emitEvent: false });
+    }
+
+    this.filtrosForm.controls.hastaHoy.setValue(checked);
+  }
+
   onTodosDetalleToggle(event: Event): void {
     const checked = (event.target as HTMLInputElement | null)?.checked ?? false;
 
@@ -2715,6 +2739,7 @@ export class ListadoTransaccionesPage implements OnInit {
           prioritarios: false,
           vencidos: false,
           mesActual: false,
+          hastaHoy: false,
           fechaDesde: '',
           fechaHasta: '',
         },
@@ -10243,6 +10268,7 @@ export class ListadoTransaccionesPage implements OnInit {
       prioritarios: usePriorityDefaults,
       vencidos: useOverdueDefaults,
       todosDetalle: false,
+      hastaHoy: false,
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
         : PRIORITY_WINDOW_DAYS,
@@ -10476,6 +10502,7 @@ export class ListadoTransaccionesPage implements OnInit {
         anioFiltro: null,
         prioritarios: false,
         vencidos: false,
+        hastaHoy: false,
         fechaDesde: this.formatDateDisplayFromApi(this.todayFilterValue),
         fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
       },
@@ -10494,6 +10521,7 @@ export class ListadoTransaccionesPage implements OnInit {
         prioritarios: false,
         vencidos: false,
         todosDetalle: false,
+        hastaHoy: false,
         fechaDesde: this.formatDateDisplayFromApi(this.currentMonthStartValue),
         fechaHasta: this.formatDateDisplayFromApi(this.currentMonthEndValue),
       },
@@ -10505,6 +10533,7 @@ export class ListadoTransaccionesPage implements OnInit {
     this.filtrosForm.patchValue(
       {
         mesActual: false,
+        hastaHoy: false,
         fechaDesde: '',
         fechaHasta: '',
       },
@@ -10523,12 +10552,14 @@ export class ListadoTransaccionesPage implements OnInit {
     const isCurrentMonthRange =
       fechaDesde === this.currentMonthStartValue &&
       fechaHasta === this.currentMonthEndValue;
+    const isHastaHoyRange = !fechaDesde && fechaHasta === this.todayFilterValue;
 
     this.filtrosForm.patchValue(
       {
         soloHoy: soloHoySeleccionado && isTodayRange,
         mesActual:
           !isTodayRange && mesActualSeleccionado && isCurrentMonthRange,
+        hastaHoy: isHastaHoyRange,
       },
       { emitEvent: false },
     );
@@ -10725,6 +10756,7 @@ export class ListadoTransaccionesPage implements OnInit {
         {
           soloHoy: false,
           mesActual: false,
+          hastaHoy: false,
           ...(this.isDetalleViewMode ? { todosDetalle: false } : { mesFiltro: null, anioFiltro: null }),
           fechaDesde: '',
           fechaHasta: '',
