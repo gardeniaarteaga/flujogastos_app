@@ -641,14 +641,15 @@ export class Dashboard implements OnInit {
     this.dashboardTransactionsModalSubtitle = modalData.subtitle;
     this.dashboardTransactionsModalBaseRows = modalData.rows;
     this.dashboardTransactionsModalShowSender = modalData.showSender;
-    this.dashboardTransactionsModalSortColumn = null;
-    this.dashboardTransactionsModalSortDirection = null;
+    this.dashboardTransactionsModalSortColumn = 'id';
+    this.dashboardTransactionsModalSortDirection = 'asc';
     this.dashboardTransactionsModalPaymentMethodOptions = paymentMethodOptions;
     this.dashboardTransactionsModalPaymentMethodSelected = new Set(paymentMethodOptions);
     this.dashboardTransactionsModalPaymentMethodFilterOpen = false;
     this.dashboardTransactionsModalRows = modalData.rows;
 
     this.dashboardTransactionsModalOpen = true;
+    this.applyTransactionsModalFilterAndSort();
   }
 
   closeTransactionsSummaryModal(): void {

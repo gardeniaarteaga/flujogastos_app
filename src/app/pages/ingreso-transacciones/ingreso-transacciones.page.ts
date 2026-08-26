@@ -1219,6 +1219,88 @@ export class IngresoTransaccionesPage implements OnInit {
     this.updateEstadoRegistroPreview();
   }
 
+  canEditCuotaFechaProgramada(cuotaIndex: number): boolean {
+    return cuotaIndex === 0;
+  }
+
+  onCuotaFechaProgramadaInput(
+    group: ParticipanteDetalleForm,
+    cuotaIndex: number,
+    event: Event,
+  ): void {
+    const input = event.target as HTMLInputElement | null;
+    const control = this.getCuotasArray(group).at(cuotaIndex)?.controls.fecha_programada;
+
+    if (!input || !control) {
+      return;
+    }
+
+    const formattedValue = this.formatDateDisplayInputValue(input.value);
+
+    if (formattedValue !== input.value) {
+      input.value = formattedValue;
+    }
+
+    control.setValue(formattedValue, { emitEvent: false });
+  }
+
+  onCuotaFechaProgramadaBlur(group: ParticipanteDetalleForm, cuotaIndex: number): void {
+    const control = this.getCuotasArray(group).at(cuotaIndex)?.controls.fecha_programada;
+
+    if (!control) {
+      return;
+    }
+
+    const rawValue = String(control.value ?? '').trim();
+
+    if (!rawValue) {
+      return;
+    }
+
+    const normalizedValue = this.normalizeDateInputValue(rawValue);
+
+    if (!normalizedValue) {
+      control.setErrors({ ...(control.errors ?? {}), invalidDate: true });
+      return;
+    }
+
+    control.setValue(normalizedValue, { emitEvent: false });
+    control.markAsDirty();
+    control.updateValueAndValidity({ emitEvent: false });
+    this.refreshProgramacionCuotas(group);
+  }
+
+  onCuotaFechaProgramadaCalendarChange(
+    group: ParticipanteDetalleForm,
+    cuotaIndex: number,
+    event: Event,
+  ): void {
+    const input = event.target as HTMLInputElement | null;
+    const isoValue = input?.value?.trim() ?? '';
+    const control = this.getCuotasArray(group).at(cuotaIndex)?.controls.fecha_programada;
+
+    if (!isoValue || !control) {
+      return;
+    }
+
+    const normalizedValue = this.normalizeDateInputValue(isoValue);
+
+    if (!normalizedValue) {
+      return;
+    }
+
+    control.setValue(normalizedValue, { emitEvent: false });
+    control.markAsDirty();
+    control.updateValueAndValidity({ emitEvent: false });
+    this.refreshProgramacionCuotas(group);
+  }
+
+  getCuotaFechaProgramadaCalendarioValue(group: ParticipanteDetalleForm, cuotaIndex: number): string {
+    const control = this.getCuotasArray(group).at(cuotaIndex)?.controls.fecha_programada;
+
+    return this.normalizeDateInputValue(control?.value ?? '') ?? '';
+  }
+
   removeParticipanteDetalle(index: number): void {
     this.participantesDetalleArray.removeAt(index);
 
@@ -3000,13 +3082,46 @@ export class IngresoTransaccionesPage implements OnInit {
       this.updateIncomeTitularMonto(group, cantidadCuotas);
     }
 
+    const primeraCuotaFechaManual = this.getManualPrimeraCuotaFecha(group);
+
     this.replaceCuotasArray(
       group,
       this.buildCuotasForConfiguredCount(group, cantidadCuotas),
     );
+
+    this.restoreManualPrimeraCuotaFecha(group, primeraCuotaFechaManual);
+
     this.syncStandaloneExpenseMonto(group);
     this.ensureProgramacionConfig(group);
     this.refreshProgramacionCuotas(group);
+  }
+
+  private getManualPrimeraCuotaFecha(group: ParticipanteDetalleForm): string | null {
+    const primeraCuota = this.getCuotasArray(group).at(0);
+
+    if (!primeraCuota?.controls.fecha_programada.dirty) {
+      return null;
+    }
+
+    return this.normalizeDateInputValue(primeraCuota.controls.fecha_programada.value ?? '');
+  }
+
+  private restoreManualPrimeraCuotaFecha(
+    group: ParticipanteDetalleForm,
+    fecha: string | null,
+  ): void {
+    if (!fecha) {
+      return;
+    }
+
+    const primeraCuota = this.getCuotasArray(group).at(0);
+
+    if (!primeraCuota) {
+      return;
+    }
+
+    primeraCuota.controls.fecha_programada.setValue(fecha, { emitEvent: false });
+    primeraCuota.controls.fecha_programada.markAsDirty();
   }
 
   private syncLastCuotaWithMonto(group: ParticipanteDetalleForm): void {
@@ -3104,7 +3219,14 @@ export class IngresoTransaccionesPage implements OnInit {
       return;
     }
 
+    const primeraCuota = cuotasArray.at(0);
+    const primeraCuotaEditadaManualmente = !!primeraCuota?.controls.fecha_programada.dirty;
+
     if (cuotasCount <= 1) {
+      if (primeraCuotaEditadaManualmente) {
+        return;
+      }
+
       const defaultFechaProgramada = this.getSingleCuotaDefaultFechaProgramada();
 
       cuotasArray.controls.forEach((cuota) =>
@@ -3119,6 +3241,30 @@ export class IngresoTransaccionesPage implements OnInit {
     }
 
     this.ensureProgramacionConfig(group);
+
+    const primeraCuotaFecha = primeraCuotaEditadaManualmente
+      ? this.normalizeDateInputValue(primeraCuota?.controls.fecha_programada.value ?? '')
+      : null;
+
+    if (primeraCuotaEditadaManualmente && primeraCuotaFecha) {
+      const fechasRestantes = this.buildFechasProgramadas(
+        cuotasCount - 1,
+        group.controls.tipo_programacion.value,
+        group.controls.dia_programado.value,
+        primeraCuotaFecha,
+      );
+
+      cuotasArray.controls.forEach((cuota, index) => {
+        if (index === 0) {
+          return;
+        }
+
+        cuota.controls.fecha_programada.setValue(fechasRestantes[index - 1] ?? null, {
+          emitEvent: false,
+        });
+      });
+      return;
+    }
 
     const fechasProgramadas = this.buildFechasProgramadas(
       cuotasCount,
@@ -3145,12 +3291,14 @@ export class IngresoTransaccionesPage implements OnInit {
     cantidadCuotas: number,
     tipoProgramacion: ProgramacionCuotaTipo,
     diaProgramado: number | null,
+    fechaBaseOverride?: string | null,
   ): Array<string | null> {
-    if (cantidadCuotas <= 1 || tipoProgramacion === 'ninguna') {
-      return Array.from({ length: cantidadCuotas }, () => null);
+    if (cantidadCuotas <= 0 || tipoProgramacion === 'ninguna') {
+      return Array.from({ length: Math.max(0, cantidadCuotas) }, () => null);
     }
 
     const fechaBase =
+      fechaBaseOverride ??
       this.normalizeDateInputValue(this.transaccionForm.controls.fecha_transaccion.value ?? '') ??
       this.formatDateApi(this.today);
 
