@@ -65,6 +65,7 @@ interface TransaccionListado {
   id_estado_registro: number | null;
   nombre_estado_registro: string | null;
   descripcion: string | null;
+  comentario: string | null;
   pagocompartido: boolean;
   fecha_ultimo_pago: string | null;
   fecha_creacion: string;
@@ -243,6 +244,9 @@ export class PagosRealizadosPage implements OnInit {
   readonly groupPageSize = 10;
   private lastParticipanteKey: string | null = null;
   detailModalTransaccion: TransaccionListado | null = null;
+  notaTooltipText: string | null = null;
+  notaTooltipX = 0;
+  notaTooltipY = 0;
 
   get isAdminSession(): boolean {
     return isAdminUser();
@@ -1000,6 +1004,23 @@ export class PagosRealizadosPage implements OnInit {
 
   openDetailModal(t: TransaccionListado): void {
     this.detailModalTransaccion = t;
+  }
+
+  showNotaTooltip(text: string | null | undefined, event: MouseEvent): void {
+    if (!text) return;
+    this.notaTooltipText = text;
+    this.notaTooltipX = event.clientX + 14;
+    this.notaTooltipY = event.clientY + 14;
+  }
+
+  moveNotaTooltip(event: MouseEvent): void {
+    if (!this.notaTooltipText) return;
+    this.notaTooltipX = event.clientX + 14;
+    this.notaTooltipY = event.clientY + 14;
+  }
+
+  hideNotaTooltip(): void {
+    this.notaTooltipText = null;
   }
 
   @HostListener('document:keydown.escape')
