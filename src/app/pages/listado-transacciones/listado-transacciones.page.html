@@ -1263,11 +1263,35 @@
                   <td *ngIf="isOnlyPagadoFilter" class="qp-col-fecha-sm">{{ row.quickPayFechaPagoLabel }}</td>
                   <td class="qp-col-transaccion">
                     <div style="display:grid;gap:.35rem;">
-                      <strong
-                        (mouseenter)="showNotaTooltip(row.transaccion.comentario, $event)"
-                        (mousemove)="moveNotaTooltip($event)"
-                        (mouseleave)="hideNotaTooltip()"
-                      >{{ row.quickPayTitle }}</strong>
+                      <div style="display:flex;align-items:center;gap:.3rem;min-width:0;">
+                        <strong
+                          style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                          (mouseenter)="showNotaTooltip(row.transaccion.comentario, $event)"
+                          (mousemove)="moveNotaTooltip($event)"
+                          (mouseleave)="hideNotaTooltip()"
+                        >{{ row.quickPayTitle }}</strong>
+                        <span
+                          *ngIf="row.transaccion.comentario"
+                          class="nota-indicator-button"
+                          aria-hidden="true"
+                          (mouseenter)="showNotaTooltip(row.transaccion.comentario, $event)"
+                          (mousemove)="moveNotaTooltip($event)"
+                          (mouseleave)="hideNotaTooltip()"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                              d="M4 4.5A1.5 1.5 0 0 1 5.5 3h13A1.5 1.5 0 0 1 20 4.5v10A1.5 1.5 0 0 1 18.5 16H9l-4 4v-4H5.5A1.5 1.5 0 0 1 4 14.5v-10Z"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="1.6"
+                              stroke-linejoin="round"
+                            />
+                            <circle cx="8" cy="9.5" r=".9" fill="currentColor" />
+                            <circle cx="12" cy="9.5" r=".9" fill="currentColor" />
+                            <circle cx="16" cy="9.5" r=".9" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </div>
                       <span
                         *ngIf="!row.transaccion.es_propietario"
                         style="display:inline-flex;width:fit-content;align-items:center;gap:.4rem;padding:.2rem .58rem;border-radius:999px;font-size:.74rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;background:#f1e8ff;color:#7a3db8;"
@@ -2622,7 +2646,10 @@
         <header class="payment-modal-header">
           <div>
             <p class="panel-title">Pago de transaccion</p>
-            <h3>{{ getTransaccionModalTitle(paymentModalTransaccion) }}</h3>
+            <div class="detail-modal-title-row">
+              <h3>{{ getTransaccionModalTitle(paymentModalTransaccion) }}</h3>
+              <span class="detail-modal-method-tag">{{ getPaymentModalMetodoPago() }}</span>
+            </div>
             <p *ngIf="paymentModalTransaccion.comentario" style="margin:.25rem 0 0;font-size:.8rem;color:#6b7c93;font-style:italic;">{{ paymentModalTransaccion.comentario }}</p>
           </div>
           <div class="header-actions">
