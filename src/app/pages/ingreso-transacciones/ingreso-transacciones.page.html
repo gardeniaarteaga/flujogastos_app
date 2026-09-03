@@ -741,7 +741,7 @@
                       </small>
                     </div>
 
-                    <div class="field">
+                    <div class="field participant-field--modo-cuotas">
                       <label [for]="'participante_modo_cuotas_' + i">Modo de cuotas</label>
                       <input
                         [id]="'participante_modo_cuotas_' + i"
@@ -751,7 +751,7 @@
                       />
                     </div>
 
-                    <div class="field">
+                    <div class="field participant-field--cuotas">
                       <label [for]="'participante_cuotas_' + i">Cuotas</label>
                       <input
                         [id]="'participante_cuotas_' + i"
@@ -785,46 +785,63 @@
                     </div>
 
                     <div
-                      class="field"
+                      class="field-with-check"
                       *ngIf="!isVariablePaymentMode && (participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && getCuotasArray(participanteGroup).at(0) as cuotaUnicaFechaGroup"
                     >
-                      <label [for]="'participante_cuota_fecha_' + i">Fecha programada</label>
-                      <div class="date-entry">
-                        <input
-                          [id]="'participante_cuota_fecha_' + i"
-                          type="text"
-                          inputmode="numeric"
-                          maxlength="10"
-                          placeholder="DD/MM/AAAA"
-                          [value]="getFechaProgramadaDisplay(cuotaUnicaFechaGroup.controls.fecha_programada.value)"
-                          (input)="onCuotaFechaProgramadaInput(participanteGroup, 0, $event)"
-                          (blur)="onCuotaFechaProgramadaBlur(participanteGroup, 0)"
-                        />
-                        <button
-                          type="button"
-                          class="date-picker-button"
-                          (click)="openNativeDatePicker(fechaProgramadaUnicaCalendarPicker)"
-                          aria-label="Abrir calendario de la fecha programada"
-                        >
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path
-                              d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
-                            />
-                          </svg>
-                        </button>
-                        <input
-                          #fechaProgramadaUnicaCalendarPicker
-                          class="date-picker-native"
-                          type="date"
-                          [value]="getCuotaFechaProgramadaCalendarioValue(participanteGroup, 0)"
-                          (change)="onCuotaFechaProgramadaCalendarChange(participanteGroup, 0, $event)"
-                          tabindex="-1"
-                          aria-hidden="true"
-                        />
+                      <div class="field">
+                        <label [for]="'participante_cuota_fecha_' + i">Fecha programada</label>
+                        <div class="date-entry">
+                          <input
+                            [id]="'participante_cuota_fecha_' + i"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="10"
+                            placeholder="DD/MM/AAAA"
+                            [value]="getFechaProgramadaDisplay(cuotaUnicaFechaGroup.controls.fecha_programada.value)"
+                            (input)="onCuotaFechaProgramadaInput(participanteGroup, 0, $event)"
+                            (blur)="onCuotaFechaProgramadaBlur(participanteGroup, 0)"
+                          />
+                          <button
+                            type="button"
+                            class="date-picker-button"
+                            (click)="openNativeDatePicker(fechaProgramadaUnicaCalendarPicker)"
+                            aria-label="Abrir calendario de la fecha programada"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path
+                                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm6 0h2v2h-2v-2Zm-6 4h2v2H8v-2Zm6 0h2v2h-2v-2Z"
+                              />
+                            </svg>
+                          </button>
+                          <input
+                            #fechaProgramadaUnicaCalendarPicker
+                            class="date-picker-native"
+                            type="date"
+                            [value]="getCuotaFechaProgramadaCalendarioValue(participanteGroup, 0)"
+                            (change)="onCuotaFechaProgramadaCalendarChange(participanteGroup, 0, $event)"
+                            tabindex="-1"
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <small *ngIf="cuotaUnicaFechaGroup.controls.fecha_programada.errors?.['invalidDate']">
+                          Ingresa una fecha valida en formato DD/MM/AAAA.
+                        </small>
                       </div>
-                      <small *ngIf="cuotaUnicaFechaGroup.controls.fecha_programada.errors?.['invalidDate']">
-                        Ingresa una fecha valida en formato DD/MM/AAAA.
-                      </small>
+
+                      <div
+                        *ngIf="participanteGroup.controls.es_titular.value && shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"
+                        class="participant-quick-check-wrap"
+                        [formGroup]="transaccionForm"
+                      >
+                        <label class="checkbox-row participant-quick-check" for="titular_cuota_unica_pagada">
+                          <input
+                            id="titular_cuota_unica_pagada"
+                            type="checkbox"
+                            formControlName="titular_cuota_unica_pagada"
+                          />
+                          <span>Marcar Pagada</span>
+                        </label>
+                      </div>
                     </div>
 
                     <div
@@ -845,20 +862,6 @@
                     </div>
 
                     <div class="participant-actions">
-                      <div
-                        *ngIf="participanteGroup.controls.es_titular.value && shouldShowTitularCuotaUnicaPagadaOption(participanteGroup)"
-                        class="participant-quick-check-wrap"
-                        [formGroup]="transaccionForm"
-                      >
-                        <label class="checkbox-row participant-quick-check" for="titular_cuota_unica_pagada">
-                          <input
-                            id="titular_cuota_unica_pagada"
-                            type="checkbox"
-                            formControlName="titular_cuota_unica_pagada"
-                          />
-                          <span>Marcar Pagada</span>
-                        </label>
-                      </div>
                       <button
                         *ngIf="!participanteGroup.controls.es_titular.value"
                         type="button"
