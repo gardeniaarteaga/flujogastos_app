@@ -206,6 +206,12 @@
 
 .filter-card-check {
   align-content: center;
+  background: linear-gradient(135deg, #fff8dd 0%, #ffffff 100%);
+  border-color: #f5df8c;
+}
+
+.filter-card-check span {
+  color: #8f6a00;
 }
 
 .filter-check-group {
