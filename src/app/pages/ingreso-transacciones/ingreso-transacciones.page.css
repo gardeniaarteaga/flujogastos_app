@@ -358,21 +358,21 @@
 }
 
 .participant-field--modo-cuotas input {
-  width: 11.2rem;
-  max-width: 11.2rem;
+  width: 9.5rem;
+  max-width: 9.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .participant-field--cuotas input {
-  width: 4.7rem;
-  max-width: 4.7rem;
+  width: 9.5rem;
+  max-width: 9.5rem;
 }
 
 .participant-single-cuota-field input {
-  width: 6.4rem;
-  max-width: 6.4rem;
+  width: 9.5rem;
+  max-width: 9.5rem;
 }
 
 .participant-single-cuota-field input[readonly] {
@@ -468,21 +468,21 @@
 
 .participant-field--identity input,
 .participant-field--identity select {
-  width: 10.8rem;
-  max-width: 10.8rem;
+  width: 13rem;
+  max-width: 13rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .participant-field--percentage input {
-  width: 6rem;
-  max-width: 6rem;
+  width: 9.5rem;
+  max-width: 9.5rem;
 }
 
 .field-with-check .date-entry input[type='text'] {
-  width: 11rem;
-  max-width: 11rem;
+  width: 10.5rem;
+  max-width: 10.5rem;
 }
 
 .participant-row--titular-cuotas {
