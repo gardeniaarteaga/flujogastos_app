@@ -90,8 +90,8 @@ interface PagoRealizadoRow {
   metodoPagoId: number | null;
   metodoPagoNombre: string;
   enviadorNombre: string | null;
-  esParticipanteAsignado: boolean;
   esTitular: boolean;
+  esTransaccionPropia: boolean;
   participanteKey: string;
   participanteNombre: string;
   cuotaLabel: string;
@@ -1236,11 +1236,11 @@ export class PagosRealizadosPage implements OnInit {
         return false;
       }
 
-      if (origenParticipante === 'propios' && !row.esTitular) {
+      if (origenParticipante === 'propios' && !row.esTransaccionPropia) {
         return false;
       }
 
-      if (origenParticipante === 'recibidos' && !row.esParticipanteAsignado) {
+      if (origenParticipante === 'recibidos' && row.esTransaccionPropia) {
         return false;
       }
 
@@ -1348,8 +1348,8 @@ export class PagosRealizadosPage implements OnInit {
       metodoPagoId,
       metodoPagoNombre: this.resolveMetodoPagoNombre(detalle, transaccion, metodoPagoId),
       enviadorNombre: this.resolveTransactionSenderFirstName(transaccion, detalle),
-      esParticipanteAsignado: !this.isDetalleDelParticipantePropio(detalle),
       esTitular: this.isDetalleDelParticipantePropio(detalle),
+      esTransaccionPropia: Boolean(transaccion.es_propietario),
       participanteKey: this.getParticipanteKey(detalle),
       participanteNombre: this.getParticipanteNombre(detalle),
       cuotaLabel: `${detalle.numero_cuota}/${detalle.total_cuotas}`,
