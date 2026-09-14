@@ -2440,6 +2440,31 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.isParticipanteAsociado(participante);
   }
 
+  tienePagoPendienteUsuario(transaccion: TransaccionListado): boolean {
+    const detalles = Array.isArray(transaccion.participantes_detalle)
+      ? transaccion.participantes_detalle
+      : [];
+    const ahora = new Date();
+    const anioActual = ahora.getFullYear();
+    const mesActual = ahora.getMonth();
+
+    return detalles.some((detalle) => {
+      if (
+        !this.isDetalleDelUsuarioLogueado(detalle, transaccion.es_propietario) ||
+        this.getNormalizedEstadoListado(detalle.nombre_estado) !== 'pendiente' ||
+        !detalle.fecha_programada
+      ) {
+        return false;
+      }
+
+      const fechaProgramada = new Date(`${detalle.fecha_programada}T00:00:00`);
+
+      return (
+        fechaProgramada.getFullYear() === anioActual && fechaProgramada.getMonth() === mesActual
+      );
+    });
+  }
+
   get currentUserParticipante(): CatalogoParticipante | null {
     const candidateNames = [
       this.currentUserProfileValue.fullName,

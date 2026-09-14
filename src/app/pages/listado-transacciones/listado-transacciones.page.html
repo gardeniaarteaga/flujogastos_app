@@ -922,7 +922,7 @@
                 <td class="col-partic" style="text-align: center; vertical-align: middle;" [attr.title]="transaccion.pagocompartido ? 'Compartido' : 'Individual'">
                   <span
                     class="payment-icon"
-                    style="display: flex; justify-content: center; width: 100%; min-height: 1.2rem;"
+                    style="display: flex; justify-content: center; align-items: center; gap: .3rem; width: 100%; min-height: 1.2rem;"
                     [ngClass]="transaccion.pagocompartido ? 'table-payment-icon-shared' : 'table-payment-icon-individual'"
                     [attr.title]="transaccion.pagocompartido ? 'Compartido' : 'Individual'"
                     [attr.aria-label]="transaccion.pagocompartido ? 'Compartido' : 'Individual'"
@@ -940,6 +940,14 @@
                         <span class="person person-front"></span>
                       </span>
                     </ng-template>
+                    <span
+                      *ngIf="tienePagoPendienteUsuario(transaccion)"
+                      class="participante-pendiente-dot"
+                      aria-label="Pago Pendiente en este Mes"
+                      (mouseenter)="showNotaTooltip('Pago Pendiente en este Mes', $event)"
+                      (mousemove)="moveNotaTooltip($event)"
+                      (mouseleave)="hideNotaTooltip()"
+                    ></span>
                   </span>
                 </td>
                 <td class="table-actions-cell col-acciones" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">

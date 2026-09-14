@@ -515,6 +515,15 @@
   padding-right: 0.5rem !important;
 }
 
+.participante-pendiente-dot {
+  flex: 0 0 auto;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #6ea3ff, #2457b8 70%);
+  box-shadow: 0 0 0 2px rgba(36, 87, 184, 0.16), 0 0 4px rgba(36, 87, 184, 0.55);
+}
+
 .col-filter-header {
   display: flex;
   align-items: center;
