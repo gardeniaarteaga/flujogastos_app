@@ -407,6 +407,11 @@ export class Dashboard implements OnInit {
     { value: 'second', label: '16 - fin de mes' },
   ];
   analytics = this.createEmptyAnalytics();
+  scheduledNotificationsDaysWindow = 10;
+  recordatoriosCuotasDaysWindow = 10;
+  private configuracionesPago: ConfiguracionNotificacionPago[] = [];
+  private recordatoriosCuotasRaw: RecordatorioCuota[] = [];
+  private recordatoriosMembresiaView: RecordatorioListItem[] = [];
   scheduledNotifications: ScheduledNotificationView[] = [];
   recordatoriosCuotas: RecordatorioListItem[] = [];
   transactions: TransaccionListado[] = [];
@@ -509,16 +514,24 @@ export class Dashboard implements OnInit {
       this.transactions = this.filterVisibleTransactions(Array.isArray(transacciones) ? transacciones : []);
       this.availableYears = this.buildAvailableYears(this.transactions);
       this.refreshDashboardSummary();
-      this.scheduledNotifications = this.buildScheduledNotifications(programadas);
+      this.configuracionesPago = Array.isArray(programadas) ? programadas : [];
+      this.scheduledNotifications = this.buildScheduledNotifications(this.configuracionesPago);
+      this.recordatoriosCuotasRaw = Array.isArray(recordatoriosCuotas) ? recordatoriosCuotas : [];
+      this.recordatoriosMembresiaView = this.buildRecordatoriosMembresiaView(
+        Array.isArray(formasPago) ? formasPago : [],
+      );
       this.recordatoriosCuotas = [
-        ...this.buildRecordatoriosMembresiaView(Array.isArray(formasPago) ? formasPago : []),
-        ...this.buildRecordatoriosCuotasView(recordatoriosCuotas),
+        ...this.recordatoriosMembresiaView,
+        ...this.buildRecordatoriosCuotasView(this.recordatoriosCuotasRaw),
       ];
     } catch {
       this.transactions = [];
       this.availableYears = this.buildAvailableYears([]);
       this.analytics = this.createEmptyAnalytics();
       this.prepareDashboardTransactionsModalData();
+      this.configuracionesPago = [];
+      this.recordatoriosCuotasRaw = [];
+      this.recordatoriosMembresiaView = [];
       this.scheduledNotifications = [];
       this.recordatoriosCuotas = [];
       this.errorMessage =
@@ -629,6 +642,31 @@ export class Dashboard implements OnInit {
 
     this.selectedYear = nextYear;
     this.refreshDashboardSummary();
+  }
+
+  onScheduledNotificationsDaysWindowChange(value: string): void {
+    const nextDays = Number(value);
+
+    if (!Number.isInteger(nextDays) || nextDays < 1) {
+      return;
+    }
+
+    this.scheduledNotificationsDaysWindow = nextDays;
+    this.scheduledNotifications = this.buildScheduledNotifications(this.configuracionesPago);
+  }
+
+  onRecordatoriosCuotasDaysWindowChange(value: string): void {
+    const nextDays = Number(value);
+
+    if (!Number.isInteger(nextDays) || nextDays < 1) {
+      return;
+    }
+
+    this.recordatoriosCuotasDaysWindow = nextDays;
+    this.recordatoriosCuotas = [
+      ...this.recordatoriosMembresiaView,
+      ...this.buildRecordatoriosCuotasView(this.recordatoriosCuotasRaw),
+    ];
   }
 
   openTransactionsSummaryModal(kpi: DashboardKpi): void {
@@ -2032,28 +2070,47 @@ export class Dashboard implements OnInit {
   private buildRecordatoriosCuotasView(
     recordatorios: RecordatorioCuota[],
   ): RecordatorioListItem[] {
-    return recordatorios.map((item) => {
-      const fechaProgramada = this.parseDateOnly(item.fecha_programada);
-      const cuotasVencidas = Math.max(0, item.cuotas_vencidas || 0);
+    const today = this.getToday();
+    const daysWindow = this.recordatoriosCuotasDaysWindow;
 
-      return {
-        kind: 'cuota',
-        descripcion: item.descripcion || 'Sin descripcion',
-        subLabel: `Transaccion #${item.id_transaccion}`,
-        metaLabel: `Fecha programada: ${
-          fechaProgramada ? this.fullDateFormatter.format(fechaProgramada) : 'Sin fecha programada'
-        }`,
-        badgeLabel:
-          cuotasVencidas > 0
-            ? cuotasVencidas === 1
-              ? '1 cuota vencida'
-              : `${cuotasVencidas} cuotas vencidas`
-            : null,
-        tone: cuotasVencidas > 0 ? 'danger' : 'info',
-        routerLink: '/resumen/detalle-transacciones',
-        queryParams: { openPayment: 1, transactionId: item.id_transaccion },
-      };
-    });
+    return recordatorios
+      .filter((item) => {
+        if (Math.max(0, item.cuotas_vencidas || 0) > 0) {
+          return true;
+        }
+
+        const fechaProgramada = this.parseDateOnly(item.fecha_programada);
+
+        if (!fechaProgramada) {
+          return true;
+        }
+
+        const diffDays = this.calculateScheduledDiffInDays(fechaProgramada, today);
+
+        return diffDays >= 0 && diffDays <= daysWindow;
+      })
+      .map((item) => {
+        const fechaProgramada = this.parseDateOnly(item.fecha_programada);
+        const cuotasVencidas = Math.max(0, item.cuotas_vencidas || 0);
+
+        return {
+          kind: 'cuota',
+          descripcion: item.descripcion || 'Sin descripcion',
+          subLabel: `Transaccion #${item.id_transaccion}`,
+          metaLabel: `Fecha programada: ${
+            fechaProgramada ? this.fullDateFormatter.format(fechaProgramada) : 'Sin fecha programada'
+          }`,
+          badgeLabel:
+            cuotasVencidas > 0
+              ? cuotasVencidas === 1
+                ? '1 cuota vencida'
+                : `${cuotasVencidas} cuotas vencidas`
+              : null,
+          tone: cuotasVencidas > 0 ? 'danger' : 'info',
+          routerLink: '/resumen/detalle-transacciones',
+          queryParams: { openPayment: 1, transactionId: item.id_transaccion },
+        };
+      }) as RecordatorioListItem[];
   }
 
   private buildRecordatoriosMembresiaView(
@@ -2095,6 +2152,7 @@ export class Dashboard implements OnInit {
     configuraciones: ConfiguracionNotificacionPago[],
   ): ScheduledNotificationView[] {
     const today = this.getToday();
+    const daysWindow = this.scheduledNotificationsDaysWindow;
 
     return configuraciones
       .flatMap((configuracion) => {
@@ -2109,7 +2167,7 @@ export class Dashboard implements OnInit {
         const daysToNext = nextDate ? this.calculateScheduledDiffInDays(nextDate, today) : null;
         const daysFromLast = lastDate ? this.calculateScheduledDiffInDays(lastDate, today) : null;
 
-        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= 10;
+        const isUpcoming = daysToNext !== null && daysToNext >= 0 && daysToNext <= daysWindow;
         const isOverdue = !isUpcoming && daysFromLast !== null && daysFromLast < 0;
 
         if (!isUpcoming && !isOverdue) {

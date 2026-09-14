@@ -325,13 +325,35 @@
         <div>
           <h3>Recordatorios de pago activos</h3>
         </div>
-        <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">
-          Ver todos
-        </a>
+        <div class="scheduled-days-filter">
+          <label class="dashboard-period-field" title="Los vencidos siempre se muestran, sin importar este valor">
+            <span>Dias a mostrar</span>
+            <input
+              #upcomingCuotasDaysInput
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              [value]="recordatoriosCuotasDaysWindow"
+              (change)="onRecordatoriosCuotasDaysWindowChange(upcomingCuotasDaysInput.value)"
+            />
+          </label>
+          <span
+            class="config-hint"
+            tabindex="0"
+            role="button"
+            aria-label="El recordatorio de pago se activa y configura al editar cada transaccion en Lista de Transacciones"
+          >
+            <span class="config-hint-icon" aria-hidden="true">&#8505;</span>
+            <span class="config-hint-bubble" role="tooltip">
+              El recordatorio de pago se activa y configura al editar cada transaccion en Lista de Transacciones.
+            </span>
+          </span>
+        </div>
       </div>
 
       <p class="panel-copy">
-        Haz clic en una tarjeta para ir directo a pagar esa cuota.
+        Haz clic en una tarjeta para ir directo a pagar esa cuota. Muestra cuotas programadas para los proximos {{ recordatoriosCuotasDaysWindow }} dia(s); las vencidas siempre aparecen, sin importar el valor elegido.
       </p>
 
       <div *ngIf="recordatoriosCuotas.length > 0; else emptyRecordatoriosCuotas" class="scheduled-grid">
@@ -371,13 +393,27 @@
         <div>
           <h3>Notificaciones programadas</h3>
         </div>
-        <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">
-          Configurar
-        </a>
+        <div class="scheduled-days-filter">
+          <label class="dashboard-period-field" title="Los vencidos siempre se muestran, sin importar este valor">
+            <span>Dias a mostrar</span>
+            <input
+              #upcomingDaysInput
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              [value]="scheduledNotificationsDaysWindow"
+              (change)="onScheduledNotificationsDaysWindowChange(upcomingDaysInput.value)"
+            />
+          </label>
+          <a class="hero-link scheduled-link" routerLink="/resumen/notificaciones">
+            Configurar
+          </a>
+        </div>
       </div>
 
       <p class="panel-copy">
-        Tus proximos recordatorios de pago aparecen aqui para que no pierdan visibilidad dentro del resumen.
+        Muestra las notificaciones programadas para los proximos {{ scheduledNotificationsDaysWindow }} dia(s). Las vencidas siempre aparecen, sin importar el valor elegido.
       </p>
 
       <div *ngIf="scheduledNotifications.length > 0; else emptyScheduledNotifications" class="scheduled-grid">
