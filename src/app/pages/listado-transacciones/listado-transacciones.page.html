@@ -262,15 +262,18 @@
                     <span>Todos</span>
                   </label>
 
-                  <label class="checkbox-row checkbox-row-compact" for="hastaHoyDetalle">
-                    <input
-                      id="hastaHoyDetalle"
-                      type="checkbox"
-                      formControlName="hastaHoy"
-                      (change)="onHastaHoyToggle($event)"
-                    />
-                    <span>Hasta la Fecha</span>
-                  </label>
+                  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;">
+                    <span style="font-size:.65rem;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:.02em;">Fecha programada</span>
+                    <label class="checkbox-row checkbox-row-compact" for="hastaHoyDetalle">
+                      <input
+                        id="hastaHoyDetalle"
+                        type="checkbox"
+                        formControlName="hastaHoy"
+                        (change)="onHastaHoyToggle($event)"
+                      />
+                      <span>Hasta la Fecha</span>
+                    </label>
+                  </div>
 
                   <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
                     <input
@@ -312,14 +315,6 @@
                     <span>Recibidos</span>
                   </label>
 
-                  <button
-                    type="button"
-                    class="secondary-button compact-button"
-                    (click)="toggleAdvancedFilters()"
-                  >
-                    {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
-                  </button>
-
                   <div class="field quick-pay-state-field" style="min-width:130px;">
                     <label for="estadoDetalle">Estado</label>
                     <select id="estadoDetalle" formControlName="estado">
@@ -352,6 +347,15 @@
                       </option>
                     </select>
                   </div>
+
+                  <button
+                    type="button"
+                    class="compact-button"
+                    style="border:1px solid #d8b9ff;background:linear-gradient(180deg,#f6edff 0%,#e9d5ff 100%);color:#7a2ec7;font-weight:800;"
+                    (click)="toggleAdvancedFilters()"
+                  >
+                    {{ showAdvancedFilters ? 'Ocultar filtros' : 'Mas filtros' }}
+                  </button>
                 </div>
 
                 <!-- Fila 3: búsqueda -->
