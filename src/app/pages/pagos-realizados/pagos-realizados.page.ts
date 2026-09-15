@@ -965,13 +965,19 @@ export class PagosRealizadosPage implements OnInit {
 
   get fechaFiltroSuffix(): string {
     if (this.isOnlyPagadoFilter) return ' (Fecha de pago)';
-    if (this.isOnlyPendienteFilter) return ' (Fecha programada)';
+    if (this.isOnlyPendienteFilter) {
+      return this.pendienteFechaTipo === 'transaccion'
+        ? ' (Fecha de transaccion)'
+        : ' (Fecha programada)';
+    }
     return '';
   }
 
   get fechaFiltroTooltip(): string {
     if (this.isOnlyPagadoFilter) return 'Fecha Pago';
-    if (this.isOnlyPendienteFilter) return 'Fecha Programada';
+    if (this.isOnlyPendienteFilter) {
+      return this.pendienteFechaTipo === 'transaccion' ? 'Fecha de Transaccion' : 'Fecha Programada';
+    }
     return '';
   }
 

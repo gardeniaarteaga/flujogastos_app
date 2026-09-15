@@ -1672,6 +1672,23 @@
                       />
                       <span>{{ dividirMontoLabel }}</span>
                     </label>
+                    <label class="checkbox-row checkbox-row-compact">
+                      <input
+                        type="checkbox"
+                        formControlName="cuotas_mixtas"
+                        [disabled]="hasAppliedPagosInEditor"
+                        (change)="onCuotasMixtasChange(titularGroup)"
+                      />
+                      <span class="label-with-help">
+                        <span>Cuotas Mixtas</span>
+                        <span class="help-tooltip">
+                          <span class="help-badge" tabindex="0" aria-label="Ayuda sobre cuotas mixtas">?</span>
+                          <span class="help-tooltip-content">
+                            Cuotas variadas sin porcentaje: pon el monto que quieras en cada cuota y participante, siempre que la suma cuadre con el Monto Total.
+                          </span>
+                        </span>
+                      </span>
+                    </label>
                   </div>
                   <div
                     class="field participants-summary-field participants-summary-field--inline"
@@ -2029,7 +2046,7 @@
                         inputmode="decimal"
                         autocomplete="off"
                         formControlName="monto"
-                        [disabled]="!canEditParticipanteMonto(participanteGroup)"
+                        [disabled]="!canEditParticipanteMonto(participanteGroup) || isSharedExpenseMontoTotalPending"
                         (focus)="onMoneyInputActivate($event)"
                         (click)="onMoneyInputActivate($event)"
                         (keydown)="onMontoKeydown($event)"
@@ -2042,8 +2059,22 @@
                       </small>
                     </div>
 
+                    <div
+                      *ngIf="(participanteGroup.controls.cantidad_cuotas.value ?? 1) === 1 && canMarkPrimeraCuotaPagada(participanteGroup)"
+                      class="participant-quick-check-wrap"
+                    >
+                      <label class="checkbox-row participant-quick-check" [for]="'edit_primera_cuota_pagada_' + i">
+                        <input
+                          [id]="'edit_primera_cuota_pagada_' + i"
+                          type="checkbox"
+                          formControlName="primera_cuota_pagada"
+                        />
+                        <span>Marcar Pagada</span>
+                      </label>
+                    </div>
+
                     <ng-template #porcentajeParticipanteEditor>
-                      <div class="field participant-field participant-field--percentage" style="display:grid;gap:.35rem;min-width:0;">
+                      <div class="field participant-field participant-field--percentage" style="display:grid;gap:.35rem;min-width:0;" *ngIf="!isCuotasMixtasActive">
                         <label [for]="'edit_participante_porcentaje_' + i" style="font-size:.8rem;font-weight:700;letter-spacing:.01em;">Porcentaje</label>
                         <input
                           [id]="'edit_participante_porcentaje_' + i"
@@ -2121,7 +2152,7 @@
                         [id]="'edit_participante_cuota_monto_' + i"
                         type="text"
                         [formControl]="cuotaUnicaGroup.controls.monto"
-                        [readonly]="isCuotaMontoReadonly(participanteGroup) || isCuotaBloqueadaEnEditor(participanteGroup, 0)"
+                        [readonly]="isCuotaMontoReadonly(participanteGroup) || isCuotaBloqueadaEnEditor(participanteGroup, 0) || isSharedExpenseMontoTotalPending"
                         (input)="onCuotaMontoInput(participanteGroup, 0, $event)"
                         (focus)="onMoneyInputActivate($event)"
                         (click)="onMoneyInputActivate($event)"
@@ -2289,7 +2320,7 @@
 
                             <div
                               class="cuota-editable-fields"
-                              style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;align-items:center;"
+                              style="display:grid;grid-template-columns:minmax(140px,1fr) minmax(170px,1.1fr) auto 160px;gap:.75rem;align-items:center;"
                             >
                               <input
                                 [id]="'edit_cuota_' + i + '_' + cuotaItem.index"
@@ -2299,7 +2330,7 @@
                                 inputmode="decimal"
                                 autocomplete="off"
                                 formControlName="monto"
-                                [readonly]="isCuotaMontoReadonly(participanteGroup)"
+                                [readonly]="isCuotaMontoReadonly(participanteGroup) || isSharedExpenseMontoTotalPending"
                                 (input)="onCuotaMontoInput(participanteGroup, cuotaItem.index, $event)"
                                 (focus)="onMoneyInputActivate($event)"
                                 (click)="onMoneyInputActivate($event)"
@@ -2326,6 +2357,20 @@
                               >
                                 Quitar
                               </button>
+                              <div
+                                *ngIf="cuotaItem.index === 0 && canMarkPrimeraCuotaPagada(participanteGroup)"
+                                class="participant-quick-check-wrap"
+                                [formGroup]="participanteGroup"
+                              >
+                                <label class="checkbox-row participant-quick-check" [for]="'edit_cuota_primera_pagada_' + i">
+                                  <input
+                                    [id]="'edit_cuota_primera_pagada_' + i"
+                                    type="checkbox"
+                                    formControlName="primera_cuota_pagada"
+                                  />
+                                  <span>Marcar Pagada</span>
+                                </label>
+                              </div>
                             </div>
                           </div>
                         </ng-container>
@@ -2420,7 +2465,7 @@
                         </button>
                       </div>
                     </div>
-                    <small *ngIf="!isCuotasTotalValid(participanteGroup)">
+                    <small *ngIf="!isSharedExpenseMontoTotalPending && !isCuotasTotalValid(participanteGroup)">
                       La suma de cuotas debe ser igual al monto total de esta persona.
                     </small>
                   </details>
@@ -2429,7 +2474,7 @@
               </ng-template>
 
               <div class="form-actions">
-                <button type="button" class="secondary-button" [disabled]="hasAppliedPagosInEditor" (click)="addParticipanteDetalle()">
+                <button type="button" class="secondary-button" [disabled]="hasAppliedPagosInEditor || isSharedExpenseMontoTotalPending" (click)="addParticipanteDetalle()">
                   Agregar participante
                 </button>
               </div>
