@@ -2510,6 +2510,10 @@ export class ListadoTransaccionesPage implements OnInit {
   }
 
   tienePagoPendienteUsuario(transaccion: TransaccionListado): boolean {
+    if (!transaccion.pagocompartido) {
+      return false;
+    }
+
     const detalles = Array.isArray(transaccion.participantes_detalle)
       ? transaccion.participantes_detalle
       : [];
