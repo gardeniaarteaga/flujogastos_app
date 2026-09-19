@@ -767,6 +767,12 @@ export class ListadoTransaccionesPage implements OnInit {
     const mesFiltro = filtros.mesFiltro;
     const anioFiltro = filtros.anioFiltro;
 
+    if (idFiltro) {
+      return this.transacciones
+        .filter((transaccion) => String(transaccion.id_transaccion).includes(idFiltro))
+        .sort((left, right) => this.compareTransacciones(left, right));
+    }
+
     return this.transacciones.filter((transaccion) => {
       const fechaTransaccion = this.normalizeDateOnly(transaccion.fecha);
       const estadoTransaccion = this.getNormalizedEstadoListado(transaccion.nombre_estado ?? '');
@@ -881,10 +887,6 @@ export class ListadoTransaccionesPage implements OnInit {
       }
 
       if (descripcionFiltro && !descripcionTransaccion.includes(descripcionFiltro)) {
-        return false;
-      }
-
-      if (idFiltro && !String(transaccion.id_transaccion).includes(idFiltro)) {
         return false;
       }
 
