@@ -37,6 +37,9 @@ export interface EstadoCuenta {
   compras_diferencia: number;
   pagos_calculado: number;
   pagos_diferencia: number;
+  intereses_calculado: number;
+  intereses_estado_cuenta: number;
+  intereses_diferencia: number;
 }
 
 export interface EstadoCuentaPayload {

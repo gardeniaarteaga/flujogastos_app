@@ -291,6 +291,13 @@
             <span>App: {{ resultado.pagos_calculado | number: '1.2-2' }}</span>
             <strong>Diferencia: {{ resultado.pagos_diferencia | number: '1.2-2' }}</strong>
           </div>
+
+          <div class="comparacion-item" [ngClass]="resultado.intereses_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+            <span class="comparacion-label">Intereses</span>
+            <span>Estado de cuenta: {{ resultado.intereses_estado_cuenta | number: '1.2-2' }}</span>
+            <span>App: {{ resultado.intereses_calculado | number: '1.2-2' }}</span>
+            <strong>Diferencia: {{ resultado.intereses_diferencia | number: '1.2-2' }}</strong>
+          </div>
         </div>
       </article>
     </section>
@@ -383,6 +390,7 @@
               <th>Total deuda</th>
               <th>Dif. compras</th>
               <th>Dif. pagos</th>
+              <th>Dif. intereses</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -399,6 +407,9 @@
               </td>
               <td [ngClass]="item.pagos_diferencia === 0 ? 'tone-good' : 'tone-warning'">
                 {{ item.pagos_diferencia | number: '1.2-2' }}
+              </td>
+              <td [ngClass]="item.intereses_diferencia === 0 ? 'tone-good' : 'tone-warning'">
+                {{ item.intereses_diferencia | number: '1.2-2' }}
               </td>
               <td class="actions-cell">
                 <app-maintenance-actions
