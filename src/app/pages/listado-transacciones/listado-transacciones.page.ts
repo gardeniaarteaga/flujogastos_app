@@ -769,7 +769,7 @@ export class ListadoTransaccionesPage implements OnInit {
 
     if (idFiltro) {
       return this.transacciones
-        .filter((transaccion) => String(transaccion.id_transaccion).includes(idFiltro))
+        .filter((transaccion) => String(transaccion.id_transaccion) === idFiltro)
         .sort((left, right) => this.compareTransacciones(left, right));
     }
 
@@ -1051,7 +1051,7 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
-        if (idFiltroDetalle && !String(row.transaccion.id_transaccion).includes(idFiltroDetalle)) {
+        if (idFiltroDetalle && String(row.transaccion.id_transaccion) !== idFiltroDetalle) {
           return false;
         }
 
