@@ -250,6 +250,28 @@
               </div>
 
               <div *ngIf="!quickPayFiltersCollapsed" style="display:grid;gap:.55rem;">
+                <!-- Fila 1b: tipo de fecha para "A la fecha" (solo visible si esta activo) -->
+                <div *ngIf="filtrosForm.controls.hastaHoy.value" style="display:flex;gap:.5rem;">
+                  <label class="checkbox-row checkbox-row-compact checkbox-row-fecha-tipo" for="fechaTipoProgramadaDetalle">
+                    <input
+                      id="fechaTipoProgramadaDetalle"
+                      type="checkbox"
+                      [checked]="fechaTipoFiltro === 'programada'"
+                      (change)="setFechaTipoFiltro('programada')"
+                    />
+                    <span>F.Progr</span>
+                  </label>
+                  <label class="checkbox-row checkbox-row-compact checkbox-row-fecha-tipo" for="fechaTipoTransaccionDetalle">
+                    <input
+                      id="fechaTipoTransaccionDetalle"
+                      type="checkbox"
+                      [checked]="fechaTipoFiltro === 'transaccion'"
+                      (change)="setFechaTipoFiltro('transaccion')"
+                    />
+                    <span>F.Trx</span>
+                  </label>
+                </div>
+
                 <!-- Fila 2: checkboxes + dropdowns en la misma línea -->
                 <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;">
                   <label class="checkbox-row checkbox-row-compact" for="todosDetalle">
@@ -262,18 +284,15 @@
                     <span>Todos</span>
                   </label>
 
-                  <div style="display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;">
-                    <span style="font-size:.65rem;font-weight:700;color:var(--color-muted);text-transform:uppercase;letter-spacing:.02em;">Fecha programada</span>
-                    <label class="checkbox-row checkbox-row-compact" for="hastaHoyDetalle">
-                      <input
-                        id="hastaHoyDetalle"
-                        type="checkbox"
-                        formControlName="hastaHoy"
-                        (change)="onHastaHoyToggle($event)"
-                      />
-                      <span>Hasta la Fecha</span>
-                    </label>
-                  </div>
+                  <label class="checkbox-row checkbox-row-compact" for="hastaHoyDetalle">
+                    <input
+                      id="hastaHoyDetalle"
+                      type="checkbox"
+                      formControlName="hastaHoy"
+                      (change)="onHastaHoyToggle($event)"
+                    />
+                    <span>A la fecha</span>
+                  </label>
 
                   <label class="checkbox-row checkbox-row-compact" for="prioritariosDetalle">
                     <input
@@ -394,7 +413,7 @@
                     </div>
 
                     <div class="field quick-pay-date-field">
-                      <label>Fecha programada</label>
+                      <label>{{ fechaTipoFiltro === 'transaccion' ? 'Fecha transaccion' : 'Fecha programada' }}</label>
                       <div class="quick-pay-date-range">
                         <div class="date-entry">
                           <input

@@ -397,6 +397,7 @@ export class ListadoTransaccionesPage implements OnInit {
     vencidos: [this.viewMode === 'detalle'],
     todosDetalle: [false],
     hastaHoy: [false],
+    fechaTipoFiltro: ['transaccion' as 'programada' | 'transaccion'],
     diasPrioridad: [
       this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
@@ -963,6 +964,14 @@ export class ListadoTransaccionesPage implements OnInit {
     return this.viewMode === 'detalle';
   }
 
+  get fechaTipoFiltro(): 'programada' | 'transaccion' {
+    return (this.filtrosForm.getRawValue().fechaTipoFiltro as 'programada' | 'transaccion') ?? 'transaccion';
+  }
+
+  setFechaTipoFiltro(tipo: 'programada' | 'transaccion'): void {
+    this.filtrosForm.patchValue({ fechaTipoFiltro: tipo });
+  }
+
   get filteredDetalleTransacciones(): DetalleTransaccionListadoRow[] {
     return this.filteredDetalleTransaccionesCache;
   }
@@ -986,6 +995,9 @@ export class ListadoTransaccionesPage implements OnInit {
         const estadoDetalleFiltro = this.getNormalizedEstadoFiltro(row.detalle.nombre_estado ?? '');
         const estadoCoincideFiltro = !!estadoFiltro && estadoDetalleFiltro === estadoFiltro;
         const fechaProgramada = this.normalizeDateOnly(row.detalle.fecha_programada);
+        const fechaTransaccionDetalle = this.normalizeDateOnly(row.transaccion.fecha);
+        const fechaFiltroBase =
+          filtros.fechaTipoFiltro === 'transaccion' ? fechaTransaccionDetalle : fechaProgramada;
         const descripcionTransaccion = this.normalizeText(row.descripcion ?? '');
 
         if (!this.isEstadoVisibleEnListado(estadoDetalle) && !estadoCoincideFiltro) {
@@ -1018,7 +1030,7 @@ export class ListadoTransaccionesPage implements OnInit {
           return false;
         }
 
-        if (!this.matchesDateRange(fechaProgramada, fechaDesde, fechaHasta)) {
+        if (!this.matchesDateRange(fechaFiltroBase, fechaDesde, fechaHasta)) {
           return false;
         }
 
@@ -1179,7 +1191,9 @@ export class ListadoTransaccionesPage implements OnInit {
     if (f.todosDetalle) chips.push('Todos');
     if (f.prioritarios) chips.push('Proximos 15 dias');
     if (f.vencidos) chips.push('Vencidos');
-    if (f.hastaHoy) chips.push('Hasta la Fecha');
+    if (f.hastaHoy) {
+      chips.push(f.fechaTipoFiltro === 'transaccion' ? 'A la fecha (Transaccion)' : 'A la fecha (Programada)');
+    }
     if (f.mesActual) chips.push('Mes actual');
     if (f.enviadas) chips.push('Recibidos');
     if (f.compartidos) chips.push('Compartidos');
@@ -10435,6 +10449,7 @@ export class ListadoTransaccionesPage implements OnInit {
       vencidos: useOverdueDefaults,
       todosDetalle: false,
       hastaHoy: false,
+      fechaTipoFiltro: 'transaccion',
       diasPrioridad: this.viewMode === 'detalle'
         ? QUICK_PAY_DEFAULT_PRIORITY_WINDOW_DAYS
         : PRIORITY_WINDOW_DAYS,
@@ -10893,8 +10908,8 @@ export class ListadoTransaccionesPage implements OnInit {
         todos: false,
         soloHoy: false,
         mesActual: false,
-        prioritarios: true,
-        vencidos: true,
+        prioritarios: false,
+        vencidos: false,
         pendientePago: false,
         enviadas: true,
         compartidos: false,
