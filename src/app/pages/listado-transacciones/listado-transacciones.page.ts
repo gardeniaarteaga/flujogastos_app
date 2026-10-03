@@ -1194,7 +1194,9 @@ export class ListadoTransaccionesPage implements OnInit {
     if (f.hastaHoy) {
       chips.push(f.fechaTipoFiltro === 'transaccion' ? 'A la fecha (Transaccion)' : 'A la fecha (Programada)');
     }
-    if (f.mesActual) chips.push('Mes actual');
+    if (f.mesActual) {
+      chips.push(f.fechaTipoFiltro === 'transaccion' ? 'Mes actual (Transaccion)' : 'Mes actual (Programada)');
+    }
     if (f.enviadas) chips.push('Recibidos');
     if (f.compartidos) chips.push('Compartidos');
     if (f.estado) chips.push(String(f.estado));
@@ -2831,6 +2833,7 @@ export class ListadoTransaccionesPage implements OnInit {
           prioritarios: false,
           vencidos: false,
           mesActual: false,
+          fechaTipoFiltro: 'programada',
           fechaDesde: '',
           fechaHasta: this.formatDateDisplayFromApi(this.todayFilterValue),
         },
@@ -10703,6 +10706,7 @@ export class ListadoTransaccionesPage implements OnInit {
         vencidos: false,
         todosDetalle: false,
         hastaHoy: false,
+        fechaTipoFiltro: 'programada',
         fechaDesde: this.formatDateDisplayFromApi(this.currentMonthStartValue),
         fechaHasta: this.formatDateDisplayFromApi(this.currentMonthEndValue),
       },
