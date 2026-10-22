@@ -1066,6 +1066,40 @@
   text-align: right;
 }
 
+.intereses-detail-table tr.intereses-detail-group-header td {
+  background: #f3f6fb;
+  color: #1f3a5f;
+  font-weight: 800;
+  border-top: 2px solid #d4ddea;
+}
+
+.intereses-detail-table tr.intereses-detail-group-header td,
+.intereses-detail-table tr.intereses-detail-total td {
+  text-align: right;
+}
+
+.intereses-detail-table tr.intereses-detail-group-header td:first-child {
+  text-align: left;
+}
+
+.intereses-detail-group-count {
+  color: #6b7a90;
+  font-weight: 600;
+  margin-left: 0.35rem;
+}
+
+.intereses-detail-table tr.intereses-detail-total td:first-child {
+  text-align: right;
+}
+
+.intereses-detail-table tfoot tr.intereses-detail-total td {
+  position: sticky;
+  bottom: 0;
+  background: #eef2f8;
+  font-weight: 900;
+  border-top: 2px solid #b9c6d8;
+}
+
 .detail-table-wrap table {
   min-width: 720px;
 }

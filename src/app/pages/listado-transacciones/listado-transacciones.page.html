@@ -3013,8 +3013,17 @@
                 <th class="intereses-detail-col-generado">Interes generado</th>
               </tr>
             </thead>
-            <tbody>
-              <tr *ngFor="let item of interesesModalDetalle">
+            <tbody *ngFor="let grupo of interesesModalGrupos">
+              <tr class="intereses-detail-group-header">
+                <td colspan="3">
+                  {{ grupo.participante }}
+                  <span class="intereses-detail-group-count">({{ grupo.items.length }} {{ grupo.items.length === 1 ? 'transaccion' : 'transacciones' }})</span>
+                </td>
+                <td>${{ grupo.total_saldo_pendiente | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-interes">${{ grupo.total_intereses_a_la_fecha | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-generado">${{ grupo.total_interes_generado | number: '1.2-2' }}</td>
+              </tr>
+              <tr *ngFor="let item of grupo.items">
                 <td>{{ item.id_transaccion }}</td>
                 <td>{{ item.descripcion || '-' }}</td>
                 <td>{{ item.participante || '-' }}</td>
@@ -3023,6 +3032,14 @@
                 <td class="intereses-detail-col-generado">${{ item.interes_generado | number: '1.2-2' }}</td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr class="intereses-detail-total">
+                <td colspan="3">Total general</td>
+                <td>${{ interesesModalTotalSaldo | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-interes">${{ interesesModalTotalALaFecha | number: '1.2-2' }}</td>
+                <td class="intereses-detail-col-generado">${{ interesesModalTotal | number: '1.2-2' }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </section>

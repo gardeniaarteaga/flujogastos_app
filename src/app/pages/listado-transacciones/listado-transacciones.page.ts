@@ -241,11 +241,22 @@ interface ApplyPagosPayload {
 
 interface CalculoInteresesDetalleItem {
   id_transaccion: number;
+  id_participante?: number;
   descripcion: string | null;
   participante: string;
+  es_titular?: boolean;
   interes_generado: number;
   saldo_pendiente: number;
   intereses_a_la_fecha: number;
+}
+
+interface CalculoInteresesGrupoParticipante {
+  participante: string;
+  es_titular: boolean;
+  items: CalculoInteresesDetalleItem[];
+  total_saldo_pendiente: number;
+  total_intereses_a_la_fecha: number;
+  total_interes_generado: number;
 }
 
 interface CalculoInteresesResponse {
@@ -434,6 +445,9 @@ export class ListadoTransaccionesPage implements OnInit {
   interesesModalRegistros = 0;
   interesesModalTotal = 0;
   interesesModalDetalle: CalculoInteresesDetalleItem[] = [];
+  interesesModalGrupos: CalculoInteresesGrupoParticipante[] = [];
+  interesesModalTotalSaldo = 0;
+  interesesModalTotalALaFecha = 0;
   saving = false;
   private pageEnterLoadPromise: Promise<void> | null = null;
   editModalOpen = false;
@@ -2751,6 +2765,15 @@ export class ListadoTransaccionesPage implements OnInit {
       this.interesesModalRegistros = result.registros_procesados;
       this.interesesModalTotal = result.total_intereses_generados;
       this.interesesModalDetalle = result.detalle ?? [];
+      this.interesesModalGrupos = this.buildInteresesGruposPorParticipante(
+        this.interesesModalDetalle,
+      );
+      this.interesesModalTotalSaldo = this.sumMontos(
+        this.interesesModalGrupos.map((grupo) => grupo.total_saldo_pendiente),
+      );
+      this.interesesModalTotalALaFecha = this.sumMontos(
+        this.interesesModalGrupos.map((grupo) => grupo.total_intereses_a_la_fecha),
+      );
       this.interesesModalOpen = true;
 
       const resolvedUserId = await this.catalogosService.syncCurrentUserId();
@@ -10404,6 +10427,60 @@ export class ListadoTransaccionesPage implements OnInit {
     }
 
     return `Completa estos campos: ${missingFields.join(', ')}.`;
+  }
+
+  private buildInteresesGruposPorParticipante(
+    detalle: CalculoInteresesDetalleItem[],
+  ): CalculoInteresesGrupoParticipante[] {
+    const grupos = new Map<string, CalculoInteresesGrupoParticipante>();
+
+    for (const item of detalle) {
+      const participante = item.participante?.trim() || '-';
+      let grupo = grupos.get(participante);
+
+      if (!grupo) {
+        grupo = {
+          participante,
+          es_titular: Boolean(item.es_titular),
+          items: [],
+          total_saldo_pendiente: 0,
+          total_intereses_a_la_fecha: 0,
+          total_interes_generado: 0,
+        };
+        grupos.set(participante, grupo);
+      }
+
+      grupo.items.push(item);
+    }
+
+    return [...grupos.values()]
+      .map((grupo) => ({
+        ...grupo,
+        items: [...grupo.items].sort(
+          (left, right) => left.id_transaccion - right.id_transaccion,
+        ),
+        total_saldo_pendiente: this.sumMontos(
+          grupo.items.map((item) => item.saldo_pendiente),
+        ),
+        total_intereses_a_la_fecha: this.sumMontos(
+          grupo.items.map((item) => item.intereses_a_la_fecha),
+        ),
+        total_interes_generado: this.sumMontos(
+          grupo.items.map((item) => item.interes_generado),
+        ),
+      }))
+      .sort((left, right) => {
+        if (left.es_titular !== right.es_titular) {
+          return left.es_titular ? -1 : 1;
+        }
+
+        return left.participante.localeCompare(right.participante, 'es');
+      });
+  }
+
+  private sumMontos(values: number[]): number {
+    const total = values.reduce((acc, value) => acc + (Number(value) || 0), 0);
+    return Math.round(total * 100) / 100;
   }
 
   private buildCalculoInteresesSuccessMessage(
